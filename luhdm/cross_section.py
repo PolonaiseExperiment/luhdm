@@ -251,6 +251,17 @@ def interpolant_k1_inverse(k1_values):
     return np.piecewise(k1_values, conditions, fns)
 
 
+def cross_section_rutherford_projection(q, alpha, v):
+    """Projected massless-mediator (Coulomb) limit: dsigma/dq = 2 pi a^2/(v^2 q^3).
+
+    This is the lamb -> infinity limit of the K1 machinery below (K1(x) -> 1/x
+    turns the arccosh integral into pi/4, collapsing dsigma/dq_tilde to
+    (pi/4)/q_tilde^3).
+    """
+    dsigma_rutherford = 2 * np.pi * alpha**2 / (v**2 * q**3)
+    return dsigma_rutherford
+
+
 def q_tilde_map(q, alpha, lamb, R_eff, v):
     """Map physical momentum transfer to dimensionless q_tilde."""
     F_factor = shape_factor(R_eff / lamb)
