@@ -1,0 +1,1 @@
+COLUMN_WIDTH = 246  # in points
