@@ -28,7 +28,7 @@ from scipy.interpolate import interp1d
 from luhdm import atmosphere, config, cross_section, halo, limits, units
 
 # --- fiducials (as in the notebook) ---
-LAMB = 3e-3
+LAMB = 3e-3  # overridden by --lamb
 R_EFF = config.R_EFF
 Q_THRESH = config.Q_THRESH
 T_TOTAL = 3600 * 24 * 7 * 2
@@ -90,13 +90,17 @@ def scan_point(task):
 
 
 def main():
-    global DS_QT, DS_VALS, V_I_SAMPLES, FID, EVENTS
+    global DS_QT, DS_VALS, V_I_SAMPLES, FID, EVENTS, LAMB
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--lamb", type=float, default=3e-3,
+                    help="mediator range in meters (3.0 ~ massless at detector scales)")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="scan_results.npz")
     args = ap.parse_args()
+    LAMB = args.lamb
+    print(f"mediator range lambda = {LAMB} m")
 
     if args.quick:
         FID = dict(n_ode=60, n_shm=int(2e4), n_q=120, q_span=1e4, n_mc=1500,
