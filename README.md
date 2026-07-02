@@ -3,8 +3,9 @@
 **Private.** Levitated-sensor ultraheavy dark matter (POLONAISE): physics models
 and limit setting.
 
-The physics modules (`config`, `halo`, `atmosphere`, `cross_section`) keep the
-notation of the original analysis code. New here:
+The spectrum code — the physics modules (`config`, `halo`, `atmosphere`,
+`cross_section`) — was written by Dorian Amaral; it is packaged here with its
+notation unchanged. New here:
 
 - `units` — unit conversions (lengths ↔ GeV⁻¹, rate GeV → s⁻¹);
 - `cross_section` additionally holds the straight-line-impulse (K1) machinery
