@@ -96,7 +96,13 @@ def solve_ode(v_i, alpha_n, lamb, m_dm, m_mol, v_min, h_max=None, z_eval=None):
     z = sol.t
     v = sol.y[0]
     v_f = v[-1]
- 
+
+    # If the integrator failed (status -1), the step size collapsed during
+    # catastrophic deceleration; physically the particle stops. Returning the
+    # last integrated v would fake a surviving flux.
+    if sol.status == -1:
+        v_f = v_min
+
     return z, v, v_f
 
 
