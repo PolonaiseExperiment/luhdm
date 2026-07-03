@@ -69,8 +69,18 @@ def differential_rate_trapz(qs, alpha_n, lamb, mu, R_eff, f_v_f, dsigma_interpol
     return np.maximum(np.array(results), 0)
 
 
+def expected_transits(alpha_n, m, f_v_f):
+    """Expected flybys within the threshold reach b_max during the exposure."""
+    alpha = alpha_n * config.N_NEUTRONS
+    vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.VESC, 300)
+    b = cross_section.impact_parameter_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
+    n_m3 = 0.3 / m * 1e6  # rho = 0.3 GeV/cm^3 -> 1/m^3
+    integrand = f_v_f(vs) * n_m3 * (vs * units.C_M_S) * np.pi * b**2
+    return T_TOTAL * float(np.trapezoid(integrand, vs))
+
+
 def scan_point(task):
-    """One (alpha_n, m) grid point -> (ia, im, extremeness, mu)."""
+    """One (alpha_n, m) grid point -> (ia, im, extremeness, mu, n_transit)."""
     ia, im, alpha_n, m = task
     state = _worker_init_lazy()
     try:
@@ -83,10 +93,11 @@ def scan_point(task):
                                        f_v_f, state["interp"])
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, rate, T_TOTAL, n_mc=FID["n_mc"])
+        n_t = expected_transits(alpha_n, m, f_v_f)
     except Exception as err:  # absurd-coupling corners: report, exclude nothing
         print(f"point (a={alpha_n:.1e}, m={m:.1e}) failed: {err}", flush=True)
-        p, mu = 0.0, 0.0
-    return ia, im, p, mu
+        p, mu, n_t = 0.0, 0.0, 0.0
+    return ia, im, p, mu, n_t
 
 
 def main():
@@ -138,19 +149,20 @@ def main():
 
     P = np.zeros((alphas_n.size, ms.size))
     MU = np.zeros_like(P)
+    NT = np.zeros_like(P)
     t0 = time.time()
     ctx = multiprocessing.get_context("fork")
     with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx) as ex:
         futures = [ex.submit(scan_point, t) for t in tasks]  # one task per grab
         for k, fut in enumerate(as_completed(futures)):
-            ia, im, p, mu = fut.result()
-            P[ia, im], MU[ia, im] = p, mu
+            ia, im, p, mu, n_t = fut.result()
+            P[ia, im], MU[ia, im], NT[ia, im] = p, mu, n_t
             if (k + 1) % 200 == 0:
                 print(f"  {k + 1}/{len(tasks)} done  ({time.time() - t0:.0f}s)",
                       flush=True)
 
     np.savez(args.out, ms=ms, alphas_n=alphas_n, extremeness=P, counts=MU,
-             events=EVENTS, lamb=LAMB, t_total=T_TOTAL, seed=SEED,
+             n_transit=NT, events=EVENTS, lamb=LAMB, t_total=T_TOTAL, seed=SEED,
              fidelity=str(FID))
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
