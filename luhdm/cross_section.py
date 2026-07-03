@@ -336,3 +336,101 @@ def dsigma_dq(q, alpha, lamb, R_eff, v, interpolant):
     prefactor = units.conv_m2pGeV(lamb)**3 * v / \
         (alpha * shape_factor(R_eff / lamb))
     return dsigma_interpolant(q_tilde, R_eff, lamb, interpolant) * prefactor
+
+
+# ============================================================================
+# Log-space variants (for xi = R_eff/lamb >~ 700, where K1(xi) underflows and
+# G2(xi) overflows float64; e.g. lamb = 0.2 um with R_eff = 200 um). Same
+# physics as the functions above, carried in logs via the exponentially
+# scaled Bessels kve(n, x) = K_n(x) e^x. Validated against the direct
+# functions at the sub-percent level for xi in [0.01, 100].
+# ============================================================================
+
+from scipy.special import kve
+
+
+def ln_shape_factor(x):
+    """ln G2(x), stable at large x (G2 ~ 1.5 e^x (x - 1) / x^3)."""
+    if x < 30:
+        return float(np.log(shape_factor(x)))
+    return float(np.log(1.5 * (x - 1)) + x - 3 * np.log(x))
+
+
+def ln_k1(beta):
+    """ln K1(beta), stable at large beta."""
+    return np.log(kve(1, beta)) - beta
+
+
+# invert ln K1 on a grid wide enough for xi = 1000 plus the reach beyond it
+_ln_beta_grid = np.geomspace(1e-4, 2000.0, 20000)
+_ln_k1_grid = ln_k1(_ln_beta_grid)
+_scipy_interpolant_ln_k1_inverse = interp1d(_ln_k1_grid[::-1],
+                                            _ln_beta_grid[::-1])
+
+
+def interpolant_ln_k1_inverse(ln_k1_values):
+    """Return beta such that ln K1(beta) = ln_k1_values (1/K1 above grid)."""
+    ln_k1_values = np.asarray(ln_k1_values, dtype=float)
+    hi = ln_k1_values > _ln_k1_grid[0]
+    out = np.empty_like(ln_k1_values)
+    out[hi] = np.exp(-ln_k1_values[hi])
+    out[~hi] = _scipy_interpolant_ln_k1_inverse(
+        np.clip(ln_k1_values[~hi], _ln_k1_grid[-1], _ln_k1_grid[0]))
+    return out
+
+
+def ln_dsigma_dq_tilde(delta, ln_q_tilde_max):
+    """ln of the dimensionless dsigma/dq_tilde at Delta = ln(qt_max/qt)."""
+    t_max = np.arccosh(np.exp(delta)) if delta < 30 else delta + np.log(2.0)
+    ts = np.linspace(0.0, t_max, 800)
+    ln_kappa = (ln_q_tilde_max - delta) + np.log(np.cosh(ts))
+    beta = interpolant_ln_k1_inverse(ln_kappa)
+    # |dK1/dbeta| = (K0 + K2)/2; the e^-beta of kve carried in the log
+    ln_integrand = (np.log(beta)
+                    - np.log(0.5 * (kve(0, beta) + kve(2, beta))) + beta)
+    peak = ln_integrand.max()
+    return peak + np.log(np.trapezoid(np.exp(ln_integrand - peak), ts))
+
+
+def make_ln_dsigma_dq_interpolant(R_eff, lamb, delta_max=32.0, N_points=400):
+    """Tabulate ln(dsigma/dq_tilde) vs Delta = ln(qt_max/qt) once."""
+    xi = R_eff / lamb
+    ln_q_tilde_max = float(ln_k1(xi))
+    deltas = np.linspace(1e-4, delta_max, N_points)
+    ln_values = [ln_dsigma_dq_tilde(d, ln_q_tilde_max) for d in deltas]
+    return interp1d(deltas, ln_values, bounds_error=False, fill_value=-np.inf)
+
+
+def dsigma_dq_ln(q, alpha, lamb, R_eff, v, ln_interpolant):
+    """Physical dsigma/dq in GeV^-3 via the log-space tabulation.
+
+    Same contract as dsigma_dq (q in GeV, lengths in m, v in c units,
+    vectorized in v); use with make_ln_dsigma_dq_interpolant.
+    """
+    xi = R_eff / lamb
+    ln_G2 = ln_shape_factor(xi)
+    lamb_gev = units.conv_m2pGeV(lamb)
+    # Delta = ln q_tilde_max - ln q_tilde, with ln q_tilde built term by term
+    delta = (float(ln_k1(xi)) + ln_G2 + np.log(2 * alpha)
+             - np.log(q * lamb_gev * v))
+    ln_prefactor = 3 * np.log(lamb_gev) + np.log(v) - np.log(alpha) - ln_G2
+    return np.exp(ln_interpolant(delta) + ln_prefactor)
+
+
+def impact_parameter_max_ln(q, alpha, lamb, R_eff, v):
+    """Largest impact parameter [m] with |q(b)| >= q, via log-space K1 inverse.
+
+    Same contract as impact_parameter_max; needed when K1(R_eff/lamb)
+    underflows. Returns 0 where the momentum-transfer cap makes q unreachable.
+    """
+    xi = R_eff / lamb
+    ln_G2 = ln_shape_factor(xi)
+    ln_q_tilde = np.log(q * units.conv_m2pGeV(lamb) * v) \
+        - np.log(2 * alpha) - ln_G2
+    ln_q_tilde = np.atleast_1d(np.asarray(ln_q_tilde, dtype=float))
+    ln_q_tilde_max = float(ln_k1(xi))
+    b = np.zeros_like(ln_q_tilde)
+    mask = ln_q_tilde < ln_q_tilde_max
+    if np.any(mask):
+        b[mask] = lamb * interpolant_ln_k1_inverse(ln_q_tilde[mask])
+    return b

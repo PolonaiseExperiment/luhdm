@@ -37,6 +37,7 @@ SEED = 20260702
 # Shared, read-only state; set in main() BEFORE the fork so children inherit it.
 DS_QT = None
 DS_VALS = None
+USE_LN = False   # log-space cross section (needed once xi = R_eff/lamb >~ 30)
 V_I_SAMPLES = None
 FID = None  # fidelity dict
 EVENTS = None
@@ -47,7 +48,11 @@ _worker_state: dict = {}
 def _worker_init_lazy():
     """Per-process state, built on first use in each child."""
     if "interp" not in _worker_state:
-        _worker_state["interp"] = interp1d(DS_QT, DS_VALS, kind="linear")
+        if USE_LN:
+            _worker_state["interp"] = interp1d(
+                DS_QT, DS_VALS, bounds_error=False, fill_value=-np.inf)
+        else:
+            _worker_state["interp"] = interp1d(DS_QT, DS_VALS, kind="linear")
         _worker_state["table"] = limits.new_table(seed=SEED)
     return _worker_state
 
@@ -63,7 +68,8 @@ def differential_rate_trapz(qs, alpha_n, lamb, mu, R_eff, f_v_f, dsigma_interpol
     for q in qs:
         mask = vs_global >= q / mu
         vs = vs_global[mask]
-        integrand = n_dm * f_vf_grid[mask] * vs * cross_section.dsigma_dq(
+        ds = (cross_section.dsigma_dq_ln if USE_LN else cross_section.dsigma_dq)
+        integrand = n_dm * f_vf_grid[mask] * vs * ds(
             q, alpha, lamb, R_eff, vs, dsigma_interpolant)
         results.append(np.trapezoid(integrand, vs) * units.CONV2RATE)
     return np.maximum(np.array(results), 0)
@@ -73,7 +79,9 @@ def expected_transits(alpha_n, m, f_v_f):
     """Expected flybys within the threshold reach b_max during the exposure."""
     alpha = alpha_n * config.N_NEUTRONS
     vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.VESC, 300)
-    b = cross_section.impact_parameter_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
+    b_max = (cross_section.impact_parameter_max_ln if USE_LN
+             else cross_section.impact_parameter_max)
+    b = b_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
     n_m3 = 0.3 / m * 1e6  # rho = 0.3 GeV/cm^3 -> 1/m^3
     integrand = f_v_f(vs) * n_m3 * (vs * units.C_M_S) * np.pi * b**2
     return T_TOTAL * float(np.trapezoid(integrand, vs))
@@ -101,7 +109,7 @@ def scan_point(task):
 
 
 def main():
-    global DS_QT, DS_VALS, V_I_SAMPLES, FID, EVENTS, LAMB
+    global DS_QT, DS_VALS, USE_LN, V_I_SAMPLES, FID, EVENTS, LAMB
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
@@ -134,10 +142,18 @@ def main():
 
     print("tabulating dsigma/dq_tilde ...")
     xi = R_EFF / LAMB
-    from scipy.special import kn
-    DS_QT = np.geomspace(1e-25, kn(1, xi) * (1 - 1e-9), 1000)
-    DS_VALS = np.array([cross_section.dsigma_dq_tilde(
-        qt, xi, cross_section.interpolant_k1_inverse) for qt in DS_QT])
+    USE_LN = xi > 30  # direct Bessels degrade, then underflow, at large xi
+    if USE_LN:
+        print(f"xi = {xi:.0f}: using log-space tabulation")
+        ln_qt_max = float(cross_section.ln_k1(xi))
+        DS_QT = np.linspace(1e-4, 32.0, 400)   # Delta = ln(qt_max/qt)
+        DS_VALS = np.array([cross_section.ln_dsigma_dq_tilde(d, ln_qt_max)
+                            for d in DS_QT])
+    else:
+        from scipy.special import kn
+        DS_QT = np.geomspace(1e-25, kn(1, xi) * (1 - 1e-9), 1000)
+        DS_VALS = np.array([cross_section.dsigma_dq_tilde(
+            qt, xi, cross_section.interpolant_k1_inverse) for qt in DS_QT])
 
     tasks = [(ia, im, float(a), float(m))
              for im, m in enumerate(ms) for ia, a in enumerate(alphas_n)]
