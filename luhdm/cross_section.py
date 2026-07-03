@@ -268,6 +268,24 @@ def q_tilde_map(q, alpha, lamb, R_eff, v):
     return q * units.conv_m2pGeV(lamb) * v / (2 * alpha * F_factor)
 
 
+def impact_parameter_max(q, alpha, lamb, R_eff, v):
+    """Largest impact parameter [m] whose flyby delivers impulse |q(b)| >= q.
+
+    Inverts q(b) = 2 alpha G2 K1(b/lamb) / (lamb v): b_max = lamb *
+    K1^-1(q_tilde). Returns 0 where the momentum-transfer cap makes q
+    unreachable (q_tilde >= K1(R_eff/lamb)). In the massless limit this tends
+    to the Coulomb reach b_max = 2 alpha G2 / (q v) (in natural units).
+    """
+    q_tilde = q_tilde_map(q, alpha, lamb, R_eff, v)
+    q_tilde = np.atleast_1d(np.asarray(q_tilde, dtype=float))
+    q_tilde_max = kn(1, R_eff / lamb)
+    b = np.zeros_like(q_tilde)
+    mask = q_tilde < q_tilde_max
+    if np.any(mask):
+        b[mask] = lamb * interpolant_k1_inverse(q_tilde[mask])
+    return b
+
+
 def dsigma_dq_tilde(q_tilde, xi, K1_inv):
     """Dimensionless projected differential cross section."""
     K1_xi = kn(1, xi)
