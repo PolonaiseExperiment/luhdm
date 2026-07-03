@@ -118,10 +118,11 @@ def main():
                    n_m=8, n_a=8)
     else:
         FID = dict(n_ode=400, n_shm=int(3e5), n_q=240, q_span=3e4, n_mc=10000,
-                   n_m=44, n_a=44)
+                   n_m=60, n_a=44)
 
-    ms = np.logspace(6.4, 15.6, FID["n_m"])
-    alphas_n = np.logspace(-8.7, 2.0, FID["n_a"])
+    # masses to the Planck scale, couplings capped at alpha_n = 1
+    ms = np.logspace(6.4, np.log10(1.22e19), FID["n_m"])
+    alphas_n = np.logspace(-8.7, 0.0, FID["n_a"])
 
     # identical event draw to the notebook
     rng = np.random.default_rng(SEED)
