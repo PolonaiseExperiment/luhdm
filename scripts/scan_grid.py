@@ -38,6 +38,8 @@ SEED = 20260702
 DS_QT = None
 DS_VALS = None
 USE_LN = False   # log-space cross section (needed once xi = R_eff/lamb >~ 30)
+MASSLESS = False  # analytic Rutherford projection at the sensor; LAMB then only
+                  # regulates the atmospheric Coulomb log
 V_I_SAMPLES = None
 FID = None  # fidelity dict
 EVENTS = None
@@ -68,9 +70,13 @@ def differential_rate_trapz(qs, alpha_n, lamb, mu, R_eff, f_v_f, dsigma_interpol
     for q in qs:
         mask = vs_global >= q / mu
         vs = vs_global[mask]
-        ds = (cross_section.dsigma_dq_ln if USE_LN else cross_section.dsigma_dq)
-        integrand = n_dm * f_vf_grid[mask] * vs * ds(
-            q, alpha, lamb, R_eff, vs, dsigma_interpolant)
+        if MASSLESS:
+            dsig = cross_section.cross_section_rutherford_projection(q, alpha, vs)
+        else:
+            ds = (cross_section.dsigma_dq_ln if USE_LN
+                  else cross_section.dsigma_dq)
+            dsig = ds(q, alpha, lamb, R_eff, vs, dsigma_interpolant)
+        integrand = n_dm * f_vf_grid[mask] * vs * dsig
         results.append(np.trapezoid(integrand, vs) * units.CONV2RATE)
     return np.maximum(np.array(results), 0)
 
@@ -79,9 +85,12 @@ def expected_transits(alpha_n, m, f_v_f):
     """Expected flybys within the threshold reach b_max during the exposure."""
     alpha = alpha_n * config.N_NEUTRONS
     vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.VESC, 300)
-    b_max = (cross_section.impact_parameter_max_ln if USE_LN
-             else cross_section.impact_parameter_max)
-    b = b_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
+    if MASSLESS:
+        b = 2 * alpha / (Q_THRESH * vs) / units.conv_m2pGeV(1.0)  # Coulomb reach
+    else:
+        b_max = (cross_section.impact_parameter_max_ln if USE_LN
+                 else cross_section.impact_parameter_max)
+        b = b_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
     n_m3 = 0.3 / m * 1e6  # rho = 0.3 GeV/cm^3 -> 1/m^3
     integrand = f_v_f(vs) * n_m3 * (vs * units.C_M_S) * np.pi * b**2
     return T_TOTAL * float(np.trapezoid(integrand, vs))
@@ -109,7 +118,7 @@ def scan_point(task):
 
 
 def main():
-    global DS_QT, DS_VALS, USE_LN, V_I_SAMPLES, FID, EVENTS, LAMB
+    global DS_QT, DS_VALS, USE_LN, MASSLESS, V_I_SAMPLES, FID, EVENTS, LAMB
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
@@ -117,9 +126,14 @@ def main():
                     help="mediator range in meters (3.0 ~ massless at detector scales)")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="scan_results.npz")
+    ap.add_argument("--massless", action="store_true",
+                    help="analytic Rutherford dsigma/dq at the sensor; --lamb "
+                         "then only regulates the atmospheric Coulomb log")
     args = ap.parse_args()
     LAMB = args.lamb
-    print(f"mediator range lambda = {LAMB} m")
+    MASSLESS = args.massless
+    print(f"mediator range lambda = {LAMB} m"
+          + (" (massless analytic at sensor)" if MASSLESS else ""))
 
     if args.quick:
         FID = dict(n_ode=60, n_shm=int(2e4), n_q=120, q_span=1e4, n_mc=1500,
@@ -143,7 +157,10 @@ def main():
     print("tabulating dsigma/dq_tilde ...")
     xi = R_EFF / LAMB
     USE_LN = xi > 30  # direct Bessels degrade, then underflow, at large xi
-    if USE_LN:
+    if MASSLESS:
+        DS_QT = np.array([0.0, 1.0])  # unused; analytic form needs no table
+        DS_VALS = np.array([0.0, 0.0])
+    elif USE_LN:
         print(f"xi = {xi:.0f}: using log-space tabulation")
         ln_qt_max = float(cross_section.ln_k1(xi))
         DS_QT = np.linspace(1e-4, 32.0, 400)   # Delta = ln(qt_max/qt)
@@ -179,8 +196,8 @@ def main():
                       flush=True)
 
     np.savez(args.out, ms=ms, alphas_n=alphas_n, extremeness=P, counts=MU,
-             n_transit=NT, events=EVENTS, lamb=LAMB, t_total=T_TOTAL, seed=SEED,
-             fidelity=str(FID))
+             n_transit=NT, events=EVENTS, lamb=LAMB, massless=MASSLESS,
+             t_total=T_TOTAL, seed=SEED, fidelity=str(FID))
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
 
