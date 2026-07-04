@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Parallel (m_DM, alpha_n) extremeness scan for the limit contour.
+"""Parallel (m_DM, alpha_n) extremeness scan for the limit contours.
 
-Runs the same physics as notebooks/limit_contour.ipynb, parallelized over grid
-points (each is independent: attenuation ODE -> dR/dq -> optimum-interval
-extremeness). Designed for a many-core node; writes scan_results.npz, which the
-notebook loads if present.
+Runs the same physics as notebooks/limit_contour.ipynb, through the shared
+luhdm.rate module (so script and notebook cannot drift), parallelized over
+grid points (each is independent: attenuation ODE -> dR/dq ->
+optimum-interval extremeness). Designed for a many-core node; writes an npz
+cache that the notebook loads if present.
 
-    python scripts/scan_grid.py                 # full fidelity (~80 cores)
+    python scripts/scan_grid.py --lamb 2e-4 --out scan7_200um.npz
+    python scripts/scan_grid.py --massless --lamb 2.0 --out scan7_massless.npz
     python scripts/scan_grid.py --quick         # small smoke test
-    python scripts/scan_grid.py --out results.npz --workers 40
 """
 
 from __future__ import annotations
@@ -18,30 +19,26 @@ import os
 import time
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")  # one process per core, no BLAS threads
+os.environ.setdefault("TQDM_DISABLE", "1")
 
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
-from scipy.interpolate import interp1d
 
-from luhdm import atmosphere, config, cross_section, halo, limits, units
+from luhdm import atmosphere, config, limits, rate
 
 # --- fiducials (as in the notebook) ---
-LAMB = 3e-3  # overridden by --lamb
-R_EFF = config.R_EFF
 Q_THRESH = config.Q_THRESH
 T_TOTAL = 3600 * 24 * 7 * 2
 SEED = 20260702
 
 # Shared, read-only state; set in main() BEFORE the fork so children inherit it.
-DS_QT = None
-DS_VALS = None
-USE_LN = False   # log-space cross section (needed once xi = R_eff/lamb >~ 30)
-MASSLESS = False  # analytic Rutherford projection at the sensor; LAMB then only
-                  # regulates the atmospheric Coulomb log
+LAMB = None      # atmospheric-regulator range [m] (also the sensor range
+                 # unless --massless)
+XS = None        # cross-section handle from rate.make_xsec
 V_I_SAMPLES = None
-FID = None  # fidelity dict
+FID = None       # fidelity dict
 EVENTS = None
 
 _worker_state: dict = {}
@@ -49,51 +46,9 @@ _worker_state: dict = {}
 
 def _worker_init_lazy():
     """Per-process state, built on first use in each child."""
-    if "interp" not in _worker_state:
-        if USE_LN:
-            _worker_state["interp"] = interp1d(
-                DS_QT, DS_VALS, bounds_error=False, fill_value=-np.inf)
-        else:
-            _worker_state["interp"] = interp1d(DS_QT, DS_VALS, kind="linear")
+    if "table" not in _worker_state:
         _worker_state["table"] = limits.new_table(seed=SEED)
     return _worker_state
-
-
-def differential_rate_trapz(qs, alpha_n, lamb, mu, R_eff, f_v_f, dsigma_interpolant):
-    """dR/dq via trapz (mu = m_DM in the original notation); as in the notebook."""
-    alpha = alpha_n * config.N_NEUTRONS
-    n_dm = halo.number_density_dm(mu)
-    v_min_global = qs.min() / mu
-    vs_global = np.geomspace(v_min_global, config.VESC, 500)
-    f_vf_grid = f_v_f(vs_global)
-    results = []
-    for q in qs:
-        mask = vs_global >= q / mu
-        vs = vs_global[mask]
-        if MASSLESS:
-            dsig = cross_section.cross_section_rutherford_projection(q, alpha, vs)
-        else:
-            ds = (cross_section.dsigma_dq_ln if USE_LN
-                  else cross_section.dsigma_dq)
-            dsig = ds(q, alpha, lamb, R_eff, vs, dsigma_interpolant)
-        integrand = n_dm * f_vf_grid[mask] * vs * dsig
-        results.append(np.trapezoid(integrand, vs) * units.CONV2RATE)
-    return np.maximum(np.array(results), 0)
-
-
-def expected_transits(alpha_n, m, f_v_f):
-    """Expected flybys within the threshold reach b_max during the exposure."""
-    alpha = alpha_n * config.N_NEUTRONS
-    vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.VESC, 300)
-    if MASSLESS:
-        b = 2 * alpha / (Q_THRESH * vs) / units.conv_m2pGeV(1.0)  # Coulomb reach
-    else:
-        b_max = (cross_section.impact_parameter_max_ln if USE_LN
-                 else cross_section.impact_parameter_max)
-        b = b_max(Q_THRESH, alpha, LAMB, R_EFF, vs)
-    n_m3 = 0.3 / m * 1e6  # rho = 0.3 GeV/cm^3 -> 1/m^3
-    integrand = f_v_f(vs) * n_m3 * (vs * units.C_M_S) * np.pi * b**2
-    return T_TOTAL * float(np.trapezoid(integrand, vs))
 
 
 def scan_point(task):
@@ -106,11 +61,10 @@ def scan_point(task):
             alpha_n, LAMB, m, V_I_SAMPLES, v_min=v_min, n_grid=FID["n_ode"])
         f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
         qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_THRESH, FID["n_q"])
-        rate = differential_rate_trapz(qs, alpha_n, LAMB, m, R_EFF,
-                                       f_v_f, state["interp"])
+        diff_rate = rate.differential_rate_trapz(qs, alpha_n, m, f_v_f, XS)
         p, mu = limits.extremeness_and_mu(
-            state["table"], EVENTS, qs, rate, T_TOTAL, n_mc=FID["n_mc"])
-        n_t = expected_transits(alpha_n, m, f_v_f)
+            state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"])
+        n_t = rate.expected_transits(alpha_n, m, f_v_f, XS, T_TOTAL)
     except Exception as err:  # absurd-coupling corners: report, exclude nothing
         print(f"point (a={alpha_n:.1e}, m={m:.1e}) failed: {err}", flush=True)
         p, mu, n_t = 0.0, 0.0, 0.0
@@ -118,12 +72,12 @@ def scan_point(task):
 
 
 def main():
-    global DS_QT, DS_VALS, USE_LN, MASSLESS, V_I_SAMPLES, FID, EVENTS, LAMB
+    global XS, V_I_SAMPLES, FID, EVENTS, LAMB
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
-    ap.add_argument("--lamb", type=float, default=3e-3,
-                    help="mediator range in meters (3.0 ~ massless at detector scales)")
+    ap.add_argument("--lamb", type=float, default=2e-4,
+                    help="mediator range in meters")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="scan_results.npz")
     ap.add_argument("--massless", action="store_true",
@@ -131,9 +85,8 @@ def main():
                          "then only regulates the atmospheric Coulomb log")
     args = ap.parse_args()
     LAMB = args.lamb
-    MASSLESS = args.massless
     print(f"mediator range lambda = {LAMB} m"
-          + (" (massless analytic at sensor)" if MASSLESS else ""))
+          + (" (massless analytic at sensor)" if args.massless else ""))
 
     if args.quick:
         FID = dict(n_ode=60, n_shm=int(2e4), n_q=120, q_span=1e4, n_mc=1500,
@@ -154,23 +107,8 @@ def main():
     np.random.seed(SEED)
     V_I_SAMPLES = atmosphere.sample_shm(FID["n_shm"])
 
-    print("tabulating dsigma/dq_tilde ...")
-    xi = R_EFF / LAMB
-    USE_LN = xi > 30  # direct Bessels degrade, then underflow, at large xi
-    if MASSLESS:
-        DS_QT = np.array([0.0, 1.0])  # unused; analytic form needs no table
-        DS_VALS = np.array([0.0, 0.0])
-    elif USE_LN:
-        print(f"xi = {xi:.0f}: using log-space tabulation")
-        ln_qt_max = float(cross_section.ln_k1(xi))
-        DS_QT = np.linspace(1e-4, 32.0, 400)   # Delta = ln(qt_max/qt)
-        DS_VALS = np.array([cross_section.ln_dsigma_dq_tilde(d, ln_qt_max)
-                            for d in DS_QT])
-    else:
-        from scipy.special import kn
-        DS_QT = np.geomspace(1e-25, kn(1, xi) * (1 - 1e-9), 1000)
-        DS_VALS = np.array([cross_section.dsigma_dq_tilde(
-            qt, xi, cross_section.interpolant_k1_inverse) for qt in DS_QT])
+    print("building cross-section handle ...")
+    XS = rate.make_xsec(None if args.massless else LAMB)
 
     tasks = [(ia, im, float(a), float(m))
              for im, m in enumerate(ms) for ia, a in enumerate(alphas_n)]
@@ -196,7 +134,7 @@ def main():
                       flush=True)
 
     np.savez(args.out, ms=ms, alphas_n=alphas_n, extremeness=P, counts=MU,
-             n_transit=NT, events=EVENTS, lamb=LAMB, massless=MASSLESS,
+             n_transit=NT, events=EVENTS, lamb=LAMB, massless=args.massless,
              t_total=T_TOTAL, seed=SEED, fidelity=str(FID))
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
