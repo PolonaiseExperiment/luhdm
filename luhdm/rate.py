@@ -56,9 +56,13 @@ def impact_parameter_max_any(q, alpha, vs, xs, R_eff=R_EFF):
 
 
 def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF):
-    """dR/dq in s^-1 GeV^-1 via trapz (mu = m_DM in the original notation)."""
+    """dR/dq in s^-1 GeV^-1 via trapz (mu = m_DM in the original notation).
+
+    The rate carries the DM-fraction scaling f_X = config.F_X: this species
+    makes up only that fraction of the local density.
+    """
     alpha = alpha_n * config.N_NEUTRONS
-    n_dm = halo.number_density_dm(mu)
+    n_dm = config.F_X * halo.number_density_dm(mu)
 
     # Precompute f_vf on a fixed grid spanning all v_mins
     v_min_global = qs.min() / mu
@@ -81,7 +85,7 @@ def expected_transits(alpha_n, mu, f_v_f, xs, t_total, R_eff=R_EFF):
     alpha = alpha_n * config.N_NEUTRONS
     vs = np.geomspace(max(Q_THRESH / mu, 1e-8), config.VESC, 300)
     b = impact_parameter_max_any(Q_THRESH, alpha, vs, xs, R_eff)
-    n_m3 = 0.3 / mu * 1e6  # rho = 0.3 GeV/cm^3 -> 1/m^3
+    n_m3 = config.F_X * 0.3 / mu * 1e6  # f_X x (0.3 GeV/cm^3) -> 1/m^3
     return t_total * float(np.trapezoid(
         f_v_f(vs) * n_m3 * (vs * units.C_M_S) * np.pi * b**2, vs))
 
@@ -95,7 +99,7 @@ def transit_count_halo(m, alpha_n, xs, t_total, R_eff=R_EFF):
     b = impact_parameter_max_any(Q_THRESH, alpha, vs, xs, R_eff)
     flux_w = halo.standard_halo_model(vs) * (vs * units.C_M_S)
     area = np.pi * b**2
-    n_m3 = 0.3 / m * 1e6
+    n_m3 = config.F_X * 0.3 / m * 1e6
     nt = t_total * n_m3 * np.trapezoid(flux_w * area, vs)
     a_eff = np.trapezoid(flux_w * area, vs) / np.trapezoid(flux_w, vs)
     return nt, a_eff
