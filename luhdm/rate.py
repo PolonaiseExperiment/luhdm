@@ -19,17 +19,20 @@ Q_THRESH = config.Q_THRESH
 R_EFF = config.R_EFF
 
 
-def make_xsec(lamb, R_eff=R_EFF, N_points=600):
+def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False):
     """Build the cross-section handle for one mediator range.
 
     lamb : mediator range in meters, or None for massless (analytic).
+    force_ln : use the (fast, trapz-based) log-space tabulation even at small
+    xi, e.g. when tabulating many ranges; validated against the direct path
+    in tests/test_cross_section_ln.py.
     Returns a dict consumed by dsigma_dq_any / differential_rate_trapz /
     expected_transits / transit_count_halo.
     """
     if lamb is None:
         return dict(lamb=None, use_ln=False, interp=None)
     xi = R_eff / lamb
-    use_ln = xi > 30
+    use_ln = force_ln or xi > 30
     if use_ln:
         interp = cross_section.make_ln_dsigma_dq_interpolant(R_eff, lamb)
     else:
