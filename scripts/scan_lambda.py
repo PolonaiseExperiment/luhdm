@@ -88,10 +88,10 @@ def main():
                    n_l=6, n_a=8)
     else:
         FID = dict(n_ode=400, n_shm=int(3e5), n_q=240, q_span=3e4, n_mc=10000,
-                   n_l=29, n_a=46)
+                   n_l=46, n_a=46)
 
-    # mediator range 20 um to 1 mm; couplings far past the atmospheric ceiling
-    LAMBS = np.geomspace(2e-5, 1e-3, FID["n_l"])
+    # mediator range 2 um to 1 mm; couplings far past the atmospheric ceiling
+    LAMBS = np.geomspace(2e-6, 1e-3, FID["n_l"])
     alphas_n = np.geomspace(1e-3, 1e6, FID["n_a"])
 
     # identical event draw to the notebook
