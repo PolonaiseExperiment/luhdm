@@ -18,9 +18,14 @@ notation unchanged. New here:
   coupling and taking level sets of the extremeness — see the notebook.
 
 **Main product:** [`notebooks/limit_contour.ipynb`](notebooks/limit_contour.ipynb)
-— event list in, excluded (m_DM, α_n) contour out. The physics that gets tweaked
-(rate formula, halo/attenuation choices, grids, exposure) lives in the notebook;
-conversions and statistics plumbing live in the package.
+— event list in, excluded (m_DM, α_n) contours out, plus the machine-readable
+`limit_contour_data.npz`. Companions:
+[`notebooks/methodology.ipynb`](notebooks/methodology.ipynb) (the physics and
+statistics pipeline, validations) and
+[`notebooks/understanding.ipynb`](notebooks/understanding.ipynb) (why the
+exclusion regions look the way they do). The physics that gets tweaked lives
+in `luhdm/rate.py` and `luhdm/config.py`, shared by the notebooks and the
+`scripts/` that generate the npz caches on a many-core node.
 
 ## Install
 
