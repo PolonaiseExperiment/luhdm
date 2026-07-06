@@ -100,8 +100,8 @@ def main():
     EVENTS = 10 ** rng.uniform(np.log10(Q_THRESH), np.log10(3 * Q_THRESH), size=1)
     print(f"events [GeV]: {np.round(EVENTS, 1)}")
 
-    np.random.seed(SEED)
-    V_I_SAMPLES = atmosphere.sample_shm(FID["n_shm"])
+    V_I_SAMPLES = atmosphere.sample_shm(FID["n_shm"],
+                                        rng=np.random.default_rng(SEED))
 
     print(f"tabulating {LAMBS.size} cross sections (log-space) ...")
     t0 = time.time()

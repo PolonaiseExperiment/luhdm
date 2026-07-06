@@ -25,7 +25,7 @@ def main():
     ap.add_argument("--lamb", type=float, default=2e-4,
                     help="finite reference range in meters (massless panel is "
                          "always included)")
-    ap.add_argument("--out", default="notebooks/flux_maps.npz")
+    ap.add_argument("--out", default="notebooks/computation_cache/flux_maps.npz")
     args = ap.parse_args()
 
     ms_map = np.geomspace(4e6, 1.22e19, 64)

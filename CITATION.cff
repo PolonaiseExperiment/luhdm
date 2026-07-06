@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "luhdm: levitated-sensor ultraheavy dark matter analysis"
+type: software
+authors:
+  - family-names: Amaral
+    given-names: Dorian
+  - family-names: Tunnell
+    given-names: Christopher
+repository-code: "https://github.com/PolonaiseExperiment/luhdm"

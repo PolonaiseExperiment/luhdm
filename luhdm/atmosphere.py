@@ -116,9 +116,16 @@ def compute_v_f_interpolant(v_is, alpha_n, lamb, m_dm, v_min):
     return interp1d(v_is, v_fs, bounds_error=False, fill_value=0.)
 
 
-def sample_shm(n_samples):
-    """Sample speeds from the standard halo model via rejection sampling."""
-    
+def sample_shm(n_samples, rng=None):
+    """Sample speeds from the standard halo model via rejection sampling.
+
+    rng: optional numpy Generator for reproducibility without touching the
+    global np.random state; defaults to the legacy global state, preserving
+    the original behavior.
+    """
+    if rng is None:
+        rng = np.random  # legacy global state (original behavior)
+
     # f(v) <= M * g(v) where g is the unnormalised MB
     # Find M = max(f(v)/g(v)) numerically
     v_test = np.linspace(0, config.VESC, 10000)
@@ -128,11 +135,11 @@ def sample_shm(n_samples):
     samples = []
     while len(samples) < n_samples:
         # Propose from uniform on [0, v_esc]
-        v_prop = np.random.uniform(0, config.VESC, n_samples)
+        v_prop = rng.uniform(0, config.VESC, n_samples)
         f_prop = halo.standard_halo_model(v_prop)
         
         # Accept/reject
-        u = np.random.uniform(0, M, n_samples)
+        u = rng.uniform(0, M, n_samples)
         accepted = v_prop[u < f_prop]
         samples.extend(accepted)
     
