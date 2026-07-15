@@ -15,9 +15,9 @@ import argparse
 
 import numpy as np
 
-from luhdm import rate
+from luhdm import config, rate
 
-T_TOTAL = 3600 * 24 * 7 * 2  # as in the notebook
+T_TOTAL = config.T_EXPOSURE  # dataset live-time (single source of truth in luhdm.config)
 
 
 def main():

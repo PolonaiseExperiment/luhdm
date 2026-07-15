@@ -35,7 +35,7 @@ Q_THRESH = config.Q_THRESH
 # Decoupled from Q_THRESH / --q-min so lowering the analysis threshold does not
 # shrink the integration window (it must stay well above the highest event).
 Q_HI_REF = 8.4e3
-T_TOTAL = 3600 * 24 * 7 * 2
+T_TOTAL = config.T_EXPOSURE  # dataset live-time (single source of truth in luhdm.config)
 SEED = 20260702
 # default observed-event list; --data overrides it (e.g. per-mode data_mode{n}.txt)
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "notebooks" / "data_mode1.txt"
