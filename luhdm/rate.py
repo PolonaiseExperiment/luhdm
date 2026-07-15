@@ -58,11 +58,18 @@ def impact_parameter_max_any(q, alpha, vs, xs, R_eff=R_EFF):
     return fn(q, alpha, xs["lamb"], R_eff, vs)
 
 
-def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF):
+def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF, eff=None):
     """dR/dq in s^-1 GeV^-1 via trapz (mu = m_DM in the original notation).
 
     The rate carries the DM-fraction scaling f_X = config.F_X: this species
     makes up only that fraction of the local density.
+
+    ``eff`` optionally folds in the detection efficiency: a callable
+    epsilon(q_GeV) in [0, 1] (see :mod:`luhdm.efficiency`) applied to the
+    returned dR/dq, so downstream the optimum interval sees the *detected*
+    momentum-kick rate. ``eff=None`` (default) is the raw rate, byte-identical
+    to the pre-efficiency pipeline. Efficiency applies ONLY here, not to the
+    geometric transit diagnostics.
     """
     alpha = alpha_n * config.N_NEUTRONS
     n_dm = config.F_X * halo.number_density_dm(mu)
@@ -80,7 +87,10 @@ def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF):
             q, alpha, vs, xs, R_eff)
         results.append(np.trapezoid(integrand, vs) * units.CONV2RATE)
 
-    return np.maximum(np.array(results), 0)
+    out = np.array(results)
+    if eff is not None:
+        out = out * np.asarray(eff(qs), dtype=float)  # detected rate = eps(q)*dR/dq
+    return np.maximum(out, 0)
 
 
 def expected_transits(alpha_n, mu, f_v_f, xs, t_total, R_eff=R_EFF):

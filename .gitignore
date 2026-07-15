@@ -10,3 +10,11 @@ venv/
 .ipynb_checkpoints/
 .DS_Store
 *.p
+
+# raw analysis data (large HDF5 / npz), kept out of git
+data/
+# derived scan caches (large, regenerable via scripts/scan_grid.py); not versioned
+notebooks/computation_cache/
+notebooks/computation_cache_noatm/
+# scratch: cache/figure backups, working notes, anything not for git
+/ignore/

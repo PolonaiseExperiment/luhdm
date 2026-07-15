@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import os
 import time
+from pathlib import Path
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")  # one process per core, no BLAS threads
 os.environ.setdefault("TQDM_DISABLE", "1")
@@ -27,8 +28,11 @@ import numpy as np
 from luhdm import atmosphere, config, limits, rate
 
 Q_THRESH = config.Q_THRESH
+Q_HI_REF = 8.4e3   # fixed qs upper-momentum reference (see scan_grid.py)
 T_TOTAL = 3600 * 24 * 7 * 2
 SEED = 20260702
+# default observed-event list; --data overrides it (e.g. per-mode data_mode{n}.txt)
+DEFAULT_DATA = Path(__file__).resolve().parent.parent / "notebooks" / "data_mode1.txt"
 
 # Shared, read-only state; set in main() BEFORE the fork so children inherit it.
 M_DM = None
@@ -58,7 +62,7 @@ def scan_point(task):
         v_f_samples = atmosphere.compute_v_f_distribution(
             alpha_n, lamb, M_DM, V_I_SAMPLES, v_min=v_min, n_grid=FID["n_ode"])
         f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
-        qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_THRESH, FID["n_q"])
+        qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_HI_REF, FID["n_q"])
         diff_rate = rate.differential_rate_trapz(qs, alpha_n, M_DM, f_v_f, xs)
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"])
@@ -79,6 +83,9 @@ def main():
                     help="fixed DM mass in GeV (the most sensitive mass)")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="scan_lambda.npz")
+    ap.add_argument("--data", default=str(DEFAULT_DATA),
+                    help="event list file, one impulse per line in eV "
+                         "(default: notebooks/data.txt)")
     args = ap.parse_args()
     M_DM = args.mass
     print(f"fixed m_DM = {M_DM:.3e} GeV")
@@ -95,10 +102,10 @@ def main():
     LAMBS = np.geomspace(2e-6, 2.0, FID["n_l"])
     alphas_n = np.logspace(-8.7, 0.0, FID["n_a"])
 
-    # identical event draw to the notebook
-    rng = np.random.default_rng(SEED)
-    EVENTS = 10 ** rng.uniform(np.log10(Q_THRESH), np.log10(3 * Q_THRESH), size=1)
-    print(f"events [GeV]: {np.round(EVENTS, 1)}")
+    # observed events from the analysis input (the same file the notebook reads,
+    # so script and notebook cannot drift)
+    EVENTS = np.atleast_1d(np.loadtxt(args.data)) / 1e9   # eV -> GeV
+    print(f"{EVENTS.size} events from {args.data} [GeV]: {np.round(EVENTS, 1)}")
 
     V_I_SAMPLES = atmosphere.sample_shm(FID["n_shm"],
                                         rng=np.random.default_rng(SEED))

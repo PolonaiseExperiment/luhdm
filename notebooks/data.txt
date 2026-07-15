@@ -1,5 +1,0 @@
-# Observed impulse candidates for the POLONAISE UHDM search.
-# One impulse per line, in eV (momentum transfer q reconstructed
-# from the sensor ringdown); 1 GeV = 1e9 eV.
-# This file is the analysis input: edit it and rerun the notebooks.
-1.262497006010281836e+13
