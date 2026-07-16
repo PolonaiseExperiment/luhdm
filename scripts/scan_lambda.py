@@ -25,7 +25,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 
-from luhdm import atmosphere, config, limits, rate
+from luhdm import atmosphere, config, efficiency, limits, rate
 
 Q_THRESH = config.Q_THRESH
 Q_HI_REF = 8.4e3   # fixed qs upper-momentum reference (see scan_grid.py)
@@ -41,6 +41,7 @@ LAMBS = None
 V_I_SAMPLES = None
 FID = None
 EVENTS = None
+EFF = None        # detection-efficiency callable eps(q_GeV), or None for raw rate
 
 _worker_state: dict = {}
 
@@ -63,7 +64,8 @@ def scan_point(task):
             alpha_n, lamb, M_DM, V_I_SAMPLES, v_min=v_min, n_grid=FID["n_ode"])
         f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
         qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_HI_REF, FID["n_q"])
-        diff_rate = rate.differential_rate_trapz(qs, alpha_n, M_DM, f_v_f, xs)
+        diff_rate = rate.differential_rate_trapz(qs, alpha_n, M_DM, f_v_f, xs,
+                                                 eff=EFF)
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"])
         n_t = rate.expected_transits(alpha_n, M_DM, f_v_f, xs, T_TOTAL)
@@ -75,7 +77,7 @@ def scan_point(task):
 
 
 def main():
-    global M_DM, XS_BY_IL, LAMBS, V_I_SAMPLES, FID, EVENTS
+    global M_DM, XS_BY_IL, LAMBS, V_I_SAMPLES, FID, EVENTS, EFF
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
@@ -83,6 +85,21 @@ def main():
                     help="fixed DM mass in GeV (the most sensitive mass)")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="scan_lambda.npz")
+    ap.add_argument("--lamb-min", type=float, default=2e-6,
+                    help="lowest mediator range in the grid, m (default: %(default)g)")
+    ap.add_argument("--lamb-max", type=float, default=2.0,
+                    help="highest mediator range in the grid, m (default: %(default)g)")
+    ap.add_argument("--a-min", type=float, default=10 ** -8.7,
+                    help="lowest coupling alpha_n in the grid (default: %(default).3g)")
+    ap.add_argument("--n-l", type=int, default=None,
+                    help="override number of mediator-range grid points")
+    ap.add_argument("--n-a", type=int, default=None,
+                    help="override number of coupling grid points")
+    ap.add_argument("--mode", type=int, choices=(1, 2, 3), default=None,
+                    help="sensor mode: fold in its measured detection "
+                         "efficiency (default: none, raw rate)")
+    ap.add_argument("--df", type=int, choices=(2, 3), default=3,
+                    help="efficiency dof hypothesis (default: 3)")
     ap.add_argument("--data", default=str(DEFAULT_DATA),
                     help="event list file, one impulse per line in eV "
                          "(default: notebooks/data.txt)")
@@ -96,11 +113,22 @@ def main():
     else:
         FID = dict(n_ode=400, n_shm=int(3e5), n_q=240, q_span=3e4, n_mc=10000,
                    n_l=49, n_a=44)
+    for key, val in (("n_l", args.n_l), ("n_a", args.n_a)):
+        if val is not None:
+            FID[key] = val
 
-    # mediator range spanning all planned lambdas (2 um to 2 m); couplings as
-    # in the mass scans
-    LAMBS = np.geomspace(2e-6, 2.0, FID["n_l"])
-    alphas_n = np.logspace(-8.7, 0.0, FID["n_a"])
+    if args.mode is not None:
+        EFF = efficiency.make_efficiency(args.mode, args.df)
+        eff_desc = f"mode {args.mode} df{args.df}"
+    else:
+        EFF = None
+        eff_desc = "none (raw rate)"
+    print(f"detection efficiency = {eff_desc}")
+
+    # mediator range and couplings (log-spaced); defaults span the planned
+    # ranges (2 um to 2 m) and the mass-scan couplings
+    LAMBS = np.geomspace(args.lamb_min, args.lamb_max, FID["n_l"])
+    alphas_n = np.logspace(np.log10(args.a_min), 0.0, FID["n_a"])
 
     # observed events from the analysis input (the same file the notebook reads,
     # so script and notebook cannot drift)
@@ -138,6 +166,7 @@ def main():
 
     np.savez(args.out, lambs=LAMBS, alphas_n=alphas_n, extremeness=P,
              counts=MU, n_transit=NT, events=EVENTS, m_dm=M_DM,
+             mode=(args.mode if args.mode is not None else 0), df=args.df,
              t_total=T_TOTAL, seed=SEED, fidelity=str(FID))
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 

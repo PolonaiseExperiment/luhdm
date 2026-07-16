@@ -28,7 +28,7 @@ def main():
     ap.add_argument("--out", default="notebooks/computation_cache/flux_maps.npz")
     args = ap.parse_args()
 
-    ms_map = np.geomspace(4e6, 1.22e19, 64)
+    ms_map = np.geomspace(1e5, 1.22e19, 64)
     al_map = np.geomspace(2e-11, 1.0, 64)
 
     print("massless (analytic Coulomb reach) ...")
