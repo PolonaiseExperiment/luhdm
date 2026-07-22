@@ -13,6 +13,7 @@ dependencies = [
     "scipy",
     "matplotlib",
     "tqdm",
+    "h5py",
 ]
 # Also requires optimum-interval (not on PyPI yet):
 #   pip install -e ~/code/optimum_interval
@@ -21,7 +22,7 @@ dependencies = [
 dev = ["pytest", "ruff", "nbformat", "nbclient", "ipykernel"]
 # notebook 00 reads the raw transient/efficiency data in data/; these load the
 # pandas/PyTables HDF5 (jax is needed to unpickle its object columns).
-notebooks = ["pandas", "tables", "h5py", "jax", "jupyterlab"]
+notebooks = ["pandas", "tables", "jax", "jupyterlab"]
 
 [tool.setuptools]
 packages = ["luhdm"]

@@ -1,0 +1,816 @@
+#!/usr/bin/env python3
+"""Assemble the per-lambda npz shards into the release HDF5 (LOCAL machine only).
+
+remote-node writes float64 npz shards (no h5py there); this script — run on a host
+with h5py — stacks them into ``release/luhdm_datarelease_v1.h5``, the single
+source every notebook loads from. It also computes ``/reference_curves`` locally
+at production fidelity (notebook 02's showcase point), copies the detector
+products, embeds full provenance, and writes ``release/provenance.json`` +
+``release/SHA256SUMS``.
+
+    python scripts/assemble_release.py \
+        --atm-dir   ~/release_shards/atm \
+        --noatm-dir ~/release_shards/noatm \
+        --halo-dir  ~/release_shards/halo
+
+Float64 shard dirs are archived as the verification source of record; the H5
+carries float32 cubes (p granularity is MC-limited at ~1e-4, far coarser than
+f4 spacing ~6e-8 near 0.95).
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import hashlib
+import json
+import os
+import platform
+import socket
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+
+import h5py
+
+from luhdm import atmosphere, config, efficiency, halo, rate, units
+
+# ── pinned constants (shared contract) ────────────────────────────────────────
+SEED = 20260702
+Q_HI_REF = 8.4e3
+CONFIDENCE = 0.95
+M_PLANCK = 1.22e19
+SCHEMA_VERSION = 1
+FILE_FORMAT = "luhdm-datarelease"
+FORMAT_VERSION = 1
+
+# canonical tag order everywhere in the release
+TAGS = ["2m", "2cm", "2mm", "200um", "20um", "10um", "2um"]
+TAG_LAMBDA = {
+    "2m": 2.0, "2cm": 2e-2, "2mm": 2e-3, "200um": 2e-4,
+    "20um": 2e-5, "10um": 1e-5, "2um": 2e-6,
+}
+MODES = (1, 2, 3)
+
+# reference-curve showcase point (notebook 02)
+REF_M = 1e8
+REF_ALPHA_N = 1e-3
+REF_TAG_FOR_SPECTRA = "200um"
+
+
+def _iso_now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+# ── git / package provenance ──────────────────────────────────────────────────
+def git_provenance():
+    """(commit, dirty) from the repo; read-only, never fatal."""
+    commit, dirty = "unknown", None
+    try:
+        commit = subprocess.run(
+            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True, timeout=15,
+        ).stdout.strip()
+        porcelain = subprocess.run(
+            ["git", "-C", str(REPO), "status", "--porcelain"],
+            capture_output=True, text=True, check=True, timeout=15,
+        ).stdout.strip()
+        dirty = bool(porcelain)
+    except Exception as err:  # noqa: BLE001
+        print(f"WARNING: git provenance unavailable ({err})")
+    return commit, dirty
+
+
+def package_versions():
+    import importlib.metadata as im
+    out = {}
+    for pkg in ("numpy", "scipy", "h5py", "optimum_interval", "luhdm",
+                "matplotlib", "pandas"):
+        try:
+            out[pkg] = im.version(pkg)
+        except Exception:  # noqa: BLE001
+            out[pkg] = "unknown"
+    out["python"] = platform.python_version()
+    return out
+
+
+# ── shard loading / validation ────────────────────────────────────────────────
+def _scalar(v):
+    """Unwrap a 0-d numpy array to a Python scalar."""
+    a = np.asarray(v)
+    return a.item() if a.ndim == 0 else a
+
+
+def _parse_fidelity(fid_str):
+    """str(FID) -> dict; robust to the exact scan_grid.py formatting."""
+    try:
+        d = ast.literal_eval(str(fid_str))
+        return {k: d[k] for k in d}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def load_pass(pass_dir, pass_name):
+    """Read + validate every shard in an atm/noatm dir, stack to a cube.
+
+    Returns a dict with axes, cubes (mode, alpha, mass, lambda) [massless last],
+    the finite-lambda axis, and the shared metadata pulled off the shards.
+    Aborts (SystemExit) on missing shards or mixed fidelity/axes/events.
+    """
+    pass_dir = Path(pass_dir)
+    if not pass_dir.is_dir():
+        sys.exit(f"FATAL: {pass_name} shard dir does not exist: {pass_dir}")
+
+    finite = {}   # il -> loaded dict
+    massless = None
+    for f in sorted(pass_dir.glob("shard_*.npz")):
+        if f.name.startswith("shard_halo"):
+            continue
+        with np.load(f, allow_pickle=True) as d:
+            rec = {k: d[k] for k in d.files}
+        rec["_file"] = f.name
+        if bool(_scalar(rec["massless"])):
+            if massless is not None:
+                sys.exit(f"FATAL: two massless shards in {pass_dir}")
+            massless = rec
+        else:
+            il = int(_scalar(rec["il"]))
+            if il in finite:
+                sys.exit(f"FATAL: duplicate il={il} in {pass_dir}")
+            finite[il] = rec
+
+    if not finite and massless is None:
+        sys.exit(f"FATAL: no shards found in {pass_dir}")
+
+    # completeness: ils must be contiguous 0..n_finite-1, massless present
+    n_finite = len(finite)
+    missing = [il for il in range(n_finite) if il not in finite]
+    if missing:
+        have = sorted(finite)
+        sys.exit(f"FATAL: {pass_name} missing finite il shards {missing} "
+                 f"(present ils: {have}); expected contiguous 0..{n_finite - 1}")
+    if massless is None:
+        sys.exit(f"FATAL: {pass_name} missing shard_massless.npz")
+
+    # order finite shards ascending in lambda (contract: finite ascending)
+    fin_recs = [finite[il] for il in range(n_finite)]
+    lam_by_il = np.array([float(_scalar(r["lamb"])) for r in fin_recs])
+    order = np.argsort(lam_by_il, kind="stable")
+    fin_recs = [fin_recs[i] for i in order]
+    lambda_finite = lam_by_il[order].astype(np.float64)
+    if not np.all(np.diff(lambda_finite) > 0):
+        print(f"WARNING: {pass_name} finite lambda axis not strictly increasing "
+              f"after sort: {lambda_finite}")
+
+    ref = fin_recs[0]
+    ms = np.asarray(ref["ms"], dtype=np.float64)
+    alphas_n = np.asarray(ref["alphas_n"], dtype=np.float64)
+    q_min = float(_scalar(ref["q_min"]))
+    seed = int(_scalar(ref["seed"]))
+    t_total = float(_scalar(ref["t_total"]))
+    df = int(_scalar(ref["df"])) if "df" in ref else 3
+    fid_str = str(_scalar(ref["fidelity"]))
+    events = {n: np.asarray(ref[f"events_mode{n}"], dtype=np.float64)
+              for n in MODES}
+
+    n_a, n_m = alphas_n.size, ms.size
+
+    # cross-shard identity (hard gate): axes, q_min, seed, t_total, fidelity, events
+    all_recs = fin_recs + [massless]
+    for rec in all_recs:
+        tag = rec["_file"]
+        if not np.array_equal(np.asarray(rec["ms"], dtype=np.float64), ms):
+            sys.exit(f"FATAL: {pass_name}:{tag} mass axis differs from {ref['_file']}")
+        if not np.array_equal(np.asarray(rec["alphas_n"], dtype=np.float64), alphas_n):
+            sys.exit(f"FATAL: {pass_name}:{tag} alpha axis differs")
+        if float(_scalar(rec["q_min"])) != q_min:
+            sys.exit(f"FATAL: {pass_name}:{tag} q_min differs")
+        if int(_scalar(rec["seed"])) != seed:
+            sys.exit(f"FATAL: {pass_name}:{tag} seed differs")
+        if float(_scalar(rec["t_total"])) != t_total:
+            sys.exit(f"FATAL: {pass_name}:{tag} t_total differs")
+        if str(_scalar(rec["fidelity"])) != fid_str:
+            sys.exit(f"FATAL: {pass_name}:{tag} MIXED FIDELITY "
+                     f"({str(_scalar(rec['fidelity']))!r} != {fid_str!r})")
+        for n in MODES:
+            if not np.array_equal(
+                    np.asarray(rec[f"events_mode{n}"], dtype=np.float64), events[n]):
+                sys.exit(f"FATAL: {pass_name}:{tag} events_mode{n} differ")
+
+    # stack cubes: lambda axis = finite (ascending) then massless last
+    L = n_finite + 1
+    p = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64)
+    mu = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64)
+    nt = np.full((n_a, n_m, L), np.nan, dtype=np.float64)
+    st = np.zeros((3, n_a, n_m, L), dtype=np.uint8)
+    for li, rec in enumerate(fin_recs + [massless]):
+        p[:, :, :, li] = np.asarray(rec["p"], dtype=np.float64)
+        mu[:, :, :, li] = np.asarray(rec["mu"], dtype=np.float64)
+        nt[:, :, li] = np.asarray(rec["n_transit"], dtype=np.float64)
+        st[:, :, :, li] = np.asarray(rec["status"], dtype=np.uint8)
+
+    # status<->NaN consistency (soft: warn with counts, never abort)
+    _check_status_nan(pass_name, p, mu, nt, st)
+
+    lambda_ode = float(_scalar(massless.get("lamb_ode", np.nan)))
+    return dict(
+        pass_name=pass_name, ms=ms, alphas_n=alphas_n,
+        lambda_finite=lambda_finite, n_finite=n_finite,
+        p=p, mu=mu, n_transit=nt, status=st,
+        q_min=q_min, seed=seed, t_total=t_total, df=df,
+        fidelity_str=fid_str, fidelity=_parse_fidelity(fid_str),
+        events=events, lambda_ode=lambda_ode,
+        shard_files=[r["_file"] for r in all_recs],
+    )
+
+
+def _check_status_nan(pass_name, p, mu, nt, st):
+    """Report (never abort) status<->NaN inconsistencies."""
+    is1 = st == 1
+    # status 1 cells must be NaN in p and mu
+    bad_p = int(np.count_nonzero(is1 & ~np.isnan(p)))
+    bad_mu = int(np.count_nonzero(is1 & ~np.isnan(mu)))
+    # non-status-1 cells must be finite in p and mu
+    bad_ok = int(np.count_nonzero(~is1 & np.isnan(p)))
+    # n_transit NaN <=> all 3 modes status 1 at that (alpha, mass, lambda)
+    all1 = np.all(is1, axis=0)
+    bad_nt = int(np.count_nonzero(np.isnan(nt) != all1))
+    if bad_p or bad_mu or bad_ok or bad_nt:
+        print(f"WARNING: {pass_name} status<->NaN inconsistencies: "
+              f"status1-but-finite p={bad_p} mu={bad_mu}; "
+              f"ok-but-NaN p={bad_ok}; n_transit/all-mode-fail mismatch={bad_nt}")
+    else:
+        print(f"  {pass_name}: status<->NaN consistency OK")
+
+
+def load_halo(halo_dir):
+    """Read + validate halo shards; stack to (alpha_halo, mass_halo, lambda)."""
+    halo_dir = Path(halo_dir)
+    if not halo_dir.is_dir():
+        sys.exit(f"FATAL: halo shard dir does not exist: {halo_dir}")
+
+    finite, massless = {}, None
+    for f in sorted(halo_dir.glob("shard_halo_*.npz")):
+        with np.load(f, allow_pickle=True) as d:
+            rec = {k: d[k] for k in d.files}
+        rec["_file"] = f.name
+        if bool(_scalar(rec["massless"])):
+            massless = rec
+        else:
+            finite[int(_scalar(rec["il"]))] = rec
+
+    if not finite and massless is None:
+        sys.exit(f"FATAL: no halo shards found in {halo_dir}")
+    n_finite = len(finite)
+    missing = [il for il in range(n_finite) if il not in finite]
+    if missing:
+        sys.exit(f"FATAL: halo missing finite il shards {missing}")
+    if massless is None:
+        sys.exit("FATAL: halo missing shard_halo_massless.npz")
+
+    fin_recs = [finite[il] for il in range(n_finite)]
+    lam_by_il = np.array([float(_scalar(r["lamb"])) for r in fin_recs])
+    order = np.argsort(lam_by_il, kind="stable")
+    fin_recs = [fin_recs[i] for i in order]
+    lambda_finite = lam_by_il[order].astype(np.float64)
+
+    ref = fin_recs[0]
+    ms = np.asarray(ref["ms"], dtype=np.float64)
+    alphas_n = np.asarray(ref["alphas_n"], dtype=np.float64)
+    for rec in fin_recs + [massless]:
+        if not np.array_equal(np.asarray(rec["ms"], dtype=np.float64), ms):
+            sys.exit(f"FATAL: halo:{rec['_file']} mass axis differs")
+        if not np.array_equal(np.asarray(rec["alphas_n"], dtype=np.float64), alphas_n):
+            sys.exit(f"FATAL: halo:{rec['_file']} alpha axis differs")
+
+    n_a, n_m = alphas_n.size, ms.size
+    L = n_finite + 1
+    nt = np.full((n_a, n_m, L), np.nan, dtype=np.float64)
+    bmax = np.full((n_a, n_m, L), np.nan, dtype=np.float64)
+    for li, rec in enumerate(fin_recs + [massless]):
+        nt[:, :, li] = np.asarray(rec["nt"], dtype=np.float64)
+        bmax[:, :, li] = np.asarray(rec["bmax_m"], dtype=np.float64)
+    return dict(ms=ms, alphas_n=alphas_n, lambda_finite=lambda_finite,
+                n_finite=n_finite, n_transit=nt, bmax=bmax,
+                shard_files=[r["_file"] for r in (fin_recs + [massless])])
+
+
+def cross_check_lambda(atm, noatm, halo_d):
+    """The three passes must share the finite-lambda axis (hard gate)."""
+    la, ln, lh = atm["lambda_finite"], noatm["lambda_finite"], halo_d["lambda_finite"]
+    if la.shape != ln.shape or not np.array_equal(la, ln):
+        sys.exit(f"FATAL: atm/noatm finite-lambda axes differ "
+                 f"(atm n={la.size}, noatm n={ln.size})")
+    if lh.shape != la.shape or not np.array_equal(lh, la):
+        sys.exit(f"FATAL: halo finite-lambda axis differs from atm/noatm "
+                 f"(halo n={lh.size})")
+    return la
+
+
+# ── status census ─────────────────────────────────────────────────────────────
+STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>40", 4: "mu==0"}
+
+
+def print_status_report(pass_name, pd):
+    """Per-status counts + every status-1 cell. Warn, never abort."""
+    st = pd["status"]
+    print(f"\n── status census: {pass_name} "
+          f"(cube {st.shape} = mode,alpha,mass,lambda) ──")
+    total = st.size
+    for code in sorted(STATUS_NAMES):
+        c = int(np.count_nonzero(st == code))
+        print(f"  status {code} {STATUS_NAMES[code]:>10}: {c:>10d}  "
+              f"({100.0 * c / total:5.2f}%)")
+    lambdas = list(pd["lambda_finite"]) + [np.inf]
+    ones = np.argwhere(st == 1)
+    print(f"  status-1 (exception) cells: {len(ones)}")
+    for (k, ia, im, li) in ones:
+        lam = lambdas[li]
+        print(f"    [{pass_name}] il={li} lambda={lam:.3e} mode={k + 1} "
+              f"alpha_n={pd['alphas_n'][ia]:.3e} m={pd['ms'][im]:.3e} GeV")
+
+
+# ── /reference_curves (production fidelity, notebook 02 showcase) ─────────────
+def compute_reference_curves(quick=False):
+    """Notebook-02 showcase arrival-speed distributions + raw spectra.
+
+    m = 1e8 GeV, alpha_n = 1e-3. Speed grid v = linspace(Q_THRESH/1e8/10, VESC,
+    500). fv_shm = SHM; fv_<tag> via the attenuation ODE per tag. Raw dR/dq on
+    q = geomspace(1e2, 1e5, 160) with the arrival f(v) FIXED at the 200 um
+    attenuated distribution for every curve (mirrors notebook 02 exactly).
+    """
+    n_grid = 80 if quick else 400
+    n_shm = int(1e5) if quick else int(3e5)
+    print(f"\ncomputing /reference_curves (n_grid={n_grid}, n_shm={n_shm}) ...")
+    t0 = time.time()
+
+    v_min = config.Q_THRESH / REF_M / 10.0
+    v = np.linspace(v_min, config.VESC, 500)
+    q_gev = np.geomspace(1e2, 1e5, 160)
+
+    v_i_samples = atmosphere.sample_shm(n_shm, rng=np.random.default_rng(SEED))
+
+    out = {"v": v.astype(np.float64), "q_gev": q_gev.astype(np.float64),
+           "fv": {}, "survival": {}, "drdq": {}}
+
+    # SHM baseline (unattenuated); survival fraction = 1.0 by construction
+    out["fv"]["shm"] = halo.standard_halo_model(v).astype(np.float32)
+    out["survival"]["shm"] = 1.0
+
+    f_v_f_ref = None   # the 200 um attenuated distribution, reused for all dR/dq
+    for tag in TAGS:
+        lamb = TAG_LAMBDA[tag]
+        v_f_samples = atmosphere.compute_v_f_distribution(
+            REF_ALPHA_N, lamb, REF_M, v_i_samples, v_min=v_min, n_grid=n_grid)
+        f_v_f, f_survive = atmosphere.compute_f_vf(v_f_samples, v_min)
+        out["fv"][tag] = np.asarray(f_v_f(v), dtype=np.float32)
+        out["survival"][tag] = float(f_survive)
+        if tag == REF_TAG_FOR_SPECTRA:
+            f_v_f_ref = f_v_f
+        print(f"    {tag:>6}: survival = {f_survive:.4f}")
+
+    assert f_v_f_ref is not None, "200um tag missing from TAGS"
+
+    # raw dR/dq for each tag + massless, arrival f(v) fixed at 200 um
+    out["drdq"]["massless"] = np.asarray(
+        rate.differential_rate_trapz(q_gev, REF_ALPHA_N, REF_M, f_v_f_ref,
+                                     rate.make_xsec(None), eff=None),
+        dtype=np.float32)
+    for tag in TAGS:
+        xs = rate.make_xsec(TAG_LAMBDA[tag])   # auto dispatch (not force_ln)
+        out["drdq"][tag] = np.asarray(
+            rate.differential_rate_trapz(q_gev, REF_ALPHA_N, REF_M, f_v_f_ref,
+                                         xs, eff=None),
+            dtype=np.float32)
+    print(f"  reference curves done ({time.time() - t0:.0f}s)")
+    return out
+
+
+# ── /detector: events, efficiency curves, blip momenta ────────────────────────
+def load_events():
+    """events_mode{n} in GeV from notebooks/data_mode{n}.txt (source of truth)."""
+    out = {}
+    for n in MODES:
+        f = REPO / "notebooks" / f"data_mode{n}.txt"
+        if f.exists():
+            out[n] = np.atleast_1d(np.loadtxt(f)).astype(np.float64) / 1e9
+        else:
+            out[n] = None
+    return out
+
+
+def load_efficiency_table():
+    """The committed efficiency curves, copied verbatim (key names preserved)."""
+    tbl = REPO / "luhdm" / "reference_data" / "efficiency_curves.npz"
+    out = {}
+    with np.load(tbl) as d:
+        for n in MODES:
+            for key in (f"q_gev_{n}", f"eff_{n}_df2", f"eff_{n}_df3"):
+                out[key] = np.asarray(d[key], dtype=np.float64)
+    return out
+
+
+def extract_blips():
+    """All blip momenta [eV] per mode, reproduced from the notebook-00 source.
+
+    No cache exists, so we replay ``blip_momenta_eV`` against the raw hdf5 the
+    notebook reads. If the raw data/ files are absent (or anything else breaks)
+    we return None for that mode — the caller writes a placeholder with
+    ``missing=true`` and warns loudly; assembly never fails on this.
+    """
+    data_dir = REPO / "data"
+    hdf = data_dir / "fit_data_temp_lockin_transients_selected.hdf5"
+    npz = data_dir / "selected_data_efficiency_curves.npz"
+    if not hdf.exists() or not npz.exists():
+        print(f"WARNING: raw blip source absent ({hdf.name}/{npz.name}); "
+              "writing empty all_blips placeholders (missing=true)")
+        return {n: None for n in MODES}
+    try:
+        import pandas as pd
+        C_LIGHT = 2.99792458e8
+        E_CHARGE = 1.602176634e-19
+        EV_PER_SI = C_LIGHT / E_CHARGE
+        df = pd.read_hdf(hdf)
+        with np.load(npz) as d:
+            dv_bins = {n: d[f"dv_bins_{n}"] for n in MODES}
+        _dv_volts = np.logspace(-6, -3, 400)
+        K = {n: float(np.median(dv_bins[n] / _dv_volts)) for n in MODES}
+
+        def blip_momenta_eV(mode):
+            out = []
+            q_col = df[f"transient_q_{mode}"]
+            dv_col = df[f"transient_dv_hat_{mode}"]
+            up_col = df[f"upcrossings_{mode}"]
+            for q, dv, ups in zip(q_col, dv_col, up_col):
+                if not len(ups):
+                    continue
+                q = np.asarray(q)
+                dv = np.asarray(dv)
+                for start_i, end_i in ups:
+                    k = start_i + int(np.argmax(q[start_i:end_i + 1]))
+                    p_si = abs(dv[k]) * K[mode]
+                    out.append(p_si * EV_PER_SI)
+            return np.array(sorted(out), dtype=np.float64)
+
+        blips = {n: blip_momenta_eV(n) for n in MODES}
+        for n in MODES:
+            print(f"  mode {n}: extracted {blips[n].size} blips [eV]")
+        return blips
+    except Exception as err:  # noqa: BLE001
+        print(f"WARNING: blip extraction failed ({err}); "
+              "writing empty all_blips placeholders (missing=true)")
+        return {n: None for n in MODES}
+
+
+# ── HDF5 writer ───────────────────────────────────────────────────────────────
+def _ds(grp, name, data, units_s, desc, *, cube=False, chunks=None):
+    """Create a dataset with units/description attrs, optionally compressed."""
+    data = np.asarray(data)
+    kw = {}
+    if cube:
+        kw = dict(compression="gzip", compression_opts=4, shuffle=True,
+                  chunks=chunks)
+    d = grp.create_dataset(name, data=data, **kw)
+    d.attrs["units"] = units_s
+    d.attrs["description"] = desc
+    return d
+
+
+def _attach_scales(dset, scale_dsets, labels, flat_axes):
+    """Attach HDF5 dimension scales + a flat axes attr (order = dataset order)."""
+    for i, (sc, lab) in enumerate(zip(scale_dsets, labels)):
+        try:
+            dset.dims[i].attach_scale(sc)
+            dset.dims[i].label = lab
+        except Exception as err:  # noqa: BLE001
+            print(f"WARNING: could not attach scale {lab} to {dset.name}: {err}")
+    dset.attrs["axes"] = flat_axes
+
+
+def _mode_plane_chunks(shape, has_mode):
+    """One mode-plane chunk: (1, n_a, n_m, L) or the whole (n_a, n_m, L)."""
+    if has_mode:
+        return (1,) + tuple(shape[1:])
+    return tuple(shape)
+
+
+def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
+             version_tag, quick_reference):
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+
+    # lambda axis in file: finite ascending + inf last; m_phi = 1/conv, 0 at inf
+    lambda_m = np.concatenate([lambda_finite, [np.inf]]).astype(np.float64)
+    with np.errstate(divide="ignore"):
+        m_phi = 1.0 / units.conv_m2pGeV(lambda_m)
+    m_phi[-1] = 0.0
+    L = lambda_m.size
+    n_finite = lambda_finite.size
+
+    commit, dirty = git_provenance()
+    pkgs = package_versions()
+    fid = atm["fidelity"]
+
+    with h5py.File(tmp, "w") as h5:
+        # ── /axes ──
+        ax = h5.create_group("axes")
+        d_mode = ax.create_dataset("mode", data=np.array(MODES, dtype=np.uint8))
+        d_mode.attrs["units"] = "1"
+        d_mode.attrs["description"] = "sensor mode index (1,2,3)"
+        d_alpha = _ds(ax, "alpha_n", atm["alphas_n"], "1",
+                      "per-neutron coupling alpha_n")
+        d_mass = _ds(ax, "mass_gev", atm["ms"], "GeV",
+                     "dark-matter mass (atm 119-tier grid)")
+        d_mass_no = _ds(ax, "mass_noatm_gev", noatm["ms"], "GeV",
+                        "dark-matter mass (noatm 600-tier grid)")
+        d_lam = _ds(ax, "lambda_m", lambda_m, "m",
+                    "mediator range; finite ascending then inf (massless) last")
+        d_lam.attrs["n_finite"] = int(n_finite)
+        d_lam.attrs["tags_json"] = json.dumps(TAG_LAMBDA)
+        d_mphi = _ds(ax, "m_phi_gev", m_phi, "GeV",
+                     "mediator mass = 1/conv_m2pGeV(lambda); exactly 0 at inf")
+        d_mhalo = _ds(ax, "mass_halo_gev", halo_d["ms"], "GeV",
+                      "dark-matter mass (halo/flux-map 64 grid)")
+        d_ahalo = _ds(ax, "alpha_halo_n", halo_d["alphas_n"], "1",
+                      "coupling alpha_n (halo/flux-map 64 grid)")
+        for dd in (d_mode, d_alpha, d_mass, d_mass_no, d_lam, d_mphi,
+                   d_mhalo, d_ahalo):
+            dd.make_scale(dd.name.split("/")[-1])
+
+        # ── /atm and /noatm ──
+        for grp_name, pd_, mass_scale in (("atm", atm, d_mass),
+                                          ("noatm", noatm, d_mass_no)):
+            g = h5.create_group(grp_name)
+            n_a = pd_["alphas_n"].size
+            n_m = pd_["ms"].size
+            cube4 = (3, n_a, n_m, L)
+            ch4 = _mode_plane_chunks(cube4, has_mode=True)
+            ext = _ds(g, "extremeness", pd_["p"].astype(np.float32), "1",
+                      f"optimum-interval extremeness / confidence ({grp_name} "
+                      "pass); NaN where status==1", cube=True, chunks=ch4)
+            muu = _ds(g, "mu", pd_["mu"].astype(np.float32), "counts",
+                      f"expected signal counts mu ({grp_name}); NaN where "
+                      "status==1", cube=True, chunks=ch4)
+            ntc = np.maximum(pd_["n_transit"], 0.0).astype(np.float32)
+            ntd = _ds(g, "n_transit", ntc, "counts",
+                      f"expected within-reach transits ({grp_name}); clipped "
+                      ">=0 (KDE tail can oscillate slightly negative)",
+                      cube=True, chunks=_mode_plane_chunks((n_a, n_m, L), False))
+            ntd.attrs["clipped_nonnegative"] = True
+            stt = _ds(g, "status", pd_["status"], "enum",
+                      "0=ok(MC) 1=exception 2=mu<0.2 3=mu>40 4=mu==0",
+                      cube=True, chunks=ch4)
+            _attach_scales(ext, (d_mode, d_alpha, mass_scale, d_lam),
+                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
+                           "mode,alpha_n,mass_gev,lambda_m")
+            _attach_scales(muu, (d_mode, d_alpha, mass_scale, d_lam),
+                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
+                           "mode,alpha_n,mass_gev,lambda_m")
+            _attach_scales(ntd, (d_alpha, mass_scale, d_lam),
+                           ("alpha_n", "mass_gev", "lambda_m"),
+                           "alpha_n,mass_gev,lambda_m")
+            _attach_scales(stt, (d_mode, d_alpha, mass_scale, d_lam),
+                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
+                           "mode,alpha_n,mass_gev,lambda_m")
+
+        # ── /halo ──
+        gh = h5.create_group("halo")
+        hshape = (halo_d["alphas_n"].size, halo_d["ms"].size, L)
+        hch = _mode_plane_chunks(hshape, has_mode=False)
+        hnt = _ds(gh, "n_transit", halo_d["n_transit"].astype(np.float32),
+                  "counts", "unattenuated-halo expected transits",
+                  cube=True, chunks=hch)
+        hbm = _ds(gh, "bmax", halo_d["bmax"].astype(np.float32), "m",
+                  "flux-averaged threshold reach sqrt(<pi b^2>/pi)",
+                  cube=True, chunks=hch)
+        for dd in (hnt, hbm):
+            _attach_scales(dd, (d_ahalo, d_mhalo, d_lam),
+                           ("alpha_halo_n", "mass_halo_gev", "lambda_m"),
+                           "alpha_halo_n,mass_halo_gev,lambda_m")
+
+        # ── /detector ──
+        gd = h5.create_group("detector")
+        exps = gd.create_dataset("exposure_s", data=float(atm["t_total"]))
+        exps.attrs["units"] = "s"
+        exps.attrs["description"] = "total live-time exposure (config.T_EXPOSURE)"
+        for n in MODES:
+            ev = detector["events"][n]
+            if ev is None:
+                ev = np.empty(0, dtype=np.float64)
+            _ds(gd, f"events_mode{n}", ev, "GeV",
+                f"observed impulse candidates, mode {n} (from data_mode{n}.txt)")
+            blip = detector["blips"][n]
+            if blip is None:
+                dblip = _ds(gd, f"all_blips_mode{n}",
+                            np.empty(0, dtype=np.float64), "eV",
+                            f"all q>100 blip momenta, mode {n} (raw source absent)")
+                dblip.attrs["missing"] = True
+            else:
+                _ds(gd, f"all_blips_mode{n}", blip, "eV",
+                    f"all q>100 blip momenta, mode {n}")
+        for key, arr in detector["efficiency"].items():
+            unit = "GeV" if key.startswith("q_gev") else "1"
+            _ds(gd, key, arr, unit,
+                f"efficiency table array '{key}' (verbatim from "
+                "efficiency_curves.npz)")
+
+        # ── /reference_curves ──
+        gr = h5.create_group("reference_curves")
+        _ds(gr, "v", ref["v"], "c",
+            "arrival-speed grid v/c for the showcase point (m=1e8, alpha_n=1e-3)")
+        d_shm = _ds(gr, "fv_shm", ref["fv"]["shm"], "(v/c)^-1",
+                    "unattenuated SHM arrival-speed distribution")
+        d_shm.attrs["survival_fraction"] = float(ref["survival"]["shm"])
+        for tag in TAGS:
+            dfv = _ds(gr, f"fv_{tag}", ref["fv"][tag], "(v/c)^-1",
+                      f"attenuated arrival-speed distribution, lambda={tag}")
+            dfv.attrs["survival_fraction"] = float(ref["survival"][tag])
+        _ds(gr, "q_gev", ref["q_gev"], "GeV",
+            "momentum-kick grid for the raw dR/dq spectra")
+        _ds(gr, "drdq_massless", ref["drdq"]["massless"], "s^-1 GeV^-1",
+            "raw dR/dq (massless), arrival f(v) fixed at 200um")
+        for tag in TAGS:
+            _ds(gr, f"drdq_{tag}", ref["drdq"][tag], "s^-1 GeV^-1",
+                f"raw dR/dq (lambda={tag}), arrival f(v) fixed at 200um")
+
+        # ── root attrs ──
+        a = h5.attrs
+        a["file_format"] = FILE_FORMAT
+        a["version"] = FORMAT_VERSION
+        a["version_tag"] = version_tag
+        a["schema_version"] = SCHEMA_VERSION
+        a["created"] = _iso_now()
+        a["git_commit"] = commit
+        a["git_dirty"] = bool(dirty) if dirty is not None else False
+        a["seed"] = SEED
+        a["q_thresh_gev"] = float(config.Q_THRESH)
+        a["r_eff_m"] = float(config.R_EFF)
+        a["f_x"] = float(config.F_X)
+        a["rho_dm_gev4"] = float(config.RHO_DM)
+        a["n_neutrons"] = float(config.N_NEUTRONS)
+        a["t_exposure_s"] = float(atm["t_total"])
+        a["m_planck_gev"] = float(M_PLANCK)
+        a["confidence_recommended"] = float(CONFIDENCE)
+        a["q_hi_ref_gev"] = float(Q_HI_REF)
+        a["fid_n_ode"] = int(fid.get("n_ode", -1))
+        a["fid_n_shm"] = int(fid.get("n_shm", -1))
+        a["fid_n_q"] = int(fid.get("n_q", -1))
+        a["fid_q_span"] = float(fid.get("q_span", float("nan")))
+        a["fid_n_mc"] = int(fid.get("n_mc", -1))
+        a["fid_json"] = json.dumps(fid)
+        a["df"] = int(atm["df"])
+        a["reference_curves_fidelity"] = ("quick" if quick_reference
+                                          else "production")
+        for k, vv in pkgs.items():
+            a[f"pkg_{k}"] = vv
+        a["packages_json"] = json.dumps(pkgs)
+
+    os.replace(tmp, out_path)
+    return out_path, commit, dirty, pkgs
+
+
+# ── provenance.json + SHA256SUMS ─────────────────────────────────────────────
+def _read_run_config(shard_dir):
+    f = Path(shard_dir) / "run_config.json"
+    if not f.exists():
+        return None
+    try:
+        return json.loads(f.read_text())
+    except Exception as err:  # noqa: BLE001
+        print(f"WARNING: could not parse {f}: {err}")
+        return None
+
+
+def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm,
+                     commit, dirty, pkgs, out_path, version_tag):
+    prov = {
+        "assembly": {
+            "created": _iso_now(),
+            "hostname": socket.gethostname(),
+            "platform": platform.platform(),
+            "argv": " ".join(sys.argv),
+            "git_commit": commit,
+            "git_dirty": bool(dirty) if dirty is not None else None,
+            "packages": pkgs,
+            "version_tag": version_tag,
+            "output": str(out_path),
+            "fidelity": atm["fidelity"],
+            "n_finite_lambda": int(atm["n_finite"]),
+            "seed": SEED,
+            "t_exposure_s": float(atm["t_total"]),
+        },
+        "shard_dirs": {
+            "atm": str(atm_dir), "noatm": str(noatm_dir), "halo": str(halo_dir),
+        },
+        "run_config": {
+            "atm": _read_run_config(atm_dir),
+            "noatm": _read_run_config(noatm_dir),
+            "halo": _read_run_config(halo_dir),
+        },
+    }
+    f = Path(release_dir) / "provenance.json"
+    f.write_text(json.dumps(prov, indent=2, default=str))
+    print(f"wrote {f}")
+    return f
+
+
+def write_sha256(release_dir, out_path):
+    h = hashlib.sha256()
+    with open(out_path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    line = f"{h.hexdigest()}  {Path(out_path).name}\n"
+    f = Path(release_dir) / "SHA256SUMS"
+    f.write_text(line)
+    print(f"wrote {f}: {line.strip()}")
+    return f
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--atm-dir", required=True)
+    ap.add_argument("--noatm-dir", required=True)
+    ap.add_argument("--halo-dir", required=True)
+    ap.add_argument("--out", default=str(REPO / "release" /
+                                         "luhdm_datarelease_v1.h5"))
+    ap.add_argument("--version-tag", default="v1.0")
+    ap.add_argument("--quick-reference", action="store_true",
+                    help="reference curves at quick fidelity (n_grid=80, "
+                         "n_shm=1e5) for smoke runs; default is production "
+                         "(n_grid=400, n_shm=3e5)")
+    args = ap.parse_args()
+
+    print("=" * 72)
+    print("luhdm data-release assembly")
+    print("=" * 72)
+
+    print("\nloading atm shards ...")
+    atm = load_pass(args.atm_dir, "atm")
+    print(f"  atm: {atm['n_finite']} finite lambda + massless, "
+          f"mass {atm['ms'].size}, alpha {atm['alphas_n'].size}")
+    print("loading noatm shards ...")
+    noatm = load_pass(args.noatm_dir, "noatm")
+    print(f"  noatm: {noatm['n_finite']} finite lambda + massless, "
+          f"mass {noatm['ms'].size}, alpha {noatm['alphas_n'].size}")
+    print("loading halo shards ...")
+    halo_d = load_halo(args.halo_dir)
+    print(f"  halo: {halo_d['n_finite']} finite lambda + massless, "
+          f"grid {halo_d['alphas_n'].size}x{halo_d['ms'].size}")
+
+    lambda_finite = cross_check_lambda(atm, noatm, halo_d)
+    print(f"\nfinite-lambda axis agrees across passes: {lambda_finite.size} values"
+          f"  [{lambda_finite.min():.3e} .. {lambda_finite.max():.3e}] m")
+
+    print_status_report("atm", atm)
+    print_status_report("noatm", noatm)
+
+    ref = compute_reference_curves(quick=args.quick_reference)
+
+    print("\nloading detector products ...")
+    events = load_events()
+    for n in MODES:
+        if events[n] is None:
+            print(f"WARNING: notebooks/data_mode{n}.txt missing; "
+                  f"using atm-shard events for mode {n}")
+            events[n] = atm["events"][n]
+        else:
+            if not np.allclose(events[n], atm["events"][n],
+                               rtol=1e-9, atol=0):
+                print(f"WARNING: data_mode{n}.txt events differ from atm-shard "
+                      f"events (mode {n}); using data_mode{n}.txt")
+    efficiency_table = load_efficiency_table()
+    blips = extract_blips()
+    detector = {"events": events, "efficiency": efficiency_table, "blips": blips}
+
+    print("\nwriting HDF5 ...")
+    out_path, commit, dirty, pkgs = write_h5(
+        args.out, atm, noatm, halo_d, lambda_finite, ref, detector,
+        args.version_tag, args.quick_reference)
+    print(f"wrote {out_path}  ({out_path.stat().st_size / 1e6:.2f} MB)")
+
+    release_dir = out_path.parent
+    write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
+                     atm, commit, dirty, pkgs, out_path, args.version_tag)
+    write_sha256(release_dir, out_path)
+
+    print("\n" + "=" * 72)
+    print(f"ASSEMBLY COMPLETE: {out_path}")
+    print(f"  git_commit={commit}{' (DIRTY)' if dirty else ''}")
+    print("=" * 72)
+
+
+if __name__ == "__main__":
+    main()

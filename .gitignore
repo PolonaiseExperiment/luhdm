@@ -16,5 +16,8 @@ data/
 # derived scan caches (large, regenerable via scripts/scan_grid.py); not versioned
 notebooks/computation_cache/
 notebooks/computation_cache_noatm/
+# data release: the HDF5 goes to Zenodo, not git; shards are build intermediates
+release/*.h5
+release_shards/
 # scratch: cache/figure backups, working notes, anything not for git
 /ignore/
