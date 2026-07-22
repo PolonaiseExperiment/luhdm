@@ -262,6 +262,41 @@ def cross_section_rutherford_projection(q, alpha, v):
     return dsigma_rutherford
 
 
+def cross_section_rutherford_projection_capped(q, alpha, v, b_constrained_max):
+    """Capped massless (Coulomb) projected dsigma/dq in GeV^-3.
+
+    The uncapped Coulomb projection is
+    :func:`cross_section_rutherford_projection`; capping the impact parameter at
+    ``b_constrained_max`` (metres) removes the contribution of flybys reaching
+    beyond the cap by multiplying by a retained fraction. The massless reach is
+
+        b_max(q) = 2 alpha / (q v) / conv_m2pGeV(1)   [m]
+
+    (exactly the massless branch of ``impact_parameter_max_any`` in rate.py).
+    With ``r = b_max(q) / b_constrained_max`` the cap bites only where ``r > 1``
+    (b_max > b_cap); there
+
+        retained(r) = 1 - (2/pi) (sqrt(r^2-1)/r^2 + arctan(sqrt(r^2-1)))
+
+    and ``retained = 1`` for ``r <= 1``. Properties: retained(1) = 1 (no
+    suppression at the reach edge), retained -> 0 as r -> inf (full
+    suppression), monotonically decreasing in r. Vectorized over q and v.
+    """
+    uncapped = cross_section_rutherford_projection(q, alpha, v)
+    b_max = 2 * alpha / (q * v) / units.conv_m2pGeV(1.0)
+    r = np.asarray(b_max / b_constrained_max, dtype=float)
+    bites = r > 1.0
+    # guard the sqrt/division where the cap does not bite (r <= 1)
+    r2 = np.where(bites, r * r, 1.0)
+    s = np.sqrt(r2 - 1.0)
+    retained = np.where(
+        bites, 1.0 - (2.0 / np.pi) * (s / r2 + np.arctan(s)), 1.0)
+    # the 1 - (...) form loses precision for r >~ 1e4 (true value ~ 1/(pi r^3))
+    # and can dip slightly negative; a cross section is never negative.
+    retained = np.maximum(retained, 0.0)
+    return uncapped * retained
+
+
 def q_tilde_map(q, alpha, lamb, R_eff, v):
     """Map physical momentum transfer to dimensionless q_tilde."""
     F_factor = shape_factor(R_eff / lamb)
@@ -286,12 +321,29 @@ def impact_parameter_max(q, alpha, lamb, R_eff, v):
     return b
 
 
-def dsigma_dq_tilde(q_tilde, xi, K1_inv):
-    """Dimensionless projected differential cross section."""
+def dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=None):
+    """Dimensionless projected differential cross section.
+
+    ``xi_cap`` (= b_constrained_max/lamb) optionally caps the impact parameter:
+    the outer b-limit becomes min(b_constrained_max, b_max(q)). In the hyperbolic
+    substitution t=0 is the OUTER edge b=b_max(q) and t=t_max is the INNER edge
+    b=R_eff, so the cap raises the LOWER limit to t_min and only bites when
+    b_constrained_max < b_max(q), i.e. q_tilde < K1(xi_cap). ``xi_cap=None``
+    (default) leaves the integral from t=0 unchanged.
+    """
     K1_xi = kn(1, xi)
     if q_tilde >= K1_xi:
         return 0.0
     t_max = np.arccosh(K1_xi / q_tilde)
+
+    t_min = 0.0
+    if xi_cap is not None:
+        K1_cap = kn(1, xi_cap)
+        if q_tilde < K1_cap:            # cap inside the reach: b_c < b_max(q)
+            t_min = np.arccosh(K1_cap / q_tilde)
+    if xi_cap is not None and xi_cap < xi:
+        raise ValueError(
+            f"xi_cap ({xi_cap}) < xi ({xi}): cap below the inner cutoff")
 
     def integrand(t):
         kappa = q_tilde * np.cosh(t)
@@ -299,21 +351,35 @@ def dsigma_dq_tilde(q_tilde, xi, K1_inv):
         dK1_dbeta = -0.5 * (kn(0, beta) + kn(2, beta))
         return beta / np.abs(dK1_dbeta)
 
-    result, _ = quad(integrand, 0, t_max, limit=100)
+    result, _ = quad(integrand, t_min, t_max, limit=100)
     return result
 
 
 def make_dsigma_dq_interpolant(q_tilde_min,
                                R_eff,
                                lamb,
-                               N_points=1000):
-    """Tabulate dsigma/dq_tilde once; returns a linear interpolant."""
+                               N_points=1000,
+                               b_constrained_max=None):
+    """Tabulate dsigma/dq_tilde once; returns a linear interpolant.
+
+    ``b_constrained_max`` (metres, or None) optionally caps the outer edge of
+    the impact-parameter integral at min(b_constrained_max, b_max(q)); None is a
+    byte-for-byte no-op.
+    """
     xi = R_eff / lamb
     q_tilde_max = kn(1, xi)
     q_tilde_values = np.geomspace(q_tilde_min, q_tilde_max, N_points)
     K1_inv = interpolant_k1_inverse
+    if b_constrained_max is None:
+        xi_cap = None
+    else:
+        if b_constrained_max < R_eff:
+            raise ValueError(
+                f"b_constrained_max ({b_constrained_max} m) below sensor "
+                f"radius R_eff ({R_eff} m)")
+        xi_cap = b_constrained_max / lamb
     dsigma_values = np.array(
-        [dsigma_dq_tilde(q_tilde, xi, K1_inv)
+        [dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=xi_cap)
          for q_tilde in tqdm(q_tilde_values)])
     return interp1d(q_tilde_values, dsigma_values, kind='linear')
 
@@ -379,10 +445,24 @@ def interpolant_ln_k1_inverse(ln_k1_values):
     return out
 
 
-def ln_dsigma_dq_tilde(delta, ln_q_tilde_max):
-    """ln of the dimensionless dsigma/dq_tilde at Delta = ln(qt_max/qt)."""
+def ln_dsigma_dq_tilde(delta, ln_q_tilde_max, ln_k1_cap=None):
+    """ln of the dimensionless dsigma/dq_tilde at Delta = ln(qt_max/qt).
+
+    ``ln_k1_cap`` (= ln K1(b_constrained_max/lamb), or None) optionally caps the
+    impact parameter: the cap raises the lower integration limit to t_min and
+    bites only when b_constrained_max < b_max(q), i.e. when
+    c = ln(K1(xi_cap)/q_tilde) > 0. ``ln_k1_cap=None`` is a byte-for-byte no-op.
+    """
     t_max = np.arccosh(np.exp(delta)) if delta < 30 else delta + np.log(2.0)
-    ts = np.linspace(0.0, t_max, 800)
+    t_min = 0.0
+    if ln_k1_cap is not None:
+        c = ln_k1_cap - ln_q_tilde_max + delta   # = ln(K1(xi_cap)/q_tilde)
+        if c > 0.0:
+            t_min = np.arccosh(np.exp(c))
+    # xi_cap < xi <=> ln K1(xi_cap) > ln K1(xi) = ln_q_tilde_max (K1 decreasing)
+    if ln_k1_cap is not None and ln_k1_cap > ln_q_tilde_max:
+        raise ValueError("cap below the inner cutoff")
+    ts = np.linspace(t_min, t_max, 800)
     ln_kappa = (ln_q_tilde_max - delta) + np.log(np.cosh(ts))
     beta = interpolant_ln_k1_inverse(ln_kappa)
     # |dK1/dbeta| = (K0 + K2)/2; the e^-beta of kve carried in the log
@@ -392,12 +472,27 @@ def ln_dsigma_dq_tilde(delta, ln_q_tilde_max):
     return peak + np.log(np.trapezoid(np.exp(ln_integrand - peak), ts))
 
 
-def make_ln_dsigma_dq_interpolant(R_eff, lamb, delta_max=32.0, N_points=400):
-    """Tabulate ln(dsigma/dq_tilde) vs Delta = ln(qt_max/qt) once."""
+def make_ln_dsigma_dq_interpolant(R_eff, lamb, delta_max=32.0, N_points=400,
+                                  b_constrained_max=None):
+    """Tabulate ln(dsigma/dq_tilde) vs Delta = ln(qt_max/qt) once.
+
+    ``b_constrained_max`` (metres, or None) optionally caps the outer edge of
+    the impact-parameter integral at min(b_constrained_max, b_max(q)); None is a
+    byte-for-byte no-op.
+    """
     xi = R_eff / lamb
     ln_q_tilde_max = float(ln_k1(xi))
+    if b_constrained_max is None:
+        ln_k1_cap = None
+    else:
+        if b_constrained_max < R_eff:
+            raise ValueError(
+                f"b_constrained_max ({b_constrained_max} m) below sensor "
+                f"radius R_eff ({R_eff} m)")
+        ln_k1_cap = float(ln_k1(b_constrained_max / lamb))
     deltas = np.linspace(1e-4, delta_max, N_points)
-    ln_values = [ln_dsigma_dq_tilde(d, ln_q_tilde_max) for d in deltas]
+    ln_values = [ln_dsigma_dq_tilde(d, ln_q_tilde_max, ln_k1_cap=ln_k1_cap)
+                 for d in deltas]
     return interp1d(deltas, ln_values, bounds_error=False, fill_value=-np.inf)
 
 

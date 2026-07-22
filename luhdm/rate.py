@@ -19,43 +19,66 @@ Q_THRESH = config.Q_THRESH
 R_EFF = config.R_EFF
 
 
-def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False):
+def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False,
+              b_constrained_max=None):
     """Build the cross-section handle for one mediator range.
 
     lamb : mediator range in meters, or None for massless (analytic).
     force_ln : use the (fast, trapz-based) log-space tabulation even at small
     xi, e.g. when tabulating many ranges; validated against the direct path
     in tests/test_cross_section_ln.py.
+    b_constrained_max : optional impact-parameter cap [m]. Clips the outer edge
+    of the b-integral to min(b_constrained_max, b_max(q)) in BOTH the cross
+    section dsigma/dq and the geometric transit reach (impact_parameter_max_any),
+    so n_transit / halo bmax stay consistent. None = uncapped, a byte-for-byte
+    no-op relative to the pre-cap pipeline for finite and massless mediators.
     Returns a dict consumed by dsigma_dq_any / differential_rate_trapz /
     expected_transits / transit_count_halo.
     """
     if lamb is None:
-        return dict(lamb=None, use_ln=False, interp=None)
+        return dict(lamb=None, use_ln=False, interp=None,
+                    b_constrained_max=b_constrained_max)
     xi = R_eff / lamb
     use_ln = force_ln or xi > 30
     if use_ln:
-        interp = cross_section.make_ln_dsigma_dq_interpolant(R_eff, lamb)
+        interp = cross_section.make_ln_dsigma_dq_interpolant(
+            R_eff, lamb, b_constrained_max=b_constrained_max)
     else:
         interp = cross_section.make_dsigma_dq_interpolant(
-            1e-25, R_eff, lamb, N_points=N_points)
-    return dict(lamb=lamb, use_ln=use_ln, interp=interp, R_eff=R_eff)
+            1e-25, R_eff, lamb, N_points=N_points,
+            b_constrained_max=b_constrained_max)
+    return dict(lamb=lamb, use_ln=use_ln, interp=interp, R_eff=R_eff,
+                b_constrained_max=b_constrained_max)
 
 
 def dsigma_dq_any(q, alpha, vs, xs, R_eff=R_EFF):
     """Projected dsigma/dq in GeV^-3, dispatching on the mediator range."""
     if xs["lamb"] is None:
+        if xs.get("b_constrained_max") is not None:
+            return cross_section.cross_section_rutherford_projection_capped(
+                q, alpha, vs, xs["b_constrained_max"])
         return cross_section.cross_section_rutherford_projection(q, alpha, vs)
+    # For finite lamb the cap is already baked into xs["interp"].
     fn = cross_section.dsigma_dq_ln if xs["use_ln"] else cross_section.dsigma_dq
     return fn(q, alpha, xs["lamb"], R_eff, vs, xs["interp"])
 
 
 def impact_parameter_max_any(q, alpha, vs, xs, R_eff=R_EFF):
-    """Threshold reach b_max [m], dispatching on the mediator range."""
+    """Threshold reach b_max [m], dispatching on the mediator range.
+
+    The b_constrained_max cap (when set on ``xs``) clips the reach to
+    min(b_max, b_constrained_max) — the same geometric cutoff the cap applies to
+    the cross section — so the transit diagnostics (expected_transits n_transit,
+    transit_count_halo nt/bmax) stay consistent with dsigma/dq.
+    """
     if xs["lamb"] is None:
-        return 2 * alpha / (q * vs) / units.conv_m2pGeV(1.0)  # Coulomb
-    fn = (cross_section.impact_parameter_max_ln if xs["use_ln"]
-          else cross_section.impact_parameter_max)
-    return fn(q, alpha, xs["lamb"], R_eff, vs)
+        b = 2 * alpha / (q * vs) / units.conv_m2pGeV(1.0)  # Coulomb
+    else:
+        fn = (cross_section.impact_parameter_max_ln if xs["use_ln"]
+              else cross_section.impact_parameter_max)
+        b = fn(q, alpha, xs["lamb"], R_eff, vs)
+    cap = xs.get("b_constrained_max")
+    return b if cap is None else np.minimum(b, cap)
 
 
 def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF, eff=None):

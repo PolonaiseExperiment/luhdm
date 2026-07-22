@@ -367,6 +367,10 @@ def main():
                     help="analysis / grid-floor momentum [GeV]")
     ap.add_argument("--massless-lamb", type=float, default=2.0,
                     help="atmospheric-ODE regulator range for the massless slice [m]")
+    ap.add_argument("--b-constrained-max", type=float, default=None,
+                    help="impact-parameter cap [m] applied to the cross section "
+                         "dsigma/dq only (finite and massless); None (default) "
+                         "= uncapped, reproduces the current build exactly")
     ap.add_argument("--data-dir", default=None,
                     help="dir holding data_mode{1,2,3}.txt (default <repo>/notebooks)")
     ap.add_argument("--print-order", action="store_true",
@@ -497,7 +501,8 @@ def main():
         LAMB = lamb
         MASSLESS = massless
         LAMB_ODE = args.massless_lamb if massless else lamb   # unused on noatm/halo
-        XS = rate.make_xsec(None if massless else lamb)       # auto dispatch
+        XS = rate.make_xsec(None if massless else lamb,       # auto dispatch
+                            b_constrained_max=args.b_constrained_max)
 
         print(f"[il={label}] lamb={lamb}  building shard "
               f"({total_cells} cells, {n_chunks} chunks) ...", flush=True)
@@ -547,6 +552,7 @@ def main():
                 path, nt=NT, bmax_m=BMAX, status=ST, ms=MS, alphas_n=ALPHAS,
                 lamb=(np.nan if massless else lamb), massless=massless,
                 il=il_stored, pass_name=pass_name, t_total=T_TOTAL, seed=SEED,
+                b_constrained_max=args.b_constrained_max,
                 schema_version=SCHEMA_VERSION, created=created, argv=argv_str,
                 hostname=hostname, wall_s=wall_s)
         else:
@@ -555,6 +561,7 @@ def main():
                 alphas_n=ALPHAS, lamb=(np.nan if massless else lamb),
                 massless=massless, lamb_ode=LAMB_ODE, il=il_stored,
                 pass_name=pass_name, q_min=Q_MIN, t_total=T_TOTAL, seed=SEED,
+                b_constrained_max=args.b_constrained_max,
                 df=DF, fidelity=str(FID),
                 events_mode1=EVENTS_BY_MODE[0], events_mode2=EVENTS_BY_MODE[1],
                 events_mode3=EVENTS_BY_MODE[2], schema_version=SCHEMA_VERSION,
@@ -565,6 +572,7 @@ def main():
 
     append_run_config(shard_dir, dict(
         argv=sys.argv, pass_name=pass_name,
+        b_constrained_max=args.b_constrained_max,
         axes=dict(n_m=n_m, n_a=n_a, n_l=n_finite + 1, m_tier=(
             None if pass_name == "halo" else (
                 args.m_tier if args.m_tier is not None else
