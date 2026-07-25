@@ -5,7 +5,7 @@ the full optimum-interval analysis as a matrix over
 (sensor mode, coupling α_n, DM mass, mediator range λ), plus the detector
 inputs and reference curves needed to reproduce every figure in `notebooks/`.
 
-- File: `luhdm_datarelease_v1.h5` (not tracked in git; distributed via Zenodo
+- File: `luhdm_datarelease_v2.h5` (not tracked in git; distributed via Zenodo
   at publication — regenerate locally per **Regeneration** below)
 - Integrity: `sha256sum -c SHA256SUMS`
 - Provenance: `provenance.json` (builder + assembly records) and the root
@@ -21,7 +21,7 @@ all work with no luhdm code.
 
 ```python
 from luhdm import release
-rel = release.open_release()                       # release/luhdm_datarelease_v1.h5
+rel = release.open_release()                       # release/luhdm_datarelease_v2.h5
 P = rel.mass_plane("extremeness", mode=1, lam="200um")   # (n_alpha, n_mass)
 lo, hi = rel.excluded_alpha_band(mass=1e8, lam="200um", mode=1)
 rel.cell(mass=1e8, alpha=1e-3, lam="200um", mode=1)      # one-cell dump
@@ -32,7 +32,7 @@ Raw h5py, no luhdm:
 
 ```python
 import h5py
-f = h5py.File("release/luhdm_datarelease_v1.h5", "r")
+f = h5py.File("release/luhdm_datarelease_v2.h5", "r")
 p = f["atm/extremeness"]          # (mode, alpha, mass, lambda), float32
 alpha = f["axes/alpha_n"][:]
 ```
@@ -85,6 +85,45 @@ atmosphere ODE uses a λ = 2 m Coulomb-log regulator, matching the historical
 production convention. The loader resolves the tag `"massless"` to this index;
 `rel.axes.lambda_finite` drops it.
 
+## The impact-parameter cap (v2)
+
+v2 applies an **impact-parameter cap** `b_constrained_max = 0.1 m (10 cm)`: the
+outer limit of the impact-parameter integral is
+
+```
+dσ/dq = ∫_{R_eff}^{min(b_constrained_max, b_max(q))} 2b / (q₀ √(1 − (q/q₀)²)) db
+```
+
+i.e. flybys further than 10 cm from the sensor are excluded. The cap applies to
+**both** the cross section `dσ/dq` **and** the geometric transit reach, so
+`n_transit` and the `halo` `bmax` / `n_transit` diagnostics stay consistent with
+the rate (one clip at the single reach chokepoint,
+`rate.impact_parameter_max_any`). Its value is in the root attribute
+`b_constrained_max_m` (NaN ⇒ uncapped); `rel.b_constrained_max` exposes it.
+
+Which λ the cap touches (α_n = 1, the strongest coupling on the grid):
+
+| channel | v floor | first affected λ index |
+|---|---|---|
+| transit reach (`n_transit`, halo) | 1e-8 (`expected_transits`) | il37, λ = 4.43 mm (b_max = 0.130 m) |
+| cross section `dσ/dq` | q_min/m_max = 8.2e-18 | il35, λ = 2.0 mm (b_max = 0.1015 m) |
+
+il34 (λ = 1.41 mm, b_max = 0.0719 m) is the highest **provably unaffected**
+shard, so v2 reuses the uncapped v1 shards il00–il34 verbatim; il35 upward and
+the massless slice were recomputed with the cap. The reuse was gated by
+recomputing il34 *with* the cap and requiring byte-identity against v1 (it
+passed for both the atm and noatm passes). `provenance.json` →
+`impact_parameter_cap.shards_without_cap_flag` lists the reused shards, and
+`assemble_release.py` refuses to mix two different explicit cap values.
+
+Confirmed against v1: every quantity in every group is bit-identical for
+λ index < 35, and changes only above it — `n_transit` first at il37 and the
+extremeness first at il38, exactly as the table predicts.
+
+The massless (Coulomb) slice uses the exact capped closed form
+`dσ/dq|capped = dσ/dq|uncapped × retained(r)`, `r = b_max(q)/b_constrained_max`,
+`retained(r) = 1 − (2/π)(√(r²−1)/r² + arctan√(r²−1))` for `r > 1`, else 1.
+
 ## Status codes (`status` datasets)
 
 | code | meaning |
@@ -99,7 +138,7 @@ Codes 2/3/4 are exact deterministic outcomes, not failures. Status is per-mode
 (μ depends on each mode's efficiency); a cell-level failure marks all three
 modes with code 1.
 
-## Known issues (v1)
+## Known issues
 
 - **61,116 status-1 cells** (2,607 atm + 58,509 noatm; ~1.3% of the noatm cube)
   in the λ ≈ 8–45 µm shards at the heaviest masses / strongest couplings: the
@@ -149,4 +188,8 @@ Zenodo alongside the paper.
 
 ## Changelog
 
+- **v2** (`v2.0-bcap10cm`) — adds the 10 cm impact-parameter cap
+  `b_constrained_max` to the cross section and the transit reach (see **The
+  impact-parameter cap**). Identical to v1 for λ index < 35. New root attribute
+  `b_constrained_max_m`; new provenance block `impact_parameter_cap`.
 - **v1** — initial release.

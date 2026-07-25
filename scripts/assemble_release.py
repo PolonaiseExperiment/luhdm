@@ -2,7 +2,7 @@
 """Assemble the per-lambda npz shards into the release HDF5 (LOCAL machine only).
 
 remote-node writes float64 npz shards (no h5py there); this script — run on a host
-with h5py — stacks them into ``release/luhdm_datarelease_v1.h5``, the single
+with h5py — stacks them into ``release/luhdm_datarelease_v2.h5``, the single
 source every notebook loads from. It also computes ``/reference_curves`` locally
 at production fidelity (notebook 02's showcase point), copies the detector
 products, embeds full provenance, and writes ``release/provenance.json`` +
@@ -223,6 +223,7 @@ def load_pass(pass_dir, pass_name):
     _check_status_nan(pass_name, p, mu, nt, st)
 
     lambda_ode = float(_scalar(massless.get("lamb_ode", np.nan)))
+    b_cap, cap_unflagged = _cap_provenance(pass_name, all_recs)
     return dict(
         pass_name=pass_name, ms=ms, alphas_n=alphas_n,
         lambda_finite=lambda_finite, n_finite=n_finite,
@@ -230,8 +231,39 @@ def load_pass(pass_dir, pass_name):
         q_min=q_min, seed=seed, t_total=t_total, df=df,
         fidelity_str=fid_str, fidelity=_parse_fidelity(fid_str),
         events=events, lambda_ode=lambda_ode,
+        b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
         shard_files=[r["_file"] for r in all_recs],
     )
+
+
+def _cap_provenance(pass_name, recs):
+    """Resolve the impact-parameter cap across a pass's shards.
+
+    Shards written before ``--b-constrained-max`` existed carry no
+    ``b_constrained_max`` key. Such shards are legitimately reusable in a capped
+    cube only over the lambda range where the cap provably cannot bite (see
+    release/README.md; the reuse is gated by a byte-identity check on the
+    boundary shard), so they are recorded, not refused. Two *different* explicit
+    cap values in one pass is genuinely mixed provenance and is fatal.
+
+    Returns (cap_or_None, [files carrying no cap flag]).
+    """
+    caps, unflagged = {}, []
+    for rec in recs:
+        v = _scalar(rec["b_constrained_max"]) if "b_constrained_max" in rec else None
+        try:
+            v = None if v is None else float(v)
+        except (TypeError, ValueError):
+            v = None
+        if v is None or not np.isfinite(v):
+            unflagged.append(rec["_file"])
+        else:
+            caps[rec["_file"]] = v
+    distinct = sorted(set(caps.values()))
+    if len(distinct) > 1:
+        sys.exit(f"FATAL: {pass_name} MIXED b_constrained_max across shards: "
+                 f"{distinct}")
+    return (distinct[0] if distinct else None), unflagged
 
 
 def _check_status_nan(pass_name, p, mu, nt, st):
@@ -300,8 +332,10 @@ def load_halo(halo_dir):
     for li, rec in enumerate(fin_recs + [massless]):
         nt[:, :, li] = np.asarray(rec["nt"], dtype=np.float64)
         bmax[:, :, li] = np.asarray(rec["bmax_m"], dtype=np.float64)
+    b_cap, cap_unflagged = _cap_provenance("halo", fin_recs + [massless])
     return dict(ms=ms, alphas_n=alphas_n, lambda_finite=lambda_finite,
                 n_finite=n_finite, n_transit=nt, bmax=bmax,
+                b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
                 shard_files=[r["_file"] for r in (fin_recs + [massless])])
 
 
@@ -315,6 +349,31 @@ def cross_check_lambda(atm, noatm, halo_d):
         sys.exit(f"FATAL: halo finite-lambda axis differs from atm/noatm "
                  f"(halo n={lh.size})")
     return la
+
+
+def cross_check_cap(atm, noatm, halo_d):
+    """All three passes must share one impact-parameter cap (hard gate)."""
+    caps = {p["pass_name"] if "pass_name" in p else "halo": p["b_constrained_max"]
+            for p in (atm, noatm, halo_d)}
+    distinct = sorted({v for v in caps.values() if v is not None})
+    if len(distinct) > 1:
+        sys.exit(f"FATAL: passes disagree on b_constrained_max: {caps}")
+    cap = distinct[0] if distinct else None
+    if cap is None:
+        print("\nimpact-parameter cap: none (uncapped cube)")
+        return None
+    unflagged = sorted(f for p in (atm, noatm, halo_d)
+                       for f in p["cap_unflagged_shards"])
+    missing = [k for k, v in caps.items() if v is None]
+    if missing:
+        sys.exit(f"FATAL: b_constrained_max={cap} m in {sorted(caps)} but "
+                 f"pass(es) {missing} carry no cap at all")
+    print(f"\nimpact-parameter cap: b_constrained_max = {cap} m")
+    if unflagged:
+        print(f"  {len(unflagged)} shard(s) reused from an uncapped run "
+              f"(provably unaffected; see release/README.md): "
+              f"{', '.join(unflagged[:6])}{' ...' if len(unflagged) > 6 else ''}")
+    return cap
 
 
 # ── status census ─────────────────────────────────────────────────────────────
@@ -663,6 +722,11 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["m_planck_gev"] = float(M_PLANCK)
         a["confidence_recommended"] = float(CONFIDENCE)
         a["q_hi_ref_gev"] = float(Q_HI_REF)
+        # impact-parameter cap: outer limit of the b-integral is
+        # min(b_constrained_max, b_max(q)) in both dsigma/dq and the transit
+        # reach. NaN = uncapped (the b-integral runs to the full b_max(q)).
+        cap = atm["b_constrained_max"]
+        a["b_constrained_max_m"] = float("nan") if cap is None else float(cap)
         a["fid_n_ode"] = int(fid.get("n_ode", -1))
         a["fid_n_shm"] = int(fid.get("n_shm", -1))
         a["fid_n_q"] = int(fid.get("n_q", -1))
@@ -692,8 +756,8 @@ def _read_run_config(shard_dir):
         return None
 
 
-def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm,
-                     commit, dirty, pkgs, out_path, version_tag):
+def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
+                     halo_d, commit, dirty, pkgs, out_path, version_tag):
     prov = {
         "assembly": {
             "created": _iso_now(),
@@ -712,6 +776,16 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm,
         },
         "shard_dirs": {
             "atm": str(atm_dir), "noatm": str(noatm_dir), "halo": str(halo_dir),
+        },
+        "impact_parameter_cap": {
+            "b_constrained_max_m": atm["b_constrained_max"],
+            # shards reused from an uncapped run over the lambda range where the
+            # cap provably cannot bite (byte-identity gated on the boundary shard)
+            "shards_without_cap_flag": {
+                "atm": atm["cap_unflagged_shards"],
+                "noatm": noatm["cap_unflagged_shards"],
+                "halo": halo_d["cap_unflagged_shards"],
+            },
         },
         "run_config": {
             "atm": _read_run_config(atm_dir),
@@ -745,7 +819,7 @@ def main():
     ap.add_argument("--noatm-dir", required=True)
     ap.add_argument("--halo-dir", required=True)
     ap.add_argument("--out", default=str(REPO / "release" /
-                                         "luhdm_datarelease_v1.h5"))
+                                         "luhdm_datarelease_v2.h5"))
     ap.add_argument("--version-tag", default="v1.0")
     ap.add_argument("--quick-reference", action="store_true",
                     help="reference curves at quick fidelity (n_grid=80, "
@@ -773,6 +847,7 @@ def main():
     lambda_finite = cross_check_lambda(atm, noatm, halo_d)
     print(f"\nfinite-lambda axis agrees across passes: {lambda_finite.size} values"
           f"  [{lambda_finite.min():.3e} .. {lambda_finite.max():.3e}] m")
+    cross_check_cap(atm, noatm, halo_d)
 
     print_status_report("atm", atm)
     print_status_report("noatm", noatm)
@@ -803,7 +878,8 @@ def main():
 
     release_dir = out_path.parent
     write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
-                     atm, commit, dirty, pkgs, out_path, args.version_tag)
+                     atm, noatm, halo_d, commit, dirty, pkgs, out_path,
+                     args.version_tag)
     write_sha256(release_dir, out_path)
 
     print("\n" + "=" * 72)

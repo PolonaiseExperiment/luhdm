@@ -1,7 +1,7 @@
 """Reader for the POLONAISE UHDM data release (HDF5).
 
 The release is a single self-describing HDF5 file
-(``release/luhdm_datarelease_v1.h5``) holding the analysis as a matrix over
+(``release/luhdm_datarelease_v2.h5``) holding the analysis as a matrix over
 (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range ``lambda``).
 It is produced by ``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
@@ -39,7 +39,7 @@ import numpy as np
 
 from luhdm import limits
 
-DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v1.h5"
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v2.h5"
 
 FORMAT_VERSION = 1
 
@@ -231,7 +231,28 @@ class Release:
         return False
 
     def __repr__(self):
-        return f"<Release {self.path} ({self.attrs.get('version')})>"
+        return f"<Release {self.path} ({self.version_tag})>"
+
+    @property
+    def version_tag(self):
+        """Human-readable cube version, e.g. 'v1.0' or 'v2.0-bcap10cm'.
+
+        Set at assembly time (``assemble_release.py --version-tag``). Notebooks
+        stamp it onto every figure so a figure always names the cube it came
+        from. Falls back to the numeric format version for pre-tag files.
+        """
+        return str(self.attrs.get("version_tag")
+                   or f"v{self.attrs.get('version', FORMAT_VERSION)}")
+
+    @property
+    def b_constrained_max(self):
+        """Impact-parameter cap in metres, or None if the cube is uncapped.
+
+        When set, the b-integral's outer limit is min(b_constrained_max,
+        b_max(q)) in both dsigma/dq and the geometric transit reach.
+        """
+        v = self.attrs.get("b_constrained_max_m")
+        return None if v is None or not np.isfinite(v) else float(v)
 
     # -- internal resolvers ----------------------------------------------- #
     def _axis_for(self, group):
