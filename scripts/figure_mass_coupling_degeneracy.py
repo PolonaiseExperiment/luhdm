@@ -468,12 +468,14 @@ for k in range(3):
     # mass tag above each hump, nudged sideways if the peak sits on a guide
     # line (the halo would otherwise punch a hole through R_eff or the cap)
     _ipk = int(np.argmax(y))
-    _tx, _ha = B_SCAN[_ipk], "center"
+    _tx, _ha, _ty = B_SCAN[_ipk], "center", y[_ipk] + 0.22
     for _g in (R_EFF, B_CAP):
         if 0.25 < B_SCAN[_ipk] / _g < 4.0:
-            _tx, _ha = B_SCAN[_ipk] * 1.5, "left"
-    t = axB.text(_tx, y[_ipk] + 0.22,
-                 r"$m=10^{%d}$" % int(round(np.log10(MASSES[k]))),
+            # sideways so the halo cannot notch the guide, and a row higher so
+            # the widened (units-carrying) tag clears the neighbouring hump's tag
+            _tx, _ha, _ty = B_SCAN[_ipk] * 1.5, "left", y[_ipk] + 0.68
+    t = axB.text(_tx, _ty,
+                 r"$m=10^{%d}$ GeV" % int(round(np.log10(MASSES[k]))),
                  color=C_PAIR[k], fontsize=9.5, ha=_ha, va="bottom",
                  zorder=7)
     t.set_path_effects([pe.Stroke(linewidth=2.6, foreground="w"), pe.Normal()])
@@ -556,21 +558,11 @@ param_txt = (
 fig.text(0.5, 0.052, param_txt, ha="center", va="bottom", fontsize=9,
          family="monospace", color="#222222")
 
-caption = (
-    "Bare-halo SHM without atmosphere (attenuation would break the degeneracy "
-    "at high $\\alpha$ and is irrelevant to the geometric point); mode-1 "
-    "measured efficiency; $\\mu$ anchored at the $\\langle N\\rangle=3$ "
-    "zero-event benchmark.  Panel B is the same $\\mu$ pipeline run with the "
-    "capped massless cross section, differentiated in $\\log_{10}b$."
-)
-fig.text(0.5, 0.004, caption, ha="center", va="bottom", fontsize=8.6,
-         color="#555555", style="italic")
-
 fig.suptitle(r"The $\alpha^{2}/m$ degeneracy of the long-range ($1/r^{2}$) "
              r"interaction: identical signal from ever-larger impact parameters",
              fontsize=13.5, y=0.985)
 
-fig.tight_layout(rect=(0, 0.065, 1, 0.955))
+fig.tight_layout(rect=(0, 0.045, 1, 0.955))
 
 # ---------------------------------------------------------------------------
 # VALIDATION GATE 6 (layout) -- the read-out block clears both panel-B guides.
