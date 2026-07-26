@@ -122,11 +122,11 @@ axA.axhline(B_CAP, color=C_RED, ls="-.", lw=1.8, zorder=4,
 for ax in (axA, axB):
     ax.axvline(Q_STAR, color=C_GUIDE, ls=":", lw=1.5, zorder=3)
 
-axA.annotate("cap engages\nfor $q<q_*$",
-             xy=(Q_STAR, b_max_lo * 0.86), xytext=(Q_LO * 1.5, b_max_lo * 0.80),
-             color=C_GUIDE, fontsize=10, ha="left", va="top")
-txt = axA.text(Q_STAR * 1.15, R_EFF * 1.04, "$q_*$", color=C_GUIDE,
-               fontsize=11, ha="left", va="bottom")
+txt = axA.text(0.30, 0.96, "cap engages\nfor $q<q_*$", transform=axA.transAxes,
+               color=C_GUIDE, fontsize=10, ha="center", va="top")
+txt.set_path_effects([pe.Stroke(linewidth=2.4, foreground="w"), pe.Normal()])
+txt = axA.text(Q_STAR * 0.82, 0.36, "$q_*$", color=C_GUIDE,
+               fontsize=11, ha="right", va="center")
 txt.set_path_effects([pe.Stroke(linewidth=2.4, foreground="w"), pe.Normal()])
 
 # code connection note (massless / Coulomb branch)
@@ -163,7 +163,7 @@ txt = axB.text(Q_STAR * 1.15, dsig_uncap.min() * 1.4, "$q_*$", color=C_GUIDE,
 txt.set_path_effects([pe.Stroke(linewidth=2.4, foreground="w"), pe.Normal()])
 axB.annotate("capped $=$ uncapped\nfor $q>q_*$",
              xy=(Q_STAR * 3, dsig_uncap[np.searchsorted(q_grid, Q_STAR * 3)]),
-             xytext=(Q_STAR * 2.4, dsig_uncap.max() * 0.06),
+             xytext=(Q_STAR * 2.4, dsig_uncap.max() * 0.03),
              color=C_GUIDE, fontsize=10, ha="left", va="top")
 
 axB.set_xscale("log")
