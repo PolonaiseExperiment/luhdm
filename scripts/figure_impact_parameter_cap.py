@@ -37,7 +37,7 @@ from luhdm import config, units
 ALPHA_N = 1.75e-6                      # coupling per neutron
 ALPHA = ALPHA_N * config.N_NEUTRONS    # full coupling alpha = alpha_n * N_neutrons
 V = 1e-3                               # incoming speed [c]
-R_EFF = config.R_EFF                   # sensor radius [m] (200 um), inner floor
+R_EFF = config.R_EFF                   # sensor radius [m] (260 um), inner floor
 B_CAP = 0.1                            # b_constrained_max [m] = 10 cm (production)
 
 Q_LO, Q_HI = 1e2, 3e4                  # plotted q window [GeV]
@@ -114,7 +114,7 @@ axA.plot(q_grid, b_max, color=C_REACH, lw=2.4, zorder=5,
 
 # inner cutoff R_eff (dashed) and cap (dash-dot, red)
 axA.axhline(R_EFF, color=C_REFF, ls="--", lw=1.6, zorder=4,
-            label=r"$R_{\mathrm{eff}}=200\,\mu$m  (inner cutoff)")
+            label=r"$R_{\mathrm{eff}}=260\,\mu$m  (inner cutoff)")
 axA.axhline(B_CAP, color=C_RED, ls="-.", lw=1.8, zorder=4,
             label=r"$b_{\mathrm{cap}}=b_{\mathrm{constrained\,max}}=10$ cm")
 

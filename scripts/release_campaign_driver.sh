@@ -44,7 +44,7 @@ set -u   # NOT -e: SHARD_FAIL must not abort the run
 cd "$HOME/code/luhdm"
 
 PY=.venv/bin/python
-OUT="$HOME/release_shards"
+OUT="${SHARD_OUT:-$HOME/release_shards}"
 WORKERS="${WORKERS:-$(nproc)}"
 mkdir -p "$OUT/atm" "$OUT/noatm"
 

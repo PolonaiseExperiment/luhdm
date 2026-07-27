@@ -25,7 +25,7 @@ loses essentially all of its rate, and the island closes.
 
 The three anchor pairs are chosen so that the whole story is told inside the
 laboratory-relevant range of b: at m = 1e10 GeV the flybys that carry mu sit at
-b ~ 1 mm, comfortably outside the sensor radius R_eff = 200 um (the kept domain
+b ~ 1 mm, comfortably outside the sensor radius R_eff = 260 um (the kept domain
 of figure 07) and comfortably inside the 10 cm cap; at m = 1e14 GeV they sit at
 b ~ 12 cm and the cap bites; at m = 1e18 GeV they sit at b ~ 12 m and the cap
 removes all but ~1e-4 of mu.
@@ -81,7 +81,7 @@ Q_MIN = 100.0                          # analysis threshold [GeV] = config.Q_THR
 MODE = 1                               # measured efficiency mode
 
 B_CAP = 0.1                            # b_constrained_max [m] = 10 cm (production)
-R_EFF = config.R_EFF                   # sensor radius [m] (200 um)
+R_EFF = config.R_EFF                   # sensor radius [m] (260 um)
 
 MU_TARGET = 3.0                        # <N> = 3 zero-event benchmark (notebooks 01/04)
 

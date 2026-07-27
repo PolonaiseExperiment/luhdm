@@ -18,7 +18,6 @@ notebooks/computation_cache/
 notebooks/computation_cache_noatm/
 # data release: the HDF5 goes to Zenodo, not git; shards are build intermediates
 release/*.h5
-release_shards/
-release_shards_cap/
+release_shards*/
 # scratch: cache/figure backups, working notes, anything not for git
 /ignore/
