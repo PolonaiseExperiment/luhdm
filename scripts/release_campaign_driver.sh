@@ -61,6 +61,7 @@ run_shard() {
             --il-start "$il" --il-end "$((il + 1))" \
             --shard-dir "$OUT/$pass" \
             --order tags-first \
+            --b-constrained-max "${BCAP:-0.1}" \
             --workers "$WORKERS"; then
         wall=$(( $(date +%s) - t0 ))
         echo "[$(ts)] SHARD_DONE pass=$pass il=$il wall=${wall}s"
