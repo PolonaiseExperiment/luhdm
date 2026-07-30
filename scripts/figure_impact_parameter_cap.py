@@ -32,9 +32,11 @@ from luhdm import config, units
 # Massless (Coulomb) example at the real production cap.
 # alpha_n and v chosen so the crossover q* (where b_max(q*) = 0.1 m) lands in
 # the middle of the plotted q window -> q* ~ 1.7e3 GeV (log-midpoint of the
-# decade range).
+# decade range). q* = 2 alpha_n N_n / (v b_cap conv(1)) is linear in N_n, so
+# alpha_n has to be retuned whenever the magnet neutron count changes; 4.13e-6
+# is the v3 value (N_n = 1.07e20).
 # ---------------------------------------------------------------------------
-ALPHA_N = 1.75e-6                      # coupling per neutron
+ALPHA_N = 4.13e-6                      # coupling per neutron
 ALPHA = ALPHA_N * config.N_NEUTRONS    # full coupling alpha = alpha_n * N_neutrons
 V = 1e-3                               # incoming speed [c]
 R_EFF = config.R_EFF                   # sensor radius [m] (260 um), inner floor

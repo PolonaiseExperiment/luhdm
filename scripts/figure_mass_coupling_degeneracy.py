@@ -35,9 +35,9 @@ at high alpha and is beside the geometric point), massless mediator, mode-1
 measured efficiency, exposure config.T_EXPOSURE. Every number is produced by the
 same luhdm.rate / luhdm.limits calls the data-release builder uses
 (scripts/build_release.py, noatm massless slice), and is cross-checked against
-the uncapped v1 cube at the exact grid points nearest the three anchor pairs
-(skipped with a note when the release file is not present -- it is gitignored
-and distributed via Zenodo).
+the shipped v3 cube -- at the cube's own 10 cm cap -- at the exact grid points
+nearest the three anchor pairs (skipped with a note when the release file is not
+present -- it is gitignored and distributed via Zenodo).
 
 One deliberate departure from the production settings: panel B *differentiates*
 mu(<b) in log10 b, which divides the quadrature error of two neighbouring b
@@ -103,8 +103,8 @@ B_SCAN_LO, B_SCAN_HI, B_PER_DEC = 1e-8, 1e6, 40
 B_FLOOR_FRAC = 3e-3
 B_FLOOR_ABS = 0.05                     # [mu per decade], i.e. ~1% of the y axis
 
-CUBE_V1 = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "release", "luhdm_datarelease_v1.h5")
+CUBE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                    "release", "luhdm_datarelease_v3.h5")
 
 # ---------------------------------------------------------------------------
 # Pipeline: identical construction to build_release.py's noatm massless cell
@@ -170,31 +170,42 @@ MU_PAIRS = np.array([mu_of(a, m, XS_UNCAPPED) for m, a in PAIRS])
 def cube_crosscheck(pairs):
     """[(alpha_grid, m_grid, mu_cube, mu_here, rel), ...], one per pair.
 
+    Compares against the shipped cube at *its own* impact-parameter cap, read
+    from the root attribute ``b_constrained_max_m`` rather than assumed: the v3
+    cube is capped at 10 cm, so the uncapped cross section would disagree by
+    construction on the two heavy pairs (that disagreement is the whole point of
+    panel B, not a pipeline error). Comparing at the cube's cap makes this a
+    parity check on the code path production actually uses.
+
     Returns ``None`` when the release cube is not on disk: ``release/*.h5`` is
     gitignored and shipped through Zenodo, so a clean clone must still be able
     to render the figure. The check runs whenever the file is present.
     """
-    if not os.path.exists(CUBE_V1):
+    if not os.path.exists(CUBE):
         return None
 
     import h5py
 
     grid = []
-    with h5py.File(CUBE_V1, "r") as f:
+    with h5py.File(CUBE, "r") as f:
         alphas = f["axes/alpha_n"][:]
         ms = f["axes/mass_noatm_gev"][:]
         lam = f["axes/lambda_m"][:]
         il = lam.shape[0] - 1             # massless is the last lambda index
         assert not np.isfinite(lam[il]), "last lambda is not massless"
+        cube_cap = f.attrs.get("b_constrained_max_m")
+        cube_cap = (None if cube_cap is None or not np.isfinite(cube_cap)
+                    else float(cube_cap))
         for m, a in pairs:
             ia = int(np.argmin(np.abs(np.log10(alphas) - np.log10(a))))
             im = int(np.argmin(np.abs(np.log10(ms) - np.log10(m))))
             grid.append((float(alphas[ia]), float(ms[im]),
                          float(f["noatm/mu"][MODE - 1, ia, im, il])))
 
+    xs_cube = rate.make_xsec(None, b_constrained_max=cube_cap)
     out = []
     for a_pt, m_pt, mu_cube in grid:
-        mu_here = mu_of(a_pt, m_pt, XS_UNCAPPED)
+        mu_here = mu_of(a_pt, m_pt, xs_cube)
         rel = abs(mu_here / mu_cube - 1.0) if mu_cube > 0 else float("nan")
         out.append((a_pt, m_pt, mu_cube, mu_here, rel))
     return out
@@ -486,7 +497,8 @@ axB.plot([], [], marker="v", ms=6.5, ls="none", color=C_NEUTRAL,
 
 # overlays: sensor radius and the production cap
 axB.axvline(R_EFF, color=C_REFF, ls="--", lw=1.6, zorder=3,
-            label=r"$R_{\mathrm{eff}}=200\,\mu$m  (sensor radius)")
+            label=r"$R_{\mathrm{eff}}=%.0f\,\mu$m  (sensor radius)"
+                  % (R_EFF * 1e6))
 axB.axvline(B_CAP, color=C_RED, ls="-.", lw=1.9, zorder=3,
             label=r"$b_{\mathrm{cap}}=b_{\mathrm{constrained\,max}}=10$ cm")
 
@@ -514,7 +526,11 @@ for k in (0, 1):
 # each row and no parenthetical percentages: with all three areas equal to mu,
 # the retained fraction is read straight off the column. Enforced by the
 # renderer-bbox gate after tight_layout (the layout is only final there).
-READOUT_X = 0.148                      # axes fraction, just right of R_eff
+# Offset from the R_eff guide rather than an absolute axes fraction: the guide
+# sits at config.R_EFF, so a hard-coded x silently drifts into it when the sensor
+# radius changes (it did, at 200 -> 260 um). 0.0181 is the clearance the layout
+# was tuned with, now measured from wherever the guide actually is.
+READOUT_X = (np.log10(R_EFF / B_LO) / np.log10(B_HI / B_LO)) + 0.0181
 READOUT_Y, READOUT_DY = 0.975, 0.058
 _lines = [(r"all $\mu=%.2f$;   $b_{95}$,  $\mu(<b_{\mathrm{cap}})$:"
            % PLATEAU.mean(), "#222222", 8.6)]
@@ -549,10 +565,10 @@ axB.grid(True, which="major", color="#e9e9e9", lw=0.7)
 _am, _ae = _mant_exp(ALPHA0_N)
 param_txt = (
     "$q_{\\mathrm{th}}=%g$ GeV      $T=%.3f\\times10^{6}$ s      "
-    "$f_X=%g$      $R_{\\mathrm{eff}}=200\\,\\mu$m      "
+    "$f_X=%g$      $R_{\\mathrm{eff}}=%.0f\\,\\mu$m      "
     "anchor  $\\alpha_n=%.3f\\times10^{%d}$ at $m=10^{%d}$ GeV, "
     "$\\times100$ per $\\times10^{4}$ in $m$"
-    % (Q_MIN, T_TOTAL / 1e6, config.F_X, _am, _ae,
+    % (Q_MIN, T_TOTAL / 1e6, config.F_X, R_EFF * 1e6, _am, _ae,
        int(round(np.log10(MASSES[0]))))
 )
 fig.text(0.5, 0.052, param_txt, ha="center", va="bottom", fontsize=9,
@@ -614,9 +630,10 @@ print("=" * 74)
 print("Q GRIDS   GATE 1 + panel A: production n_q = %d   |   panel-B cap scan:"
       " n_q = %d  (same span)" % (FID["n_q"], N_Q_PANEL_B))
 print()
-print("GATE 1  uncapped v1 cube cross-check (noatm, mode 1, massless slice)")
+print("GATE 1  v3 cube cross-check at the cube's own 10 cm cap"
+      " (noatm, mode 1, massless slice)")
 if CUBE_CHECK is None:
-    print("  cross-check skipped (release file not present): %s" % CUBE_V1)
+    print("  cross-check skipped (release file not present): %s" % CUBE)
     print("  release/*.h5 is gitignored and distributed via Zenodo; the figure")
     print("  is unaffected -- every curve is computed from luhdm directly.")
 else:

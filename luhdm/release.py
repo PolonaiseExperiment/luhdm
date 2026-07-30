@@ -1,7 +1,7 @@
 """Reader for the POLONAISE UHDM data release (HDF5).
 
 The release is a single self-describing HDF5 file
-(``release/luhdm_datarelease_v2.h5``) holding the analysis as a matrix over
+(``release/luhdm_datarelease_v3.h5``) holding the analysis as a matrix over
 (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range ``lambda``).
 It is produced by ``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
@@ -39,7 +39,7 @@ import numpy as np
 
 from luhdm import limits
 
-DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v2.h5"
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v3.h5"
 
 FORMAT_VERSION = 1
 

@@ -316,7 +316,7 @@ def build(rel, ref_dir, confidence=0.95):
     # -- annotations -------------------------------------------------------- #
     note = ax.text(0.028, 0.955,
                    "$f_{\\mathrm{DM}} = 0.1$, 95\\% CL\n"
-                   "prior limits: $f_\\chi = 1$",
+                   "prior limits: $f_{\\mathrm{DM}} = 1$",
                    transform=ax.transAxes, ha="left", va="top", fontsize=7.0,
                    linespacing=1.4, zorder=Z_TEXT)
 
