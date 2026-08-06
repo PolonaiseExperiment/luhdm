@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""PRL figure: the mode-2 impulse data the UHDM search runs on.
+"""PRL figure: the mode-1 impulse data the UHDM search runs on.
 
-Reconstructed impulse momenta of the mode-2 candidate sample -- the observed
+Reconstructed impulse momenta of the mode-1 candidate sample -- mode 1 is the
+paper's channel, the night-selected search reported in the Letter -- the observed
 data, with no signal model on top (a signal curve would need a coupling, and the
 normalisation is coupling dependent, so drawing one would be a choice, not a
 measurement).  The panel carries three things:
 
 1. a histogram of the surviving impulse candidates in log-spaced momentum bins
-   (0.25 dex), read from ``/detector/events_mode2`` in the data release, which is
-   the release's copy of ``notebooks/data_mode2.txt`` converted from eV to GeV;
+   (0.25 dex), read from ``/detector/events_mode1`` in the data release, which is
+   the release's copy of ``notebooks/data_mode1.txt`` converted from eV to GeV;
 2. the sub-threshold blip population in muted grey, *if* the release's
-   ``/detector/all_blips_mode2`` dataset actually extends below the selection.
-   In the v2 release it does not -- ``all_blips_mode2`` is exactly the 99
-   candidates, in eV -- so nothing grey is drawn and the script says so on
-   stdout.  A later release that adds sub-threshold blips lights this up with no
-   edit here;
-3. the mode-2 detection efficiency eps(q) for the df = 3 dof hypothesis on a
+   ``/detector/all_blips_mode1`` dataset actually extends below the selection.
+   In the night-selection cube it does not -- ``all_blips_mode1`` is the whole
+   run's 66 up-crossings, in eV, a wider selection than the 8 night candidates
+   -- so nothing grey is drawn and the script says so on stdout.  A later
+   release that adds sub-threshold blips lights this up with no edit here;
+3. the mode-1 detection efficiency eps(q) for the df = 3 dof hypothesis on a
    right-hand axis, using the analysis' own extrapolation convention
    (``luhdm.efficiency.make_efficiency``: zero below the calibrated table, held
    at the saturated value above it).
@@ -27,12 +28,12 @@ label tracks the release.
 
 Style: PRL single column at final printed size; see ``scripts/paper_style.py``.
 Figures built from a pre-v3 cube carry a red PRELIMINARY corner tag; the tag
-disappears by itself when ``--release`` points at a v3 file.
+disappears by itself when ``--release`` points at a v3 or later file.
 
 Usage
 -----
     python scripts/paper_fig_data_spectrum.py                # default release
-    python scripts/paper_fig_data_spectrum.py --release <h5> # e.g. the v3 cube
+    python scripts/paper_fig_data_spectrum.py --release <h5> # e.g. the night cube
 """
 from __future__ import annotations
 
@@ -51,10 +52,11 @@ from matplotlib.ticker import LogLocator, NullFormatter  # noqa: E402
 import paper_style as ps  # noqa: E402
 from luhdm import release  # noqa: E402
 # Same eps(q) evaluation and eps = 0.5 solver as the standalone efficiency
-# figure, so the two figures cannot disagree about the mode-2 curve.
+# figure, so the two figures cannot disagree about the mode-1 curve.  Both
+# helpers take the (q, eps) tables themselves, so they carry no mode of their own.
 from paper_fig_efficiency import efficiency_interp, q_at_efficiency  # noqa: E402
 
-MODE = 2                 # the paper's channel
+MODE = 1                 # the paper's channel: the night-selected mode-1 search
 DF = 3                   # dof hypothesis for the efficiency curve
 DEX = 0.25               # histogram bin width in decades of q
 EV_PER_GEV = 1.0e9
@@ -80,8 +82,23 @@ def log_bin_edges(q_thresh, q_min, q_max, dex=DEX):
 
 
 def tev(q_gev):
-    """'0.76' style TeV string for a momentum in GeV."""
+    """'0.96' style TeV string for a momentum in GeV."""
     return f"{q_gev / 1.0e3:.2f}".rstrip("0").rstrip(".")
+
+
+def count_tick_step(y_max, n_ticks=3):
+    """A 1/2/5 x 10^n count step giving about ``n_ticks`` labelled ticks.
+
+    The night selection leaves a two-count tallest bin where the whole-run
+    sample had forty, so a fixed step of ten labels the left axis with nothing
+    but the zero.  Never returns less than one, since the axis counts events.
+    """
+    target = max(float(y_max) / n_ticks, 1.0)
+    decade = 10.0 ** np.floor(np.log10(target))
+    for mult in (1.0, 2.0, 5.0):
+        if mult * decade >= target:
+            return mult * decade
+    return 10.0 * decade
 
 
 # --------------------------------------------------------------------------- #
@@ -93,11 +110,21 @@ def build(rel):
     blips = np.asarray(rel.all_blips(MODE), dtype=float) / EV_PER_GEV
     q_tab, eff_tab = rel.efficiency_curve(MODE, DF)
 
-    assert events.size > 0, "no mode-2 candidates in the release"
+    assert events.size > 0, f"no mode-{MODE} candidates in the release"
     assert np.all(np.isfinite(events)), "non-finite candidate momenta"
     assert np.all((eff_tab >= 0.0) & (eff_tab <= 1.0)), "efficiency outside [0,1]"
 
-    sub = np.sort(blips[blips < q_thresh])
+    # ``all_blips_modeN`` is written straight from the raw analysis file and is
+    # *not* re-cut with the analysis selection, so it can describe a wider run
+    # than the candidates do (in the night-selection cube it is the whole run:
+    # 66 mode-1 blips against 8 night candidates). Drawing its sub-threshold
+    # tail beside a differently-selected histogram would put two exposures in
+    # one panel. The tell is an above-threshold blip that is not a candidate:
+    # in a same-selection list every one of them is, by construction.
+    above = np.sort(blips[blips >= q_thresh])
+    same_selection = (above.size == events.size
+                      and np.allclose(above, np.sort(events), rtol=1e-9))
+    sub = np.sort(blips[blips < q_thresh]) if same_selection else blips[:0]
     has_sub = sub.size > 0
     eps = efficiency_interp(q_tab, eff_tab)
     q50 = q_at_efficiency(q_tab, eff_tab, 0.5)
@@ -105,11 +132,20 @@ def build(rel):
     print(f"  candidates (mode {MODE}): {events.size} "
           f"in {events.min():.1f}-{events.max():.1f} GeV")
     print(f"  all_blips_mode{MODE}: {blips.size} entries, "
-          f"{blips.min():.1f}-{blips.max():.1f} GeV -> "
-          f"{sub.size} below the {q_thresh:g} GeV selection")
+          f"{blips.min():.1f}-{blips.max():.1f} GeV, "
+          f"{int(above.size)} above the {q_thresh:g} GeV selection")
+    if same_selection:
+        print(f"  -> same selection as the candidates; {sub.size} "
+              f"sub-threshold blips drawn")
+    else:
+        print(f"  -> a *different* (wider) selection than the {events.size} "
+              f"candidates: {int(above.size - events.size)} above-threshold "
+              f"blips are not candidates. Not drawn; the panel shows the "
+              f"candidate sample only.")
     print(f"  eps(q) = 0.5 at q = {q50:.1f} GeV = {q50 / 1e3:.3f} TeV")
 
-    edges = log_bin_edges(q_thresh, min(events.min(), blips.min()), events.max())
+    q_lo = min(events.min(), sub.min()) if has_sub else events.min()
+    edges = log_bin_edges(q_thresh, q_lo, events.max())
     counts_sel, _ = np.histogram(events, bins=edges)
     counts_sub, _ = np.histogram(sub, bins=edges) if has_sub else (None, None)
     y_max = float(counts_sel.max() if not has_sub
@@ -163,7 +199,7 @@ def build(rel):
     ax.xaxis.set_minor_locator(
         LogLocator(base=10.0, subs=tuple(np.arange(2, 10) * 0.1), numticks=12))
     ax.xaxis.set_minor_formatter(NullFormatter())
-    ax.set_yticks(np.arange(0, y_top, max(10.0, round(y_max / 3 / 10) * 10)))
+    ax.set_yticks(np.arange(0.0, y_top, count_tick_step(y_max)))
 
     axr.set_ylim(0.0, HEADROOM)
     axr.set_yticks([0.0, 0.5, 1.0])

@@ -43,6 +43,8 @@ Known matplotlib gotchas encoded here
 """
 from __future__ import annotations
 
+import re
+
 import matplotlib
 import numpy as np
 
@@ -138,14 +140,18 @@ def apply_prl_style():
 # Preliminary tag
 # --------------------------------------------------------------------------- #
 def preliminary_tag_text(version_tag):
-    """Corner-tag text for a release ``version_tag``; ``""`` once v3 lands.
+    """Corner-tag text for a release ``version_tag``; ``""`` from v3 onwards.
 
     ``"v2.0-bcap10cm"`` -> ``"PRELIMINARY (v2 constants)"``;
-    ``"v3.0-..."`` -> ``""`` (no tag drawn).  The figure scripts therefore drop
-    the tag automatically when re-run against the v3 cube, with no edit.
+    ``"v3.0-..."``, ``"v4.0-night-..."`` -> ``""`` (no tag drawn).  The figure
+    scripts therefore drop the tag automatically when re-run against a v3 or
+    later cube, with no edit.  The test is on the *number*, not on the literal
+    string ``"v3"``: a prefix match silently re-tagged every figure the day the
+    v4 night cube landed.
     """
     tag = str(version_tag or "")
-    if tag.startswith("v3"):
+    m = re.match(r"v(\d+)", tag)
+    if m is not None and int(m.group(1)) >= 3:
         return ""
     major = tag.split(".", 1)[0].split("-", 1)[0] or "unversioned"
     return rf"PRELIMINARY ({major} constants)"
