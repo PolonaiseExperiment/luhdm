@@ -29,9 +29,6 @@ authors:
     given-names: "Christopher D."
     orcid: "https://orcid.org/0000-0001-8158-7795"
     affiliation: "Department of Physics and Astronomy, Rice University"
-  - family-names: Qin
-    given-names: Juehang
-    affiliation: "Department of Physics and Astronomy, Rice University"
 references:
   - type: software
     title: "optimum_interval: Yellin optimum-interval statistics"
