@@ -48,8 +48,9 @@ jupyter lab
 ```
 
 Notebooks 01 to 06 and 09 then run start to finish with no environment variables
-set and no file from outside the repository. Notebook 01 is the slow one, around
-forty minutes; the rest take seconds.
+set and no file from outside the repository, in about a minute for all seven
+together. They read the cube rather than recomputing it, which is why they are
+quick.
 
 **Notebook 00 does not run from a fresh checkout.** It is the only one that reads
 the raw instrument file `data/fit_data_temp_lockin_transients_selected.hdf5`,
