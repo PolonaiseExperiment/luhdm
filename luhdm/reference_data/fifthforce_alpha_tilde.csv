@@ -1,0 +1,10 @@
+"# 95% CL upper limit on the Yukawa strength alpha_tilde vs range lambda, the envelope of the short-range fifth-force compilation"
+"# source: Fig. 5 (bottom panel) of Lee et al., Phys. Rev. Lett. 124, 101101 (2020); arXiv:2002.11761 -- the authors' own compilation"
+# extracted from the vector figure fig5b1.pdf in the arXiv source package by ignore/paper/digitize_eotwash_fig5.py; validated against five |alpha| = 1 crossings the respective authors quote, all to better than 1%
+# alpha_tilde is the pointwise MINIMUM over every curve in the panel, i.e. the boundary of the shaded excluded region; owner names the experiment that sets it at that range (NOT always Eot-Wash: HUST owns 200 um)
+# one-sided: the region ABOVE the curve is excluded
+# frozen from ignore/paper/eotwash_corrected.json, which is scratch and not tracked; regenerate that with .venv/bin/python ignore/paper/digitize_eotwash_fig5.py --json
+lambda_m,alpha_tilde,owner_citation_key,uncertainty
+1.000000e-05,3.088127e+03,Lee:2020zjt,+/-10%
+2.000000e-05,2.101278e+01,Lee:2020zjt,+/-7%
+2.000000e-04,4.969021e-03,Tan:2020vpf,+/-3%
