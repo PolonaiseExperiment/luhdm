@@ -40,18 +40,35 @@ SEED = 20260702
 Q_HI_REF = 8.4e3
 MODES = (1, 2, 3)
 TAG_LAMBDA = {
-    "2m": 2.0, "2cm": 2e-2, "2mm": 2e-3, "200um": 2e-4,
+    "2m": 2.0, "20cm": 0.2, "2cm": 2e-2, "2mm": 2e-3, "200um": 2e-4,
     "20um": 2e-5, "10um": 1e-5, "2um": 2e-6,
 }
 DP_GATE = 0.05           # MC-band |Delta p| tolerance vs committed cache
 DRIFT_RTOL = 1e-12       # environment-drift band for "bit-equal" quantities
-STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>40", 4: "mu==0"}
+STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>mu_cap",
+                4: "mu==0"}
 
 
 # ── shard reading (no completeness requirement; partial dirs OK) ──────────────
 def _scalar(v):
     a = np.asarray(v)
     return a.item() if a.ndim == 0 else a
+
+
+def _opt_float(rec, key):
+    """Read an optional float shard field that may be absent / stored as None.
+
+    ``np.savez(b_constrained_max=None)`` round-trips as a 0-d object array, so
+    ``_scalar`` yields None; a real cap comes back as a float. Missing key (a
+    pre-cap shard) is also None = uncapped.
+    """
+    if key not in rec:
+        return None
+    val = _scalar(rec[key])
+    if val is None:
+        return None
+    val = float(val)
+    return None if np.isnan(val) else val
 
 
 def read_shards(shard_dir):
@@ -79,6 +96,9 @@ def read_shards(shard_dir):
             "q_min": float(_scalar(rec["q_min"])),
             "df": int(_scalar(rec["df"])) if "df" in rec else 3,
             "lamb_ode": float(_scalar(rec.get("lamb_ode", np.nan))),
+            # the impact-parameter cap this shard was built with; V2 must
+            # recompute with the SAME cap or nothing on a capped cube can match
+            "b_constrained_max": _opt_float(rec, "b_constrained_max"),
             "fidelity": str(_scalar(rec["fidelity"])),
             "events": {n: np.asarray(rec[f"events_mode{n}"], np.float64)
                        for n in MODES},
@@ -324,9 +344,17 @@ def _recompute_cell(scan_grid, shard, pass_name, mode, ia, im, caches):
     lamb = shard["lamb_ode"] if massless else shard["lamb"]
 
     fid = _parse_fid(shard["fidelity"])
-    key_xs = ("massless" if massless else round(shard["lamb"], 18))
+    # The optimum-interval mu>cap shortcut is part of the cell's identity: a
+    # recompute at a different cap flips p between 1.0 and its MC value. Shards
+    # built before the cap was recorded carry no "mu_cap" key -> the historical
+    # default, which is exactly what those shards were built with.
+    fid.setdefault("mu_cap", scan_grid.MU_CAP_DEFAULT)
+    b_cap = shard.get("b_constrained_max")
+    # the cap is part of the cross-section identity, so it belongs in the key
+    key_xs = ("massless" if massless else round(shard["lamb"], 18), b_cap)
     if key_xs not in caches["xs"]:
-        caches["xs"][key_xs] = rate.make_xsec(None if massless else shard["lamb"])
+        caches["xs"][key_xs] = rate.make_xsec(
+            None if massless else shard["lamb"], b_constrained_max=b_cap)
     # V_I_SAMPLES built once per n_shm (same seed as the campaign)
     vkey = fid["n_shm"]
     if vkey not in caches["visamp"]:
@@ -365,6 +393,13 @@ def v2_spot_recompute(atm_shards, noatm_shards, n_spot):
         print(f"  could not import scan_grid.py: {err}")
         print("V2 verdict: FAIL")
         return False
+
+    caps = sorted({s.get("b_constrained_max") for s in atm_shards + noatm_shards},
+                  key=lambda c: (c is not None, c))
+    print(f"  recomputing with the shards' own impact-parameter caps: {caps}")
+    mu_caps = sorted({_parse_fid(s["fidelity"]).get("mu_cap", scan_grid.MU_CAP_DEFAULT)
+                      for s in atm_shards + noatm_shards})
+    print(f"  recomputing with the shards' own optimum-interval mu caps: {mu_caps}")
 
     caches = {"xs": {}, "visamp": {}}
     hard_fail = False
@@ -528,11 +563,21 @@ def release_spot_check(release_path, atm_shards, noatm_shards, n_spot):
     ok = True
     with h5py.File(release_path, "r") as h5:
         lam_axis = h5["axes/lambda_m"][:]
+        # Layout-agnostic read of the f_DM = 0.1 extremeness surface, which is
+        # what the shards' "p" array holds. Axis layout: one /results cube
+        # indexed by (f_dm, atmosphere, ...). v3 layout: one group per pass.
+        axis_layout = "results" in h5
+        if axis_layout:
+            i_f = int(np.argmin(np.abs(h5["axes/f_dm"][:] - 0.1)))
+            atmos = h5["axes/atmosphere"][:]
         for pass_name, shards in (("atm", atm_shards), ("noatm", noatm_shards)):
             if not shards:
                 continue
-            grp = h5[pass_name]
-            ext = grp["extremeness"]
+            if axis_layout:
+                i_at = int(np.where(atmos == (1 if pass_name == "atm" else 0))[0][0])
+                ext = h5["results/extremeness"][i_f, i_at]
+            else:
+                ext = h5[pass_name]["extremeness"]
             for s in shards[: max(1, n_spot // 4)]:
                 if s["massless"]:
                     hits = np.where(np.isinf(lam_axis))[0]

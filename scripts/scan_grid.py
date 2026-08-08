@@ -37,6 +37,11 @@ Q_THRESH = config.Q_THRESH
 Q_HI_REF = 8.4e3
 T_TOTAL = config.T_EXPOSURE  # dataset live-time (single source of truth in luhdm.config)
 SEED = 20260702
+# Optimum-interval p==1 shortcut used when the caller's fidelity dict carries no
+# explicit "mu_cap". Kept at the historical 40.0 so shards/caches built before
+# the cap was recorded still recompute bit-for-bit; build_release.py pins its own
+# (currently 85.0) into the fidelity string it writes.
+MU_CAP_DEFAULT = 40.0
 # default observed-event list; --data overrides it (e.g. per-mode data_mode{n}.txt)
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "notebooks" / "data_mode1.txt"
 
@@ -45,7 +50,9 @@ LAMB = None      # atmospheric-regulator range [m] (also the sensor range
                  # unless --massless)
 XS = None        # cross-section handle from rate.make_xsec
 V_I_SAMPLES = None
-FID = None       # fidelity dict
+FID = None       # fidelity dict; optional "mu_cap" key selects the
+                 # optimum-interval p==1 shortcut (absent -> MU_CAP_DEFAULT, the
+                 # historical value every pre-mu_cap shard was built with)
 EVENTS = None
 Q_MIN = None     # lower edge of the momentum grid / analysis threshold [GeV]
 EFF = None       # detection-efficiency callable eps(q_GeV), or None for raw rate
@@ -78,7 +85,8 @@ def scan_point(task):
         qs = np.geomspace(Q_MIN, FID["q_span"] * Q_HI_REF, FID["n_q"])
         diff_rate = rate.differential_rate_trapz(qs, alpha_n, m, f_v_f, XS, eff=EFF)
         p, mu = limits.extremeness_and_mu(
-            state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"])
+            state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"],
+            mu_cap=FID.get("mu_cap", MU_CAP_DEFAULT))
         n_t = rate.expected_transits(alpha_n, m, f_v_f, XS, T_TOTAL)
     except Exception as err:  # absurd-coupling corners: report, exclude nothing
         print(f"point (a={alpha_n:.1e}, m={m:.1e}) failed: {err}", flush=True)

@@ -36,7 +36,7 @@ def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False,
     expected_transits / transit_count_halo.
     """
     if lamb is None:
-        return dict(lamb=None, use_ln=False, interp=None,
+        return dict(lamb=None, use_ln=False, interp=None, R_eff=R_eff,
                     b_constrained_max=b_constrained_max)
     xi = R_eff / lamb
     use_ln = force_ln or xi > 30
@@ -52,12 +52,17 @@ def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False,
 
 
 def dsigma_dq_any(q, alpha, vs, xs, R_eff=R_EFF):
-    """Projected dsigma/dq in GeV^-3, dispatching on the mediator range."""
+    """Projected dsigma/dq in GeV^-3, dispatching on the mediator range.
+
+    Both branches carry the R_eff inner cutoff: the b-integral starts at the
+    sensor radius, so no flyby delivers more than q_max (K1(R_eff/lamb) for
+    finite lamb, its Coulomb limit 2 alpha/(v conv(R_eff)) for massless) and
+    dsigma/dq is zero above it. The outer b_constrained_max cap is independent:
+    b_constrained_max=None removes the OUTER cap only, never the inner cutoff.
+    """
     if xs["lamb"] is None:
-        if xs.get("b_constrained_max") is not None:
-            return cross_section.cross_section_rutherford_projection_capped(
-                q, alpha, vs, xs["b_constrained_max"])
-        return cross_section.cross_section_rutherford_projection(q, alpha, vs)
+        return cross_section.cross_section_rutherford_projection_capped(
+            q, alpha, vs, xs.get("b_constrained_max"), R_eff=R_eff)
     # For finite lamb the cap is already baked into xs["interp"].
     fn = cross_section.dsigma_dq_ln if xs["use_ln"] else cross_section.dsigma_dq
     return fn(q, alpha, xs["lamb"], R_eff, vs, xs["interp"])
@@ -70,9 +75,15 @@ def impact_parameter_max_any(q, alpha, vs, xs, R_eff=R_EFF):
     min(b_max, b_constrained_max) — the same geometric cutoff the cap applies to
     the cross section — so the transit diagnostics (expected_transits n_transit,
     transit_count_halo nt/bmax) stay consistent with dsigma/dq.
+
+    The R_eff inner cutoff is applied on both branches: where the reach does not
+    even clear the sensor radius the impulse q is unreachable, so the returned
+    b is 0 (the finite-range path already did this via q_tilde >= K1(R_eff/lamb);
+    the massless branch matches it at b_max <= R_eff, i.e. q >= q_max).
     """
     if xs["lamb"] is None:
         b = 2 * alpha / (q * vs) / units.conv_m2pGeV(1.0)  # Coulomb
+        b = np.where(b > R_eff, b, 0.0)   # q >= q_max: no trajectory delivers q
     else:
         fn = (cross_section.impact_parameter_max_ln if xs["use_ln"]
               else cross_section.impact_parameter_max)

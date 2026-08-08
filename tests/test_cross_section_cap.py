@@ -98,6 +98,10 @@ def test_capped_equals_uncapped_when_cap_huge():
 # CAP BITES: massless closed form below the uncapped Rutherford by retained(r)
 # --------------------------------------------------------------------------- #
 def test_cap_bites_massless():
+    """With the inner cutoff switched off (R_eff=0) the cap reduces to the
+    historical retained-fraction closed form; with it on, both entry points
+    lose the same (q-independent) inner shell, so the ratio moves only by the
+    inner shell's weight (~1e-8 here) — see test_inner_cutoff_shifts_ratio."""
     alpha = 1.0
     v = 1e-3
     b_cap = 0.1
@@ -109,10 +113,28 @@ def test_cap_bites_massless():
     r = b_max / b_cap
     assert r > 1.0                                  # cap bites
     capped = cross_section.cross_section_rutherford_projection_capped(
-        qa, alpha, va, b_cap)
-    unc = cross_section.cross_section_rutherford_projection(qa, alpha, va)
+        qa, alpha, va, b_cap, R_eff=0.0)
+    unc = cross_section.cross_section_rutherford_projection(qa, alpha, va,
+                                                            R_eff=0.0)
     assert np.all(capped < unc)
     np.testing.assert_allclose(capped, unc * retained(r), rtol=1e-12)
+
+
+def test_inner_cutoff_shifts_ratio():
+    """Same cell WITH the R_eff inner cutoff: both curves drop by the inner
+    shell F(b_max/R_eff) * uncapped, which is q-independent and tiny here."""
+    alpha, v, b_cap = 1.0, 1e-3, 0.1
+    q = 2 * alpha / (v * 0.5 * units.conv_m2pGeV(1.0))
+    qa, va = np.array([q]), np.array([v])
+    b_max = 2 * alpha / (q * v) / units.conv_m2pGeV(1.0)
+    bare = 2 * np.pi * alpha**2 / (va**2 * qa**3)
+    inner = bare * cross_section.rutherford_shell_fraction(b_max / R_EFF)
+    capped = cross_section.cross_section_rutherford_projection_capped(
+        qa, alpha, va, b_cap)
+    unc = cross_section.cross_section_rutherford_projection(qa, alpha, va)
+    np.testing.assert_allclose(capped, bare * retained(b_max / b_cap) - inner,
+                               rtol=1e-12)
+    np.testing.assert_allclose(unc, bare - inner, rtol=1e-12)
 
 
 # --------------------------------------------------------------------------- #

@@ -41,9 +41,12 @@
 
 set -u   # NOT -e: SHARD_FAIL must not abort the run
 
-cd "$HOME/code/luhdm"
+# REPO_DIR override lets the campaign run from a relocated repo copy
+# (e.g. /stor1 when the root filesystem is full).
+cd "${REPO_DIR:-$HOME/code/luhdm}"
 
-PY=.venv/bin/python
+PY="${PYTHON_BIN:-.venv/bin/python}"
+
 OUT="${SHARD_OUT:-$HOME/release_shards}"
 WORKERS="${WORKERS:-$(nproc)}"
 mkdir -p "$OUT/atm" "$OUT/noatm"
@@ -62,6 +65,8 @@ run_shard() {
             --shard-dir "$OUT/$pass" \
             --order tags-first \
             --b-constrained-max "${BCAP:-0.1}" \
+            --data-dir "${DATA_DIR:-notebooks}" \
+            --m-tier "${MTIER:-119}" \
             --workers "$WORKERS"; then
         wall=$(( $(date +%s) - t0 ))
         echo "[$(ts)] SHARD_DONE pass=$pass il=$il wall=${wall}s"

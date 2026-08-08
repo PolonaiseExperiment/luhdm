@@ -1,7 +1,7 @@
 """Reader for the POLONAISE UHDM data release (HDF5).
 
 The release is a single self-describing HDF5 file
-(``release/luhdm_datarelease_v3.h5``) holding the analysis as a matrix over
+(``release/luhdm_datarelease_v5.h5``) holding the analysis as a matrix over
 (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range ``lambda``).
 It is produced by ``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
@@ -13,20 +13,41 @@ the convenience layer: eager axis loading, exact/nearest index resolution,
 hyperslab plane reads, and the shared best-mass criterion so that notebooks 01
 and 04 cannot drift from each other.
 
-Datasets use axis order ``(mode, alpha, mass, lambda)``. The lambda axis is the
-finite ranges in ascending order followed by ``np.inf`` (the massless / analytic
-slice) as the last element, for which ``m_phi_gev`` is exactly ``0.0``. Per-mode
-cubes are ``(3, n_alpha, n_mass, n_lambda)``; ``n_transit`` is mode-less
-``(n_alpha, n_mass, n_lambda)``.
+Two on-disk layouts are readable, detected automatically:
+
+``axes`` (file ``version`` 2, the release layout)
+    One ``/results/<quantity>`` array per quantity, shaped
+    ``(f_dm, atmosphere, mode, alpha, mass, lambda)``, so every element
+    explicitly carries its hypothesis. ``axes/f_dm`` is ``[0.1, 1.0]`` and
+    ``axes/atmosphere`` is ``[1, 0]`` (1 = attenuation applied). ``n_transit``
+    drops the mode axis: ``(f_dm, atmosphere, alpha, mass, lambda)``.
+
+``groups`` (file ``version`` 1, the v3 layout)
+    ``/atm`` and ``/noatm`` groups holding ``(mode, alpha, mass, lambda)``
+    cubes, with the f_DM = 1 surface in parallel ``*_f1`` datasets and a mass
+    axis per pass.
+
+The lambda axis is the finite ranges in ascending order followed by ``np.inf``
+(the massless / analytic slice) as the last element, for which ``m_phi_gev`` is
+exactly ``0.0``.
 
 ``h5py`` is imported here (not in ``luhdm.__init__``) so importing the rest of
 the package stays dependency-light.
+
+Cubes built by the dual-f_DM pipeline carry two exclusion surfaces: the baseline
+dark-matter fraction f_DM = 0.1 and f_DM = 1.0. Because f_DM is a pure flux
+normalisation, both come from one campaign. Every accessor takes ``f_dm=``
+(default 0.1) and ``atmosphere=`` (default True), and the historical
+``group='atm'/'noatm'`` spelling of the atmosphere choice keeps working, so code
+written before either axis existed reads exactly what it always did.
 
 Quickstart::
 
     from luhdm import release
     rel = release.open_release()
     ext = rel.mass_plane("extremeness", mode=1, lam="200um")   # (n_alpha, n_mass)
+    ext1 = rel.mass_plane("extremeness", mode=1, lam="200um", f_dm=1.0)
+    bare = rel.mass_plane("extremeness", mode=1, lam="200um", atmosphere=False)
     m_best, im = rel.best_mass(mode=1)
     rel.close()
 """
@@ -39,14 +60,17 @@ import numpy as np
 
 from luhdm import limits
 
-DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v3.h5"
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v5.h5"
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 1            # v3 group layout (/atm, /noatm)
+FORMAT_VERSION_AXES = 2       # axis layout (/results over f_dm x atmosphere)
+SUPPORTED_VERSIONS = (FORMAT_VERSION, FORMAT_VERSION_AXES)
 
 # Canonical mediator-range tags -> lambda in metres. Order matters elsewhere;
 # 'massless' -> inf is the analytic slice appended last on the lambda axis.
 TAGS = {
     "2m": 2.0,
+    "20cm": 0.2,
     "2cm": 2e-2,
     "2mm": 2e-3,
     "200um": 2e-4,
@@ -57,14 +81,30 @@ TAGS = {
 }
 
 # Canonical ordering used throughout the release / notebooks.
-TAG_ORDER = ["2m", "2cm", "2mm", "200um", "20um", "10um", "2um"]
-# Speed-distribution tags: standard halo model + the seven finite ranges.
+TAG_ORDER = ["2m", "20cm", "2cm", "2mm", "200um", "20um", "10um", "2um"]
+# Speed-distribution tags: standard halo model + the eight finite ranges.
 SPEED_TAGS = ("shm",) + tuple(TAG_ORDER)
-# Raw-spectrum tags: the seven finite ranges + the massless slice.
+# Raw-spectrum tags: the eight finite ranges + the massless slice.
 RAW_TAGS = tuple(TAG_ORDER) + ("massless",)
 
 _GROUP_H5 = {"atm": "atm", "noatm": "noatm", "halo": "halo"}
 _PER_MODE = ("extremeness", "mu", "status")
+_QUANTITIES = ("extremeness", "mu", "n_transit", "status")
+
+# Atmosphere hypothesis <-> the historical group name. The atm/noatm split was
+# always the presence or absence of the attenuation ODE; in the axis layout it
+# is an explicit axis (``axes/atmosphere``, 1 = attenuation on) instead of two
+# groups, and ``group=`` keeps working as the name for the same choice.
+_ATM_GROUP = {True: "atm", False: "noatm"}
+
+# Dark-matter fraction hypotheses carried by the cube. f_DM is a pure flux
+# normalisation (same attenuation ODE, same dR/dq shape, mu scales linearly), so
+# one campaign produces both surfaces: the baseline f_DM = 0.1 in the unsuffixed
+# datasets and f_DM = 1.0 in the parallel ``*_f1`` ones. Every accessor takes
+# ``f_dm=`` and defaults to the baseline, so pre-dual-f code is unaffected.
+F_DM_DEFAULT = 0.1
+F_DM_VALUES = (0.1, 1.0)
+_F_DM_SUFFIX = {0.1: "", 1.0: "_f1"}
 
 
 # --------------------------------------------------------------------------- #
@@ -177,12 +217,13 @@ def open_release(path=None):
     ff = _py(f.attrs.get("file_format"))
     ver = f.attrs.get("version")
     ver_i = None if ver is None else int(ver)
-    if ff != "luhdm-datarelease" or ver_i != FORMAT_VERSION:
+    if ff != "luhdm-datarelease" or ver_i not in SUPPORTED_VERSIONS:
         f.close()
         raise ValueError(
             f"unrecognised data release: file_format={ff!r}, version={ver_i!r}; "
             f"this loader (luhdm.release) expects "
-            f"file_format='luhdm-datarelease', version={FORMAT_VERSION}."
+            f"file_format='luhdm-datarelease', version in "
+            f"{list(SUPPORTED_VERSIONS)}."
         )
     return Release(f, path)
 
@@ -212,8 +253,21 @@ class Release:
         n_finite = int(ax["lambda_m"].attrs["n_finite"]) if "n_finite" in \
             ax["lambda_m"].attrs else int(np.count_nonzero(np.isfinite(lam)))
         self._mode = ax["mode"][:]
+        # layout detection: the axis layout puts everything in /results over an
+        # explicit (f_dm, atmosphere) pair of axes; the v3 layout splits the
+        # atmosphere hypothesis into /atm and /noatm groups with its own mass
+        # axis each. Both are readable through the same accessors.
+        self.layout = "axes" if "results" in self._file else "groups"
+        if self.layout == "axes":
+            self._f_dm_axis = np.asarray(ax["f_dm"][:], dtype=float)
+            self._atmosphere_axis = np.asarray(ax["atmosphere"][:], dtype=int)
+            mass_noatm = ax["mass_gev"][:]        # one shared mass axis
+        else:
+            self._f_dm_axis = None
+            self._atmosphere_axis = None
+            mass_noatm = ax["mass_noatm_gev"][:]
         self.axes = _AxisSet(ax["mass_gev"][:], alpha, lam, mphi, n_finite)
-        self.axes_noatm = _AxisSet(ax["mass_noatm_gev"][:], alpha, lam, mphi, n_finite)
+        self.axes_noatm = _AxisSet(mass_noatm, alpha, lam, mphi, n_finite)
         self.axes_halo = _AxisSet(
             ax["mass_halo_gev"][:], ax["alpha_halo_n"][:], lam, mphi, n_finite)
 
@@ -254,9 +308,130 @@ class Release:
         v = self.attrs.get("b_constrained_max_m")
         return None if v is None or not np.isfinite(v) else float(v)
 
+    @property
+    def f_dm_values(self):
+        """DM-fraction hypotheses this file carries, ascending (e.g. [0.1, 1.0]).
+
+        Pre-dual-f cubes carry only the baseline; ``[0.1]`` is then returned.
+        """
+        if self.layout == "axes":
+            return [float(x) for x in self._f_dm_axis]
+        v = self.attrs.get("f_dm_values")
+        if v is None:
+            return [float(self.attrs.get("f_x", F_DM_DEFAULT))]
+        return [float(x) for x in np.atleast_1d(v)]
+
+    @property
+    def atmosphere_values(self):
+        """Atmosphere hypotheses carried, as booleans (attenuation on/off)."""
+        if self.layout == "axes":
+            return [bool(x) for x in self._atmosphere_axis]
+        return [True, False]
+
     # -- internal resolvers ----------------------------------------------- #
+    def _resolve_group(self, group, atmosphere, default_group):
+        """Normalise the (group, atmosphere) pair to a group name.
+
+        ``group`` is the historical selector ('atm'/'noatm'/'halo') and
+        ``atmosphere`` the axis-native one (True = attenuation applied). Passing
+        neither uses this accessor's historical default; passing both is allowed
+        only when they agree, so a caller can never silently get the other
+        hypothesis than the one it named.
+        """
+        if group is not None and group not in _GROUP_H5:
+            raise ValueError(
+                f"unknown group {group!r}; expected 'atm', 'noatm' or 'halo'")
+        if atmosphere is None:
+            return default_group if group is None else group
+        want = _ATM_GROUP[bool(atmosphere)]
+        if group is not None and group != want:
+            raise ValueError(
+                f"group={group!r} and atmosphere={atmosphere!r} disagree; "
+                f"atmosphere={bool(atmosphere)} means group={want!r}")
+        return want
+
+    def _f_dm_index(self, f_dm):
+        """Index into ``axes/f_dm`` (axis layout), validated."""
+        vals = self._f_dm_axis
+        idx = np.where(np.isclose(vals, float(f_dm), rtol=1e-12, atol=0.0))[0]
+        if not idx.size:
+            raise ValueError(
+                f"f_dm={f_dm!r} is not on this cube's f_dm axis "
+                f"{[float(v) for v in vals]}")
+        return int(idx[0])
+
+    def _atmosphere_index(self, group):
+        """Index into ``axes/atmosphere`` for a group name (axis layout)."""
+        want = 1 if group == "atm" else 0
+        idx = np.where(self._atmosphere_axis == want)[0]
+        if not idx.size:
+            raise ValueError(
+                f"atmosphere={want} ({group}) is not on this cube's atmosphere "
+                f"axis {self._atmosphere_axis.tolist()}")
+        return int(idx[0])
+
+    def _cube(self, quantity, group, f_dm):
+        """(dataset, leading-index tuple) for one quantity+hypothesis.
+
+        The single place the two layouts differ: in the axis layout the
+        hypothesis is a pair of leading indices into one ``/results`` array; in
+        the v3 layout it is the group name plus a dataset-name suffix. Callers
+        index ``ds[prefix + rest]`` either way.
+        """
+        if quantity not in _QUANTITIES:
+            raise ValueError(
+                f"quantity must be one of {'/'.join(_QUANTITIES)}; "
+                f"got {quantity!r}")
+        if self.layout == "axes":
+            return (self._file["results"][quantity],
+                    (self._f_dm_index(f_dm), self._atmosphere_index(group)))
+        if quantity == "n_transit":
+            # never stored per f_DM in the v3 layout: it is exactly linear in
+            # f_DM, so the caller scales the plane it reads back.
+            self._check_f_dm_value(f_dm)
+            return self._h5group(group)["n_transit"], ()
+        return self._h5group(group)[quantity + self._f_dm_suffix(
+            f_dm, group, quantity)], ()
+
+    @staticmethod
+    def _check_f_dm_value(f_dm):
+        """Reject an f_DM that is not one of the hypotheses this loader knows."""
+        if float(f_dm) not in _F_DM_SUFFIX:
+            raise ValueError(
+                f"f_dm={f_dm!r} is not a supported hypothesis; "
+                f"known values: {sorted(_F_DM_SUFFIX)}")
+
+    def _f_dm_suffix(self, f_dm, group, quantity):
+        """Dataset-name suffix for ``f_dm`` in the v3 group layout.
+
+        Returns "" for the baseline and "_f1" for the f_DM = 1 surface. Raises
+        ValueError for an unsupported value, naming what the file does carry.
+        """
+        f = float(f_dm)
+        avail = self.f_dm_values
+        suffix = _F_DM_SUFFIX.get(f)
+        if suffix is None:
+            raise ValueError(
+                f"f_dm={f_dm!r} is not a supported hypothesis; this cube "
+                f"carries {avail}")
+        if suffix and (quantity not in _PER_MODE
+                       or quantity + suffix not in self._h5group(group)):
+            raise ValueError(
+                f"f_dm={f} is not available for {group}/{quantity} in this "
+                f"cube (it carries {avail}); rebuild with the dual-f_DM "
+                f"pipeline (scripts/build_release.py schema 2)")
+        return suffix
+
+    def _f_dm_scale(self, f_dm):
+        """Linear flux scaling from the baseline to ``f_dm`` (n_transit etc.).
+
+        Only used where a quantity is not stored per f_DM (the v3 layout's
+        ``n_transit``, and the halo group in both layouts).
+        """
+        return float(f_dm) / F_DM_DEFAULT
+
     def _axis_for(self, group):
-        if group == "atm":
+        if group in ("atm", None):
             return self.axes
         if group == "noatm":
             return self.axes_noatm
@@ -268,7 +443,13 @@ class Release:
         if group not in _GROUP_H5:
             raise ValueError(
                 f"unknown group {group!r}; expected 'atm', 'noatm' or 'halo'")
-        return self._file[_GROUP_H5[group]]
+        name = _GROUP_H5[group]
+        if name not in self._file:
+            raise KeyError(
+                f"this cube has no /{name} group (layout={self.layout!r}); "
+                f"read it through the accessors, which map the atmosphere "
+                f"hypothesis onto whichever layout the file uses")
+        return self._file[name]
 
     def _mode_index(self, mode):
         if mode is None:
@@ -323,14 +504,20 @@ class Release:
         return int(np.argmin(np.abs(np.log10(axis) - np.log10(float(alpha)))))
 
     # -- plane reads ------------------------------------------------------ #
-    def mass_plane(self, quantity, mode=None, lam="200um", group="atm"):
+    def mass_plane(self, quantity, mode=None, lam="200um", group=None,
+                   atmosphere=None, f_dm=F_DM_DEFAULT):
         """A (n_alpha, n_mass) plane at fixed lambda.
 
-        ``quantity`` in ``{extremeness, mu, n_transit, status}`` for atm/noatm
-        (``extremeness``/``mu``/``status`` need ``mode``; ``n_transit`` is
-        mode-less), or ``{n_transit, bmax}`` for ``group='halo'`` (``mode`` must
-        be ``None``).
+        ``quantity`` in ``{extremeness, mu, n_transit, status}`` for the
+        atmosphere planes (``extremeness``/``mu``/``status`` need ``mode``;
+        ``n_transit`` is mode-less), or ``{n_transit, bmax}`` for
+        ``group='halo'`` (``mode`` must be ``None``).
+
+        The hypothesis is named by ``f_dm`` (default 0.1) and ``atmosphere``
+        (default True = attenuation applied); ``group='atm'``/``'noatm'`` is the
+        historical spelling of the same atmosphere choice and still works.
         """
+        group = self._resolve_group(group, atmosphere, "atm")
         if group == "halo":
             if mode is not None:
                 raise ValueError("halo quantities are mode-less; pass mode=None")
@@ -338,104 +525,129 @@ class Release:
                 raise ValueError(
                     f"halo quantity must be 'n_transit' or 'bmax'; got {quantity!r}")
             il = self.at_lambda(lam, "halo")
-            return self._h5group("halo")[quantity][:, :, il]
+            plane = self._h5group("halo")[quantity][:, :, il]
+            return plane * self._f_dm_scale(f_dm) if quantity == "n_transit" \
+                else plane
 
-        if quantity not in ("extremeness", "mu", "n_transit", "status"):
-            raise ValueError(
-                f"{group} quantity must be one of extremeness/mu/n_transit/status; "
-                f"got {quantity!r}")
         il = self.at_lambda(lam, group)
-        ds = self._h5group(group)[quantity]
+        ds, pre = self._cube(quantity, group, f_dm)
         if quantity == "n_transit":
             if mode is not None:
                 raise ValueError("n_transit is mode-less; pass mode=None")
-            return ds[:, :, il]
-        imode = self._mode_index(mode)
-        return ds[imode, :, :, il]
+            plane = ds[pre + (slice(None), slice(None), il)]
+            # stored per f_DM in the axis layout; scaled on read in the v3 one
+            return plane if self.layout == "axes" \
+                else plane * self._f_dm_scale(f_dm)
+        return ds[pre + (self._mode_index(mode), slice(None), slice(None), il)]
 
-    def lambda_plane(self, quantity, mode, mass=None, group="atm"):
+    def lambda_plane(self, quantity, mode, mass=None, group=None,
+                     atmosphere=None, f_dm=F_DM_DEFAULT):
         """A (n_alpha, n_finite) plane at fixed mass over the finite lambdas.
 
-        ``mass=None`` uses :meth:`best_mass` for this mode/group. Only atm/noatm
-        groups; the trailing massless lambda column is excluded.
+        ``mass=None`` uses :meth:`best_mass` for this mode/hypothesis. Not
+        defined for the halo group; the trailing massless lambda column is
+        excluded.
         """
-        if group not in ("atm", "noatm"):
-            raise ValueError(
-                f"lambda_plane is defined for 'atm'/'noatm'; got {group!r}")
-        if quantity not in ("extremeness", "mu", "n_transit", "status"):
-            raise ValueError(
-                f"quantity must be one of extremeness/mu/n_transit/status; "
-                f"got {quantity!r}")
+        group = self._resolve_group(group, atmosphere, "atm")
+        if group == "halo":
+            raise ValueError("lambda_plane is defined for 'atm'/'noatm'; "
+                             "got 'halo'")
         axset = self._axis_for(group)
         nfin = axset.n_finite
-        im = self.best_mass(mode, group)[1] if mass is None \
+        im = self.best_mass(mode, group, f_dm=f_dm)[1] if mass is None \
             else self.at_mass(mass, group)
-        ds = self._h5group(group)[quantity]
+        ds, pre = self._cube(quantity, group, f_dm)
         if quantity == "n_transit":
-            return ds[:, im, :nfin]
-        imode = self._mode_index(mode)
-        return ds[imode, :, im, :nfin]
+            plane = ds[pre + (slice(None), im, slice(0, nfin))]
+            return plane if self.layout == "axes" \
+                else plane * self._f_dm_scale(f_dm)
+        return ds[pre + (self._mode_index(mode), slice(None), im,
+                         slice(0, nfin))]
 
-    def composite(self, quantity="extremeness", lam="massless", group="noatm"):
-        """Per-mode maximum of a plane: ``np.maximum.reduce`` over the 3 modes."""
+    def composite(self, quantity="extremeness", lam="massless", group=None,
+                  atmosphere=None, f_dm=F_DM_DEFAULT):
+        """Per-mode maximum of a plane: ``np.maximum.reduce`` over the 3 modes.
+
+        Historically defaults to the bare-halo (no-atmosphere) massless slice.
+        """
         if quantity not in _PER_MODE:
             raise ValueError(
                 f"composite needs a per-mode quantity {_PER_MODE}; got {quantity!r}")
+        group = self._resolve_group(group, atmosphere, "noatm")
         il = self.at_lambda(lam, group)
-        ds = self._h5group(group)[quantity]
-        planes = [ds[k, :, :, il] for k in range(ds.shape[0])]
+        ds, pre = self._cube(quantity, group, f_dm)
+        n_mode = self._mode.size
+        planes = [ds[pre + (k, slice(None), slice(None), il)]
+                  for k in range(n_mode)]
         return np.maximum.reduce(planes)
 
     # -- derived ---------------------------------------------------------- #
-    def best_mass(self, mode, group="atm", confidence=0.95):
+    def best_mass(self, mode, group=None, confidence=0.95, f_dm=F_DM_DEFAULT,
+                  atmosphere=None):
         """(mass_gev, im): the mode's best mass via :func:`best_mass_index`.
 
-        Memoised per ``(mode, group, confidence)``. Loads the mode's
+        Memoised per ``(mode, group, confidence, f_dm)``. Loads the mode's
         finite-lambda extremeness cube once and delegates to the shared pure
         criterion.
         """
-        if group not in ("atm", "noatm"):
-            raise ValueError(
-                f"best_mass is defined for 'atm'/'noatm'; got {group!r}")
-        key = (int(mode), group, float(confidence))
+        group = self._resolve_group(group, atmosphere, "atm")
+        if group == "halo":
+            raise ValueError("best_mass is defined for 'atm'/'noatm'; "
+                             "got 'halo'")
+        key = (int(mode), group, float(confidence), float(f_dm))
         if key in self._best_mass_cache:
             return self._best_mass_cache[key]
         axset = self._axis_for(group)
-        imode = self._mode_index(mode)
         nfin = axset.n_finite
-        p_finite = self._h5group(group)["extremeness"][imode, :, :, :nfin]
+        ds, pre = self._cube("extremeness", group, f_dm)
+        p_finite = ds[pre + (self._mode_index(mode), slice(None), slice(None),
+                             slice(0, nfin))]
         im = best_mass_index(p_finite, axset.lambda_finite, axset.alpha_n,
                              confidence)
         result = (float(axset.mass_gev[im]), im)
         self._best_mass_cache[key] = result
         return result
 
-    def excluded_alpha_band(self, mass, lam, mode=1, group="atm", confidence=0.95):
+    def excluded_alpha_band(self, mass, lam, mode=1, group=None,
+                            confidence=0.95, f_dm=F_DM_DEFAULT,
+                            atmosphere=None):
         """(lo, hi) coupling edges excluded at fixed (mass, lambda, mode).
 
         Delegates to :func:`luhdm.limits.excluded_band` on the 1-D
         ``p(alpha)`` column; ``(nan, nan)`` if nothing is excluded.
         """
+        group = self._resolve_group(group, atmosphere, "atm")
         axset = self._axis_for(group)
         im = self.at_mass(mass, group)
         il = self.at_lambda(lam, group)
-        imode = self._mode_index(mode)
-        column = self._h5group(group)["extremeness"][imode, :, im, il]
+        ds, pre = self._cube("extremeness", group, f_dm)
+        column = ds[pre + (self._mode_index(mode), slice(None), im, il)]
         return limits.excluded_band(axset.alpha_n, column, level=confidence)
 
-    def cell(self, mass, alpha, lam, mode=1, group="atm"):
+    def cell(self, mass, alpha, lam, mode=1, group=None, f_dm=F_DM_DEFAULT,
+             atmosphere=None):
         """Full dump of one (mass, alpha, lambda, mode) cell as a dict.
 
-        Includes the atm/noatm values at the resolved cell plus the halo values
-        (``bmax``, ``n_transit_halo``) from the nearest halo cell at the same
-        lambda.
+        Includes the values at the resolved cell for the selected (f_dm,
+        atmosphere) hypothesis, plus the halo values (``bmax``,
+        ``n_transit_halo``) from the nearest halo cell at the same lambda. The
+        hypothesis is echoed back in the dict.
         """
+        group = self._resolve_group(group, atmosphere, "atm")
         axset = self._axis_for(group)
         ia = self.at_alpha(alpha, group)
         im = self.at_mass(mass, group)
         il = self.at_lambda(lam, group)
         imode = self._mode_index(mode)
-        g = self._h5group(group)
+        scale = self._f_dm_scale(f_dm)
+        cells = {}
+        for q in _QUANTITIES:
+            ds, pre = self._cube(q, group, f_dm)
+            if q == "n_transit":
+                v = float(ds[pre + (ia, im, il)])
+                cells[q] = v if self.layout == "axes" else v * scale
+            else:
+                cells[q] = ds[pre + (imode, ia, im, il)]
         # nearest halo cell at the same lambda index (halo shares the lambda axis)
         ia_h = self.at_alpha(alpha, "halo")
         im_h = self.at_mass(mass, "halo")
@@ -444,13 +656,15 @@ class Release:
             "mass_gev": float(axset.mass_gev[im]),
             "alpha_n": float(axset.alpha_n[ia]),
             "lambda_m": float(axset.lambda_m[il]),
+            "f_dm": float(f_dm),
+            "atmosphere": group == "atm",
             "indices": (ia, im, il),
-            "extremeness": float(g["extremeness"][imode, ia, im, il]),
-            "mu": float(g["mu"][imode, ia, im, il]),
-            "n_transit": float(g["n_transit"][ia, im, il]),
-            "status": int(g["status"][imode, ia, im, il]),
+            "extremeness": float(cells["extremeness"]),
+            "mu": float(cells["mu"]),
+            "n_transit": float(cells["n_transit"]),
+            "status": int(cells["status"]),
             "bmax": float(halo["bmax"][ia_h, im_h, il]),
-            "n_transit_halo": float(halo["n_transit"][ia_h, im_h, il]),
+            "n_transit_halo": float(halo["n_transit"][ia_h, im_h, il]) * scale,
         }
 
     # -- detector / reference curves ------------------------------------- #

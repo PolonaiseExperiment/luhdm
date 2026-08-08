@@ -218,7 +218,9 @@ class YukawaPointCrossSectionPhysical:
 from scipy.interpolate import interp1d
 from scipy.special import kn
 
-from luhdm import units
+from luhdm import config, units
+
+R_EFF = config.R_EFF
 
 
 def shape_factor(x):
@@ -251,50 +253,110 @@ def interpolant_k1_inverse(k1_values):
     return np.piecewise(k1_values, conditions, fns)
 
 
-def cross_section_rutherford_projection(q, alpha, v):
-    """Projected massless-mediator (Coulomb) limit: dsigma/dq = 2 pi a^2/(v^2 q^3).
+def coulomb_reach(q, alpha, v):
+    """Massless (Coulomb) impact parameter [m] delivering the impulse q.
 
-    This is the lamb -> infinity limit of the K1 machinery below (K1(x) -> 1/x
-    turns the arccosh integral into pi/4, collapsing dsigma/dq_tilde to
-    (pi/4)/q_tilde^3).
+    b_max(q) = 2 alpha / (q v) / conv_m2pGeV(1): the largest b whose flyby still
+    transfers |q| (exactly the massless branch of ``impact_parameter_max_any``).
     """
-    dsigma_rutherford = 2 * np.pi * alpha**2 / (v**2 * q**3)
-    return dsigma_rutherford
+    return 2 * alpha / (q * v) / units.conv_m2pGeV(1.0)
 
 
-def cross_section_rutherford_projection_capped(q, alpha, v, b_constrained_max):
-    """Capped massless (Coulomb) projected dsigma/dq in GeV^-3.
+def coulomb_q_max(alpha, v, R_eff=R_EFF):
+    """Largest momentum transfer [GeV] a massless-mediator flyby can deliver.
 
-    The uncapped Coulomb projection is
-    :func:`cross_section_rutherford_projection`; capping the impact parameter at
-    ``b_constrained_max`` (metres) removes the contribution of flybys reaching
-    beyond the cap by multiplying by a retained fraction. The massless reach is
+    No trajectory approaches closer than the sensor radius, so the b-integral
+    starts at b = R_eff and the impulse saturates at
 
-        b_max(q) = 2 alpha / (q v) / conv_m2pGeV(1)   [m]
+        q_max = 2 alpha / (v R_eff) / conv_m2pGeV(1)   [GeV]
 
-    (exactly the massless branch of ``impact_parameter_max_any`` in rate.py).
-    With ``r = b_max(q) / b_constrained_max`` the cap bites only where ``r > 1``
-    (b_max > b_cap); there
-
-        retained(r) = 1 - (2/pi) (sqrt(r^2-1)/r^2 + arctan(sqrt(r^2-1)))
-
-    and ``retained = 1`` for ``r <= 1``. Properties: retained(1) = 1 (no
-    suppression at the reach edge), retained -> 0 as r -> inf (full
-    suppression), monotonically decreasing in r. Vectorized over q and v.
+    (the lamb -> infinity limit of the finite-range cutoff q_tilde < K1(R_eff/lamb),
+    since K1(x) -> 1/x and G2(x) -> 1). dsigma/dq vanishes identically above it.
     """
-    uncapped = cross_section_rutherford_projection(q, alpha, v)
-    b_max = 2 * alpha / (q * v) / units.conv_m2pGeV(1.0)
-    r = np.asarray(b_max / b_constrained_max, dtype=float)
-    bites = r > 1.0
-    # guard the sqrt/division where the cap does not bite (r <= 1)
-    r2 = np.where(bites, r * r, 1.0)
-    s = np.sqrt(r2 - 1.0)
-    retained = np.where(
-        bites, 1.0 - (2.0 / np.pi) * (s / r2 + np.arctan(s)), 1.0)
-    # the 1 - (...) form loses precision for r >~ 1e4 (true value ~ 1/(pi r^3))
-    # and can dip slightly negative; a cross section is never negative.
-    retained = np.maximum(retained, 0.0)
-    return uncapped * retained
+    return 2 * alpha / (v * units.conv_m2pGeV(R_eff))
+
+
+def rutherford_shell_fraction(r):
+    """Fraction of the uncapped Coulomb projection contributed by b <= b_outer.
+
+    ``r = b_max(q) / b_outer``. Writing x = 1/r = b_outer/b_max, the projected
+    b-integral over the disc b <= b_outer is the uncapped result times
+
+        F(x) = (2/pi) (arcsin x - x sqrt(1 - x^2))     for x < 1  (r > 1)
+        F    = 1                                       for x >= 1 (r <= 1),
+
+    i.e. the shell already contains the whole reach. F(0) = 0, F(1) = 1, and F is
+    monotonically increasing in x. Equivalent to the previous
+    ``1 - (2/pi)(sqrt(r^2-1)/r^2 + arctan sqrt(r^2-1))`` retained fraction, but
+    evaluated in the form that keeps full precision for x << 1 (small discs),
+    where the series F = (4/(3 pi)) x^3 (1 + 3x^2/10 + 9x^4/56 + ...) is used.
+    Vectorized; r may be 0 (b_outer -> infinity, F = 1) or inf (b_outer = 0, F = 0).
+    """
+    r = np.asarray(r, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        x = np.where(r > 1.0, 1.0 / r, 1.0)      # x = b_outer/b_max, clipped to 1
+    x = np.where(np.isfinite(x), x, 0.0)         # r = inf (b_outer = 0) -> x = 0
+    small = x < 1e-2
+    x_s = np.where(small, x, 0.5)                # dummy where unused
+    x_d = np.where(small, 0.5, x)
+    series = (4.0 / (3.0 * np.pi)) * x_s**3 * (
+        1.0 + 0.3 * x_s**2 + (9.0 / 56.0) * x_s**4)
+    direct = (2.0 / np.pi) * (
+        np.arcsin(x_d) - x_d * np.sqrt(np.maximum(1.0 - x_d * x_d, 0.0)))
+    return np.where(small, series, direct)
+
+
+def cross_section_rutherford_projection_capped(q, alpha, v, b_constrained_max,
+                                               R_eff=R_EFF):
+    """Massless-mediator (Coulomb) projected dsigma/dq in GeV^-3.
+
+    The impact-parameter integral runs over the ANNULUS
+    ``R_eff <= b <= b_constrained_max``:
+
+    * the inner edge is the sensor radius — a flyby cannot approach closer, so
+      the impulse saturates at ``q_max = coulomb_q_max(alpha, v, R_eff)`` and
+      dsigma/dq is identically zero above it. This is the massless counterpart of
+      the ``q_tilde < K1(R_eff/lamb)`` cutoff the finite-range path applies;
+    * the outer edge ``b_constrained_max`` (metres, or None for no outer cap)
+      removes flybys reaching beyond the cap.
+
+    Both edges enter through :func:`rutherford_shell_fraction`, the fraction of
+    the uncapped Coulomb projection ``2 pi alpha^2/(v^2 q^3)`` coming from
+    b <= b_outer, so
+
+        dsigma/dq = uncapped(q) * [F(b_max/b_cap) - F(b_max/R_eff)] .
+
+    Above q_max both shells equal the full reach (F = 1) and the difference is
+    exactly 0; ``R_eff = 0`` recovers the pure disc integral (no inner cutoff).
+    Vectorized over q and v.
+    """
+    if R_eff is None:
+        R_eff = 0.0
+    if b_constrained_max is not None and b_constrained_max < R_eff:
+        raise ValueError(
+            f"b_constrained_max ({b_constrained_max} m) below sensor "
+            f"radius R_eff ({R_eff} m)")
+    uncapped = 2 * np.pi * alpha**2 / (v**2 * q**3)
+    b_max = coulomb_reach(q, alpha, v)
+    outer = (1.0 if b_constrained_max is None
+             else rutherford_shell_fraction(b_max / b_constrained_max))
+    inner = (0.0 if R_eff == 0.0
+             else rutherford_shell_fraction(b_max / R_eff))
+    return np.maximum(uncapped * (outer - inner), 0.0)
+
+
+def cross_section_rutherford_projection(q, alpha, v, R_eff=R_EFF):
+    """Massless-mediator (Coulomb) projected dsigma/dq in GeV^-3, no outer cap.
+
+    Shorthand for :func:`cross_section_rutherford_projection_capped` with
+    ``b_constrained_max=None``: the b-integral still starts at the sensor radius
+    ``R_eff``, so dsigma/dq vanishes above ``q_max = coulomb_q_max(alpha, v,
+    R_eff)``. Only with ``R_eff = 0`` does this reduce to the bare
+    ``2 pi alpha^2/(v^2 q^3)`` power law (the lamb -> infinity limit of the K1
+    machinery below, whose arccosh integral collapses to pi/4).
+    """
+    return cross_section_rutherford_projection_capped(q, alpha, v, None,
+                                                      R_eff=R_eff)
 
 
 def q_tilde_map(q, alpha, lamb, R_eff, v):

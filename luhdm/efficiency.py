@@ -6,11 +6,24 @@ every host (no data/ dir needed). ``make_efficiency`` returns a vectorised
 callable epsilon(q_GeV) in [0, 1] for use as the ``eff`` argument of
 ``rate.differential_rate_trapz``.
 """
+import os
 from pathlib import Path
 
 import numpy as np
 
-_TABLE = Path(__file__).resolve().parent / "reference_data" / "efficiency_curves.npz"
+# LUHDM_EFFICIENCY_NPZ overrides the table for veto-variant scans (re-averaged efficiency).
+_TABLE = Path(os.environ.get(
+    "LUHDM_EFFICIENCY_NPZ",
+    str(Path(__file__).resolve().parent / "reference_data" / "efficiency_curves.npz")))
+
+
+def table_path():
+    """Path of the efficiency table actually in use (LUHDM_EFFICIENCY_NPZ aware).
+
+    Provenance writers record this (and its sha256) so an env-overridden table
+    is visible in the run/assembly metadata instead of being silently assumed.
+    """
+    return _TABLE
 
 
 def load_curve(mode, df=3):

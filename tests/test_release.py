@@ -428,11 +428,18 @@ def test_tree(rel):
 # Errors: version mismatch, missing file, context manager
 # --------------------------------------------------------------------------- #
 def test_version_mismatch(tmp_path):
-    p = make_mini_release(tmp_path / "bad.h5", version=2)
+    # 1 (group layout) and 2 (axis layout) are both supported; anything else is
+    # refused, naming the file's version and the supported set.
+    p = make_mini_release(tmp_path / "bad.h5", version=99)
     with pytest.raises(ValueError) as exc:
         open_release(p)
     msg = str(exc.value)
-    assert "2" in msg and str(release.FORMAT_VERSION) in msg
+    assert "99" in msg and str(release.FORMAT_VERSION) in msg
+
+
+def test_supported_versions_include_both_layouts():
+    assert release.SUPPORTED_VERSIONS == (release.FORMAT_VERSION,
+                                          release.FORMAT_VERSION_AXES)
 
 
 def test_missing_file(tmp_path):

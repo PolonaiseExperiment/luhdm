@@ -16,6 +16,26 @@ products, embeds full provenance, and writes ``release/provenance.json`` +
 Float64 shard dirs are archived as the verification source of record; the H5
 carries float32 cubes (p granularity is MC-limited at ~1e-4, far coarser than
 f4 spacing ~6e-8 near 0.95).
+
+Layouts (``--layout``):
+
+``axes`` (default, the release layout, file ``version`` 2)
+    One ``/results/<quantity>`` array per quantity, shaped
+    ``(f_dm, atmosphere, mode, alpha_n, mass, lambda)`` — so every element
+    explicitly carries its (f_DM) x (atmosphere) hypothesis, named by
+    ``axes/f_dm`` = [0.1, 1.0] and ``axes/atmosphere`` = [1, 0] (1 = attenuation
+    on). The noatm shard dir fills the atmosphere=0 plane and atm the
+    atmosphere=1 plane; unsuffixed shard arrays fill f_dm=0.1 and ``_f1`` fills
+    f_dm=1.0. ``n_transit`` is materialised at full shape (it is
+    atmosphere-dependent and exactly linear in f_DM). This needs BOTH f_DM
+    surfaces and ONE shared mass axis across the two passes.
+
+``groups`` (the v3 layout, file ``version`` 1)
+    ``/atm`` and ``/noatm`` groups, each with ``extremeness``/``mu``/``status``
+    at f_DM = 0.1 plus ``*_f1`` at f_DM = 1.0, and a mass axis per pass. Kept so
+    v3-schema cubes can still be produced and compared against.
+
+``luhdm.release`` reads both, keyed on schema detection.
 """
 
 from __future__ import annotations
@@ -52,12 +72,13 @@ CONFIDENCE = 0.95
 M_PLANCK = 1.22e19
 SCHEMA_VERSION = 1
 FILE_FORMAT = "luhdm-datarelease"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 1        # v3 group layout: /atm, /noatm (+ _f1 datasets)
+FORMAT_VERSION_AXES = 2   # axis layout: /results over (f_dm, atmosphere, ...)
 
 # canonical tag order everywhere in the release
-TAGS = ["2m", "2cm", "2mm", "200um", "20um", "10um", "2um"]
+TAGS = ["2m", "20cm", "2cm", "2mm", "200um", "20um", "10um", "2um"]
 TAG_LAMBDA = {
-    "2m": 2.0, "2cm": 2e-2, "2mm": 2e-3, "200um": 2e-4,
+    "2m": 2.0, "20cm": 0.2, "2cm": 2e-2, "2mm": 2e-3, "200um": 2e-4,
     "20um": 2e-5, "10um": 1e-5, "2um": 2e-6,
 }
 MODES = (1, 2, 3)
@@ -207,20 +228,47 @@ def load_pass(pass_dir, pass_name):
                     np.asarray(rec[f"events_mode{n}"], dtype=np.float64), events[n]):
                 sys.exit(f"FATAL: {pass_name}:{tag} events_mode{n} differ")
 
+    # dual f_DM: shards from schema 2 on also carry the f_DM=1 surfaces. Older
+    # shard dirs (f=0.1 only) stay assemblable — the _f1 datasets are then just
+    # absent from the release.
+    ordered = fin_recs + [massless]
+    f1_missing = [r["_file"] for r in ordered if "p_f1" not in r]
+    has_f1 = not f1_missing
+    if f1_missing and len(f1_missing) != len(ordered):
+        sys.exit(f"FATAL: {pass_name} MIXED f_DM schema: shards without the "
+                 f"f_DM=1 arrays: {f1_missing}")
+    f_dm_values = None
+    if has_f1:
+        vals = {tuple(np.asarray(r["f_dm_values"], dtype=np.float64).tolist())
+                for r in ordered if "f_dm_values" in r}
+        if len(vals) > 1:
+            sys.exit(f"FATAL: {pass_name} MIXED f_dm_values across shards: {vals}")
+        f_dm_values = list(vals.pop()) if vals else [float(config.F_X), 1.0]
+
     # stack cubes: lambda axis = finite (ascending) then massless last
     L = n_finite + 1
     p = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64)
     mu = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64)
     nt = np.full((n_a, n_m, L), np.nan, dtype=np.float64)
     st = np.zeros((3, n_a, n_m, L), dtype=np.uint8)
-    for li, rec in enumerate(fin_recs + [massless]):
+    p_f1 = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64) if has_f1 else None
+    mu_f1 = np.full((3, n_a, n_m, L), np.nan, dtype=np.float64) if has_f1 else None
+    st_f1 = np.zeros((3, n_a, n_m, L), dtype=np.uint8) if has_f1 else None
+    for li, rec in enumerate(ordered):
         p[:, :, :, li] = np.asarray(rec["p"], dtype=np.float64)
         mu[:, :, :, li] = np.asarray(rec["mu"], dtype=np.float64)
         nt[:, :, li] = np.asarray(rec["n_transit"], dtype=np.float64)
         st[:, :, :, li] = np.asarray(rec["status"], dtype=np.uint8)
+        if has_f1:
+            p_f1[:, :, :, li] = np.asarray(rec["p_f1"], dtype=np.float64)
+            mu_f1[:, :, :, li] = np.asarray(rec["mu_f1"], dtype=np.float64)
+            st_f1[:, :, :, li] = np.asarray(rec["status_f1"], dtype=np.uint8)
 
     # status<->NaN consistency (soft: warn with counts, never abort)
     _check_status_nan(pass_name, p, mu, nt, st)
+    if has_f1:
+        _check_status_nan(f"{pass_name}[f_dm=1]", p_f1, mu_f1, nt, st_f1)
+        _check_f1_scaling(pass_name, mu, mu_f1, f_dm_values)
 
     lambda_ode = float(_scalar(massless.get("lamb_ode", np.nan)))
     b_cap, cap_unflagged = _cap_provenance(pass_name, all_recs)
@@ -228,6 +276,9 @@ def load_pass(pass_dir, pass_name):
         pass_name=pass_name, ms=ms, alphas_n=alphas_n,
         lambda_finite=lambda_finite, n_finite=n_finite,
         p=p, mu=mu, n_transit=nt, status=st,
+        p_f1=p_f1, mu_f1=mu_f1, status_f1=st_f1,
+        has_f1=has_f1, f_dm_values=f_dm_values,
+        inputs=_shard_inputs(ordered),
         q_min=q_min, seed=seed, t_total=t_total, df=df,
         fidelity_str=fid_str, fidelity=_parse_fidelity(fid_str),
         events=events, lambda_ode=lambda_ode,
@@ -264,6 +315,57 @@ def _cap_provenance(pass_name, recs):
         sys.exit(f"FATAL: {pass_name} MIXED b_constrained_max across shards: "
                  f"{distinct}")
     return (distinct[0] if distinct else None), unflagged
+
+
+def _shard_inputs(recs):
+    """The per-run input provenance stamped on the shards (paths + sha256).
+
+    ``inputs_json`` is written by build_release from the *runtime* resolution of
+    the event dir, the efficiency table (LUHDM_EFFICIENCY_NPZ) and the live-time
+    (LUHDM_T_EXPOSURE). Distinct values across a pass are reported as a list so
+    a mixed-input pass is visible rather than silently collapsed.
+    """
+    seen = []
+    for rec in recs:
+        if "inputs_json" not in rec:
+            continue
+        try:
+            v = json.loads(str(_scalar(rec["inputs_json"])))
+        except Exception:  # noqa: BLE001
+            continue
+        if v not in seen:
+            seen.append(v)
+    if not seen:
+        return None
+    if len(seen) > 1:
+        print(f"WARNING: shards disagree on their inputs provenance "
+              f"({len(seen)} distinct records); all are kept in provenance.json")
+        return seen
+    return seen[0]
+
+
+def _check_f1_scaling(pass_name, mu, mu_f1, f_dm_values):
+    """mu(f=1) must be exactly the flux ratio times mu(f=0.1). Warn, never abort.
+
+    f_DM is a pure normalisation, so this is an identity up to float round-off
+    in the trapz of the scaled rate; a violation means the two surfaces were not
+    computed from the same spectrum.
+    """
+    if f_dm_values is None or len(f_dm_values) != 2 or f_dm_values[0] == 0:
+        return
+    ratio = f_dm_values[1] / f_dm_values[0]
+    ok = np.isfinite(mu) & np.isfinite(mu_f1) & (mu > 0)
+    if not ok.any():
+        return
+    rel = np.abs(mu_f1[ok] / (ratio * mu[ok]) - 1.0)
+    worst = float(rel.max())
+    if worst > 1e-9:
+        bad = int(np.count_nonzero(rel > 1e-9))
+        print(f"WARNING: {pass_name} mu_f1 != {ratio:g}*mu in {bad} cells "
+              f"(worst rel dev {worst:.2e})")
+    else:
+        print(f"  {pass_name}: mu_f1 == {ratio:g}*mu OK (worst rel dev "
+              f"{worst:.1e})")
 
 
 def _check_status_nan(pass_name, p, mu, nt, st):
@@ -336,6 +438,7 @@ def load_halo(halo_dir):
     return dict(ms=ms, alphas_n=alphas_n, lambda_finite=lambda_finite,
                 n_finite=n_finite, n_transit=nt, bmax=bmax,
                 b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
+                inputs=_shard_inputs(fin_recs + [massless]),
                 shard_files=[r["_file"] for r in (fin_recs + [massless])])
 
 
@@ -377,7 +480,8 @@ def cross_check_cap(atm, noatm, halo_d):
 
 
 # ── status census ─────────────────────────────────────────────────────────────
-STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>40", 4: "mu==0"}
+STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>mu_cap",
+                4: "mu==0"}
 
 
 def print_status_report(pass_name, pd):
@@ -456,11 +560,34 @@ def compute_reference_curves(quick=False):
 
 
 # ── /detector: events, efficiency curves, blip momenta ────────────────────────
-def load_events():
-    """events_mode{n} in GeV from notebooks/data_mode{n}.txt (source of truth)."""
+def sha256_file(path):
+    """sha256 of a file, or None if it cannot be read (never fatal)."""
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for blk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(blk)
+        return h.hexdigest()
+    except Exception as err:  # noqa: BLE001
+        print(f"WARNING: sha256 unavailable for {path}: {err}")
+        return None
+
+
+def events_dir(data_dir=None):
+    """Directory holding data_mode{n}.txt for this assembly."""
+    return Path(data_dir) if data_dir else REPO / "notebooks"
+
+
+def load_events(data_dir=None):
+    """events_mode{n} in GeV from <data-dir>/data_mode{n}.txt (source of truth).
+
+    ``data_dir`` must match the ``--data-dir`` the shards were built with (e.g.
+    the cveto event dir); the recorded sha256s in provenance.json are of the
+    files actually read here.
+    """
     out = {}
     for n in MODES:
-        f = REPO / "notebooks" / f"data_mode{n}.txt"
+        f = events_dir(data_dir) / f"data_mode{n}.txt"
         if f.exists():
             out[n] = np.atleast_1d(np.loadtxt(f)).astype(np.float64) / 1e9
         else:
@@ -468,15 +595,38 @@ def load_events():
     return out
 
 
-def load_efficiency_table():
-    """The committed efficiency curves, copied verbatim (key names preserved)."""
-    tbl = REPO / "luhdm" / "reference_data" / "efficiency_curves.npz"
+def load_efficiency_table(table=None):
+    """The efficiency curves in use, copied verbatim (key names preserved).
+
+    Defaults to :func:`luhdm.efficiency.table_path` so LUHDM_EFFICIENCY_NPZ (the
+    veto-variant table) is honoured instead of silently assuming the committed
+    one.
+    """
+    tbl = Path(table) if table else Path(efficiency.table_path())
     out = {}
     with np.load(tbl) as d:
         for n in MODES:
             for key in (f"q_gev_{n}", f"eff_{n}_df2", f"eff_{n}_df3"):
                 out[key] = np.asarray(d[key], dtype=np.float64)
     return out
+
+
+def assembly_inputs(data_dir, eff_table):
+    """Paths + sha256 of the detector inputs this assembly actually read."""
+    tbl = Path(eff_table) if eff_table else Path(efficiency.table_path())
+    return {
+        "t_exposure_s": float(config.T_EXPOSURE),
+        "efficiency_npz": str(tbl),
+        "efficiency_npz_sha256": sha256_file(tbl),
+        "events_dir": str(events_dir(data_dir)),
+        "events": {
+            f"data_mode{n}.txt": {
+                "path": str(events_dir(data_dir) / f"data_mode{n}.txt"),
+                "sha256": sha256_file(events_dir(data_dir) / f"data_mode{n}.txt"),
+            } for n in MODES},
+        "env": {k: os.environ[k] for k in
+                ("LUHDM_T_EXPOSURE", "LUHDM_EFFICIENCY_NPZ") if k in os.environ},
+    }
 
 
 def extract_blips():
@@ -563,11 +713,100 @@ def _mode_plane_chunks(shape, has_mode):
     return tuple(shape)
 
 
+def _shared_mass_axis(atm, noatm):
+    """The single mass axis of the axis-based layout, or abort explaining why.
+
+    ``results/*`` is one array spanning (f_dm, atmosphere, mode, alpha, mass,
+    lambda), so the atm and noatm planes must live on the SAME mass grid. The
+    default tiers do not (atm 119, noatm 600: only the two endpoints coincide),
+    and resampling either onto the other would fabricate values, so this is a
+    hard gate rather than a silent interpolation.
+    """
+    ma, mn = atm["ms"], noatm["ms"]
+    if ma.shape == mn.shape and np.array_equal(ma, mn):
+        return ma
+    sys.exit(
+        f"FATAL: the axis-based layout needs one mass axis, but atm has "
+        f"{ma.size} masses and noatm has {mn.size} "
+        f"({int(np.intersect1d(ma, mn).size)} exactly in common).\n"
+        f"       Build both passes on the same grid (build_release.py "
+        f"--m-tier N for BOTH --pass atm and --pass noatm), or assemble the "
+        f"group-based layout instead (--layout groups), which keeps a mass "
+        f"axis per pass.")
+
+
+def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales):
+    """``/results``: one array per quantity over (f_dm, atmosphere, ...).
+
+    Every element explicitly carries its (f_DM, atmosphere) hypothesis: the
+    atmosphere axis holds 1 (attenuation on, the atm pass) then 0 (off, noatm),
+    and the f_dm axis holds the baseline then the f_DM=1 surface. n_transit is
+    materialised at full shape too — it is atmosphere-dependent and exactly
+    linear in f_DM.
+    """
+    d_fdm, d_atm, d_mode, d_alpha, d_mass, d_lam = scales
+    n_f = len(f_dm_values)
+    n_a = atm["alphas_n"].size
+    n_m = atm["ms"].size
+    g = h5.create_group("results")
+
+    # plane order follows the axis values: atmosphere = [1, 0] -> [atm, noatm]
+    passes = [atm, noatm]
+    scale_f1 = f_dm_values[1] / f_dm_values[0] if n_f > 1 else None
+
+    def stack(key_base, dtype, fill):
+        """(n_f, 2, 3, n_a, n_m, L) from the per-pass, per-f_DM planes."""
+        out = np.full((n_f, 2) + (3, n_a, n_m, L), fill, dtype=dtype)
+        for i_at, pd_ in enumerate(passes):
+            out[0, i_at] = pd_[key_base]
+            if n_f > 1:
+                out[1, i_at] = pd_[key_base + "_f1"]
+        return out
+
+    cube = (n_f, 2, 3, n_a, n_m, L)
+    ch = (1, 1, 1) + cube[3:]              # one (alpha, mass, lambda) plane
+    ext = _ds(g, "extremeness", stack("p", np.float32, np.nan), "1",
+              "optimum-interval extremeness / confidence; NaN where status==1",
+              cube=True, chunks=ch)
+    muu = _ds(g, "mu", stack("mu", np.float32, np.nan), "counts",
+              "expected signal counts mu; NaN where status==1. Exactly linear "
+              "in f_DM (a pure flux normalisation).", cube=True, chunks=ch)
+    stt = _ds(g, "status", stack("status", np.uint8, 0), "enum",
+              "0=ok(MC) 1=exception 2=mu<0.2 3=mu>mu_cap 4=mu==0",
+              cube=True, chunks=ch)
+    for dset in (ext, muu, stt):
+        _attach_scales(dset, (d_fdm, d_atm, d_mode, d_alpha, d_mass, d_lam),
+                       ("f_dm", "atmosphere", "mode", "alpha_n", "mass_gev",
+                        "lambda_m"),
+                       "f_dm,atmosphere,mode,alpha_n,mass_gev,lambda_m")
+
+    # n_transit: mode-less, so (n_f, 2, n_a, n_m, L). The f_DM=1 plane is
+    # materialised as scale_f1 x the baseline (n_dm ∝ f_DM, geometry unchanged).
+    nt = np.full((n_f, 2, n_a, n_m, L), np.nan, dtype=np.float32)
+    for i_at, pd_ in enumerate(passes):
+        base = np.maximum(pd_["n_transit"], 0.0).astype(np.float32)
+        nt[0, i_at] = base
+        if n_f > 1:
+            # scale the STORED float32 baseline, so the materialised plane is
+            # exactly scale_f1 x what a reader sees at f_dm[0] (and identical to
+            # what the group layout produces by scaling on read).
+            nt[1, i_at] = base * np.float32(scale_f1)
+    ntd = _ds(g, "n_transit", nt, "counts",
+              "expected within-reach transits; clipped >=0 (KDE tail can "
+              "oscillate slightly negative). Exactly linear in f_DM.",
+              cube=True, chunks=(1, 1) + nt.shape[2:])
+    ntd.attrs["clipped_nonnegative"] = True
+    _attach_scales(ntd, (d_fdm, d_atm, d_alpha, d_mass, d_lam),
+                   ("f_dm", "atmosphere", "alpha_n", "mass_gev", "lambda_m"),
+                   "f_dm,atmosphere,alpha_n,mass_gev,lambda_m")
+
+
 def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
-             version_tag, quick_reference):
+             version_tag, quick_reference, inputs, layout="axes"):
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    axis_layout = layout == "axes"
 
     # lambda axis in file: finite ascending + inf last; m_phi = 1/conv, 0 at inf
     lambda_m = np.concatenate([lambda_finite, [np.inf]]).astype(np.float64)
@@ -580,6 +819,13 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
     commit, dirty = git_provenance()
     pkgs = package_versions()
     fid = atm["fidelity"]
+    f_dm_values = atm["f_dm_values"] or [float(config.F_X)]
+    if axis_layout:
+        shared_ms = _shared_mass_axis(atm, noatm)
+        if not atm["has_f1"] or len(f_dm_values) < 2:
+            sys.exit("FATAL: the axis-based layout needs both f_DM surfaces; "
+                     "these shards carry only f_DM=" f"{f_dm_values}. Rebuild "
+                     "with the dual-f_DM builder or use --layout groups.")
 
     with h5py.File(tmp, "w") as h5:
         # ── /axes ──
@@ -589,10 +835,22 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         d_mode.attrs["description"] = "sensor mode index (1,2,3)"
         d_alpha = _ds(ax, "alpha_n", atm["alphas_n"], "1",
                       "per-neutron coupling alpha_n")
-        d_mass = _ds(ax, "mass_gev", atm["ms"], "GeV",
-                     "dark-matter mass (atm 119-tier grid)")
-        d_mass_no = _ds(ax, "mass_noatm_gev", noatm["ms"], "GeV",
-                        "dark-matter mass (noatm 600-tier grid)")
+        d_fdm = d_atmos = None
+        if axis_layout:
+            d_mass = _ds(ax, "mass_gev", shared_ms, "GeV",
+                         "dark-matter mass (shared by both atmosphere planes)")
+            d_mass_no = d_mass
+            d_fdm = _ds(ax, "f_dm", np.asarray(f_dm_values, dtype=np.float64),
+                        "1", "dark-matter fraction hypothesis of this species; "
+                        "a pure flux normalisation (n_dm ∝ f_DM)")
+            d_atmos = _ds(ax, "atmosphere", np.array([1, 0], dtype=np.int8),
+                          "bool", "1 = attenuation through the atmosphere/earth "
+                          "applied (atm pass); 0 = bare halo flux (noatm pass)")
+        else:
+            d_mass = _ds(ax, "mass_gev", atm["ms"], "GeV",
+                         "dark-matter mass (atm 119-tier grid)")
+            d_mass_no = _ds(ax, "mass_noatm_gev", noatm["ms"], "GeV",
+                            "dark-matter mass (noatm 600-tier grid)")
         d_lam = _ds(ax, "lambda_m", lambda_m, "m",
                     "mediator range; finite ascending then inf (massless) last")
         d_lam.attrs["n_finite"] = int(n_finite)
@@ -603,13 +861,21 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
                       "dark-matter mass (halo/flux-map 64 grid)")
         d_ahalo = _ds(ax, "alpha_halo_n", halo_d["alphas_n"], "1",
                       "coupling alpha_n (halo/flux-map 64 grid)")
+        seen = set()
         for dd in (d_mode, d_alpha, d_mass, d_mass_no, d_lam, d_mphi,
-                   d_mhalo, d_ahalo):
+                   d_mhalo, d_ahalo, d_fdm, d_atmos):
+            if dd is None or dd.name in seen:   # mass_noatm aliases mass_gev
+                continue                        # in the axis layout
+            seen.add(dd.name)
             dd.make_scale(dd.name.split("/")[-1])
 
-        # ── /atm and /noatm ──
-        for grp_name, pd_, mass_scale in (("atm", atm, d_mass),
-                                          ("noatm", noatm, d_mass_no)):
+        # ── /results (axis-based) or /atm + /noatm (v3 group layout) ──
+        if axis_layout:
+            _write_results_axes(h5, atm, noatm, f_dm_values, L,
+                                (d_fdm, d_atmos, d_mode, d_alpha, d_mass, d_lam))
+        for grp_name, pd_, mass_scale in ([] if axis_layout else
+                                          (("atm", atm, d_mass),
+                                           ("noatm", noatm, d_mass_no))):
             g = h5.create_group(grp_name)
             n_a = pd_["alphas_n"].size
             n_m = pd_["ms"].size
@@ -628,20 +894,33 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
                       cube=True, chunks=_mode_plane_chunks((n_a, n_m, L), False))
             ntd.attrs["clipped_nonnegative"] = True
             stt = _ds(g, "status", pd_["status"], "enum",
-                      "0=ok(MC) 1=exception 2=mu<0.2 3=mu>40 4=mu==0",
+                      "0=ok(MC) 1=exception 2=mu<0.2 3=mu>mu_cap 4=mu==0",
                       cube=True, chunks=ch4)
-            _attach_scales(ext, (d_mode, d_alpha, mass_scale, d_lam),
-                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
-                           "mode,alpha_n,mass_gev,lambda_m")
-            _attach_scales(muu, (d_mode, d_alpha, mass_scale, d_lam),
-                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
-                           "mode,alpha_n,mass_gev,lambda_m")
+            per_mode = [ext, muu, stt]
+            if pd_["has_f1"]:
+                f_hi = pd_["f_dm_values"][1]
+                ext1 = _ds(g, "extremeness_f1",
+                           pd_["p_f1"].astype(np.float32), "1",
+                           f"optimum-interval extremeness / confidence "
+                           f"({grp_name} pass) for f_DM = {f_hi:g}; NaN where "
+                           "status_f1==1", cube=True, chunks=ch4)
+                muu1 = _ds(g, "mu_f1", pd_["mu_f1"].astype(np.float32), "counts",
+                           f"expected signal counts mu ({grp_name}) for f_DM = "
+                           f"{f_hi:g}; exactly {f_hi / pd_['f_dm_values'][0]:g}x "
+                           "mu (f_DM is a pure flux normalisation)",
+                           cube=True, chunks=ch4)
+                stt1 = _ds(g, "status_f1", pd_["status_f1"], "enum",
+                           f"status of the f_DM = {f_hi:g} surface: 0=ok(MC) "
+                           "1=exception 2=mu<0.2 3=mu>mu_cap 4=mu==0",
+                           cube=True, chunks=ch4)
+                per_mode += [ext1, muu1, stt1]
+            for dset in per_mode:
+                _attach_scales(dset, (d_mode, d_alpha, mass_scale, d_lam),
+                               ("mode", "alpha_n", "mass_gev", "lambda_m"),
+                               "mode,alpha_n,mass_gev,lambda_m")
             _attach_scales(ntd, (d_alpha, mass_scale, d_lam),
                            ("alpha_n", "mass_gev", "lambda_m"),
                            "alpha_n,mass_gev,lambda_m")
-            _attach_scales(stt, (d_mode, d_alpha, mass_scale, d_lam),
-                           ("mode", "alpha_n", "mass_gev", "lambda_m"),
-                           "mode,alpha_n,mass_gev,lambda_m")
 
         # ── /halo ──
         gh = h5.create_group("halo")
@@ -706,7 +985,8 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # ── root attrs ──
         a = h5.attrs
         a["file_format"] = FILE_FORMAT
-        a["version"] = FORMAT_VERSION
+        a["version"] = FORMAT_VERSION_AXES if axis_layout else FORMAT_VERSION
+        a["layout"] = "axes" if axis_layout else "groups"
         a["version_tag"] = version_tag
         a["schema_version"] = SCHEMA_VERSION
         a["created"] = _iso_now()
@@ -716,6 +996,15 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["q_thresh_gev"] = float(config.Q_THRESH)
         a["r_eff_m"] = float(config.R_EFF)
         a["f_x"] = float(config.F_X)
+        # dual f_DM: the unsuffixed cubes are f_DM = f_x (0.1); the *_f1 cubes
+        # (when present) are the same cells at f_dm_values[1]. f_DM is a pure
+        # flux normalisation: same ODE, same dR/dq shape, mu scales exactly.
+        fdm = f_dm_values
+        a["f_dm_values"] = np.asarray(fdm, dtype=np.float64)
+        a["f_dm_default"] = float(fdm[0])
+        if not axis_layout:
+            a["f_dm_suffix_json"] = json.dumps(
+                {f"{v:g}": ("" if i == 0 else "_f1") for i, v in enumerate(fdm)})
         a["rho_dm_gev4"] = float(config.RHO_DM)
         a["n_neutrons"] = float(config.N_NEUTRONS)
         a["t_exposure_s"] = float(atm["t_total"])
@@ -732,10 +1021,23 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["fid_n_q"] = int(fid.get("n_q", -1))
         a["fid_q_span"] = float(fid.get("q_span", float("nan")))
         a["fid_n_mc"] = int(fid.get("n_mc", -1))
+        # optimum-interval expected-count cap: cells above it are asserted
+        # excluded without Monte Carlo. Shards built before the cap was
+        # recorded carry no "mu_cap" key -> NaN, meaning "not recorded".
+        a["fid_mu_cap"] = float(fid.get("mu_cap", float("nan")))
         a["fid_json"] = json.dumps(fid)
         a["df"] = int(atm["df"])
         a["reference_curves_fidelity"] = ("quick" if quick_reference
                                           else "production")
+        # input provenance on the file itself, so a cube is self-describing even
+        # when separated from provenance.json (env-overridable inputs included).
+        a["efficiency_npz"] = inputs["efficiency_npz"]
+        a["efficiency_npz_sha256"] = inputs["efficiency_npz_sha256"] or ""
+        a["events_dir"] = inputs["events_dir"]
+        for n in MODES:
+            ev = inputs["events"].get(f"data_mode{n}.txt", {})
+            a[f"events_mode{n}_sha256"] = ev.get("sha256") or ""
+        a["inputs_json"] = json.dumps(inputs, sort_keys=True)
         for k, vv in pkgs.items():
             a[f"pkg_{k}"] = vv
         a["packages_json"] = json.dumps(pkgs)
@@ -757,7 +1059,8 @@ def _read_run_config(shard_dir):
 
 
 def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
-                     halo_d, commit, dirty, pkgs, out_path, version_tag):
+                     halo_d, commit, dirty, pkgs, out_path, version_tag,
+                     inputs):
     prov = {
         "assembly": {
             "created": _iso_now(),
@@ -772,10 +1075,18 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             "fidelity": atm["fidelity"],
             "n_finite_lambda": int(atm["n_finite"]),
             "seed": SEED,
+            # t_exposure_s comes off the shards; config.T_EXPOSURE is what THIS
+            # process resolved (LUHDM_T_EXPOSURE-aware) and must agree.
             "t_exposure_s": float(atm["t_total"]),
+            "f_dm_values": atm["f_dm_values"],
+            "inputs": inputs,
         },
         "shard_dirs": {
             "atm": str(atm_dir), "noatm": str(noatm_dir), "halo": str(halo_dir),
+        },
+        "shard_inputs": {
+            "atm": atm["inputs"], "noatm": noatm["inputs"],
+            "halo": halo_d.get("inputs"),
         },
         "impact_parameter_cap": {
             "b_constrained_max_m": atm["b_constrained_max"],
@@ -821,6 +1132,20 @@ def main():
     ap.add_argument("--out", default=str(REPO / "release" /
                                          "luhdm_datarelease_v2.h5"))
     ap.add_argument("--version-tag", default="v1.0")
+    ap.add_argument("--layout", choices=("axes", "groups"), default="axes",
+                    help="'axes' (default, the release layout): one /results "
+                         "cube per quantity over (f_dm, atmosphere, mode, "
+                         "alpha, mass, lambda) — needs both f_DM surfaces and "
+                         "one shared mass axis. 'groups': the v3 layout "
+                         "(/atm + /noatm, _f1 datasets alongside).")
+    ap.add_argument("--data-dir", default=None,
+                    help="dir holding data_mode{1,2,3}.txt for /detector "
+                         "(default <repo>/notebooks); must match the "
+                         "--data-dir the shards were built with")
+    ap.add_argument("--efficiency-npz", default=None,
+                    help="efficiency table copied into /detector (default: the "
+                         "one luhdm.efficiency resolves, i.e. "
+                         "LUHDM_EFFICIENCY_NPZ or the committed table)")
     ap.add_argument("--quick-reference", action="store_true",
                     help="reference curves at quick fidelity (n_grid=80, "
                          "n_shm=1e5) for smoke runs; default is production "
@@ -855,31 +1180,41 @@ def main():
     ref = compute_reference_curves(quick=args.quick_reference)
 
     print("\nloading detector products ...")
-    events = load_events()
+    ev_dir = events_dir(args.data_dir)
+    events = load_events(args.data_dir)
     for n in MODES:
         if events[n] is None:
-            print(f"WARNING: notebooks/data_mode{n}.txt missing; "
+            print(f"WARNING: {ev_dir}/data_mode{n}.txt missing; "
                   f"using atm-shard events for mode {n}")
             events[n] = atm["events"][n]
         else:
             if not np.allclose(events[n], atm["events"][n],
                                rtol=1e-9, atol=0):
-                print(f"WARNING: data_mode{n}.txt events differ from atm-shard "
-                      f"events (mode {n}); using data_mode{n}.txt")
-    efficiency_table = load_efficiency_table()
+                print(f"WARNING: {ev_dir}/data_mode{n}.txt events differ from "
+                      f"atm-shard events (mode {n}); using data_mode{n}.txt")
+    efficiency_table = load_efficiency_table(args.efficiency_npz)
+    inputs = assembly_inputs(args.data_dir, args.efficiency_npz)
+    print(f"  events dir: {inputs['events_dir']}")
+    print(f"  efficiency: {inputs['efficiency_npz']}")
+    print(f"  t_exposure_s: {inputs['t_exposure_s']:.0f} "
+          f"(shards: {atm['t_total']:.0f})")
+    if abs(inputs["t_exposure_s"] - float(atm["t_total"])) > 1e-6:
+        print("WARNING: config.T_EXPOSURE differs from the shards' t_total; "
+              "the release uses the shards' value (set LUHDM_T_EXPOSURE to "
+              "match when assembling a veto-variant cube)")
     blips = extract_blips()
     detector = {"events": events, "efficiency": efficiency_table, "blips": blips}
 
-    print("\nwriting HDF5 ...")
+    print(f"\nwriting HDF5 (layout={args.layout}) ...")
     out_path, commit, dirty, pkgs = write_h5(
         args.out, atm, noatm, halo_d, lambda_finite, ref, detector,
-        args.version_tag, args.quick_reference)
+        args.version_tag, args.quick_reference, inputs, args.layout)
     print(f"wrote {out_path}  ({out_path.stat().st_size / 1e6:.2f} MB)")
 
     release_dir = out_path.parent
     write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
                      atm, noatm, halo_d, commit, dirty, pkgs, out_path,
-                     args.version_tag)
+                     args.version_tag, inputs)
     write_sha256(release_dir, out_path)
 
     print("\n" + "=" * 72)

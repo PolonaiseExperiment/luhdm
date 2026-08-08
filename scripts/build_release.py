@@ -16,12 +16,24 @@ recompute matches bit-for-bit.
 Shard schema (atm/ and noatm/ dirs, one file per lambda index; massless is the
 virtual index n_finite, written to shard_massless.npz with stored il = -1):
 
+Dual f_DM: the DM fraction is a pure flux normalisation — the attenuated
+velocity distribution and the dR/dq *shape* do not depend on it, only the
+normalisation does. So each cell computes the rate ONCE (at the baseline
+config.F_X = 0.1) and evaluates the optimum-interval statistic TWICE: once on
+that rate and once on ``F_SCALE_F1 = 1.0/F_X`` times it. The f=1 surfaces are
+written as parallel ``*_f1`` arrays; the unsuffixed arrays keep their exact
+f=0.1 meaning, so every existing consumer is untouched.
+
   file : shard_il{il:02d}.npz  |  shard_massless.npz
   key            dtype   shape          meaning
   p              f8      (3,n_a,n_m)    optimum-interval extremeness, modes [1,2,3]
   mu             f8      (3,n_a,n_m)    expected detected counts, per mode
   n_transit      f8      (n_a,n_m)      expected flybys within threshold reach
-  status         u1      (3,n_a,n_m)    0 ok / 1 exc / 2 mu<0.2 / 3 mu>40 / 4 mu==0
+  status         u1      (3,n_a,n_m)    0 ok / 1 exc / 2 mu<0.2 / 3 mu>mu_cap / 4 mu==0
+  p_f1           f8      (3,n_a,n_m)    as p, for f_DM = 1.0 (rate x 10)
+  mu_f1          f8      (3,n_a,n_m)    as mu, for f_DM = 1.0 (== 10 x mu)
+  status_f1      u1      (3,n_a,n_m)    as status, for f_DM = 1.0
+  f_dm_values    f8      (2,)           [0.1, 1.0]: unsuffixed / _f1 surfaces
   ms             f8      (n_m,)         DM mass axis [GeV]
   alphas_n       f8      (n_a,)         per-neutron coupling axis
   lamb           f8      ()             mediator range [m]; NaN for massless
@@ -33,15 +45,21 @@ virtual index n_finite, written to shard_massless.npz with stored il = -1):
   t_total        f8      ()            exposure live-time [s]
   seed           i8      ()            MC seed
   df             i8      ()            efficiency dof hypothesis (3)
-  fidelity       str     ()            str(FID)
+  fidelity       str     ()            str(FID); includes mu_cap, so a
+                                        single-cell recompute (verify_release V2
+                                        -> scan_grid.scan_point) reuses the same
+                                        optimum-interval shortcut as the build
   events_mode1/2/3 f8    (n_ev,)       observed impulses [GeV]
-  schema_version i8      ()            1
+  schema_version i8      ()            2
   created,argv,hostname str; wall_s f8  provenance
+  inputs_json    str     ()            event/efficiency file paths + sha256
 
 Halo shard schema (halo/ dir, shard_halo_il{il:02d}.npz | shard_halo_massless.npz):
   nt f8 (n_a,n_m); bmax_m f8 (n_a,n_m); status u1 (n_a,n_m) [0 ok / 1 exc];
   ms, alphas_n (64-pt halo axes); lamb; massless; il; pass_name='halo'; t_total;
-  seed; schema_version; created; argv; hostname; wall_s.
+  seed; schema_version; created; argv; hostname; wall_s; inputs_json.
+  (The halo pass is pure geometry: n_transit scales linearly with f_DM, so it
+  carries no _f1 arrays.)
 
 Usage
 -----
@@ -61,6 +79,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import socket
@@ -82,19 +101,37 @@ from luhdm import atmosphere, config, efficiency, halo, limits, rate
 
 # --- pinned constants (shared contract) ---
 SEED = 20260702
-T_TOTAL = config.T_EXPOSURE                 # 1_691_020.0 s (single source of truth)
+T_TOTAL = config.T_EXPOSURE                 # 790_778.0 s (single source of truth)
 Q_HI_REF = 8.4e3                            # fixed qs upper-momentum reference
 M_PLANCK = 1.22e19                          # top of the mass axis [GeV]
 DF = 3                                      # efficiency dof hypothesis
 CONFIDENCE = 0.95
 MU_FLOOR = 0.2                              # matches limits.extremeness_and_mu
-MU_CAP = 40.0
-SCHEMA_VERSION = 1
+# Optimum-interval "no MC needed, p == 1" shortcut. This is passed EXPLICITLY to
+# limits.extremeness_and_mu (whose own default is the historical 40.0) and is
+# recorded in the shard fidelity string, so build and single-cell recompute
+# always agree. Raised 40 -> 85 because the measured extremeness at mu ~ 40 is
+# far below 1 (as low as 0.0000), i.e. the 40 cap over-excluded; the true p only
+# saturates at 1.0000 by mu ~ 84, so 85 removes the shortcut bias with margin.
+MU_CAP = 85.0
+SCHEMA_VERSION = 2                          # 2: added the f_DM=1 (*_f1) surfaces
 
-TAGS = [2e-6, 1e-5, 2e-5, 2e-4, 2e-3, 2e-2, 2.0]  # exact members of the finite axis
+# Dual f_DM. config.F_X (0.1) is the baseline the unsuffixed arrays carry; the
+# *_f1 arrays are the same cells at f_DM = 1.0. f_DM is a pure flux
+# normalisation (n_dm ∝ f_DM), so the ODE and the dR/dq shape are identical and
+# only the normalisation moves: one rate, two optimum-interval evaluations.
+F_DM_BASE = float(config.F_X)               # 0.1
+F_DM_HIGH = 1.0
+F_SCALE_F1 = F_DM_HIGH / F_DM_BASE          # 10.0
+F_DM_VALUES = (F_DM_BASE, F_DM_HIGH)
 
-FID_PROD = dict(n_ode=400, n_shm=300000, n_q=240, q_span=3e4, n_mc=10000)
-FID_QUICK = dict(n_ode=60, n_shm=20000, n_q=120, q_span=1e4, n_mc=1500)
+# exact members of the finite axis; 0.2 (20 cm) fills the 2 cm -> 2 m gap
+TAGS = [2e-6, 1e-5, 2e-5, 2e-4, 2e-3, 2e-2, 0.2, 2.0]
+
+FID_PROD = dict(n_ode=400, n_shm=300000, n_q=240, q_span=3e4, n_mc=10000,
+                mu_cap=MU_CAP)
+FID_QUICK = dict(n_ode=60, n_shm=20000, n_q=120, q_span=1e4, n_mc=1500,
+                 mu_cap=MU_CAP)
 
 # Shared, read-only state; set in main() BEFORE the fork so children inherit it.
 # Pass-constant globals:
@@ -169,7 +206,7 @@ def _derive_status(p, mu):
     if mu < MU_FLOOR:
         return 2          # mu<0.2 shortcut, p exactly 0
     if mu > MU_CAP:
-        return 3          # mu>40 shortcut, p exactly 1
+        return 3          # mu>mu_cap shortcut, p exactly 1
     return 0              # MC ran
 
 
@@ -198,19 +235,33 @@ def _process_chunk(chunk):
             p3 = np.empty(3)
             mu3 = np.empty(3)
             st3 = np.empty(3, np.uint8)
+            p3_f1 = np.empty(3)
+            mu3_f1 = np.empty(3)
+            st3_f1 = np.empty(3, np.uint8)
             for k in range(3):
+                detected = raw * EFF_QS[k]       # dR/dq at f_DM = F_DM_BASE
                 p, mu = limits.extremeness_and_mu(
-                    table, EVENTS_BY_MODE[k], QS, raw * EFF_QS[k], T_TOTAL,
-                    n_mc=FID["n_mc"])
+                    table, EVENTS_BY_MODE[k], QS, detected, T_TOTAL,
+                    n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
                 p3[k], mu3[k], st3[k] = p, mu, _derive_status(p, mu)
+                # f_DM = 1: same spectrum shape, same events, same MC table —
+                # only the normalisation scales (mu -> F_SCALE_F1 * mu).
+                p_f1, mu_f1 = limits.extremeness_and_mu(
+                    table, EVENTS_BY_MODE[k], QS, detected * F_SCALE_F1, T_TOTAL,
+                    n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+                p3_f1[k], mu3_f1[k] = p_f1, mu_f1
+                st3_f1[k] = _derive_status(p_f1, mu_f1)
         except Exception as err:  # a raised ODE/rate corner: NaNs + status 1
             print(f"cell FAIL im={im} ia={ia} m={m:.3e} a={alpha_n:.3e}: {err}",
                   flush=True)
             p3 = np.full(3, np.nan)
             mu3 = np.full(3, np.nan)
             st3 = np.ones(3, np.uint8)
+            p3_f1 = np.full(3, np.nan)
+            mu3_f1 = np.full(3, np.nan)
+            st3_f1 = np.ones(3, np.uint8)
             n_t = np.nan
-        out.append((im, ia, p3, mu3, float(n_t), st3))
+        out.append((im, ia, p3, mu3, float(n_t), st3, p3_f1, mu3_f1, st3_f1))
     return out
 
 
@@ -301,6 +352,47 @@ def shard_path(shard_dir, pass_name, il, n_finite):
     else:
         name = "shard_massless.npz" if massless else f"shard_il{il:02d}.npz"
     return shard_dir / name
+
+
+def sha256_file(path):
+    """sha256 of a file, or None if it cannot be read (never fatal)."""
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for blk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(blk)
+        return h.hexdigest()
+    except Exception as err:  # noqa: BLE001
+        print(f"WARNING: sha256 unavailable for {path}: {err}", flush=True)
+        return None
+
+
+def input_provenance(data_dir):
+    """Paths + sha256 of the inputs this run actually consumed.
+
+    Both the event files (``--data-dir``) and the efficiency table
+    (``LUHDM_EFFICIENCY_NPZ``) can be redirected per run, and the live-time can
+    be redirected by ``LUHDM_T_EXPOSURE``; recording them here is what makes an
+    env-overridden campaign (e.g. the cveto variant) reconstructable from the
+    shards alone.
+    """
+    eff_table = Path(efficiency.table_path())
+    prov = {
+        "t_exposure_s": float(config.T_EXPOSURE),
+        "f_dm_values": list(F_DM_VALUES),
+        "f_x_base": F_DM_BASE,
+        "efficiency_npz": str(eff_table),
+        "efficiency_npz_sha256": sha256_file(eff_table),
+        "events": {},
+        "env": {k: os.environ[k] for k in
+                ("LUHDM_T_EXPOSURE", "LUHDM_EFFICIENCY_NPZ") if k in os.environ},
+    }
+    if data_dir is not None:
+        for n in (1, 2, 3):
+            f = Path(data_dir) / f"data_mode{n}.txt"
+            prov["events"][f"data_mode{n}.txt"] = {
+                "path": str(f), "sha256": sha256_file(f)}
+    return prov
 
 
 def _atomic_savez(path, **arrays):
@@ -462,6 +554,10 @@ def main():
                           / 1e9 for n in (1, 2, 3)]
         V_I_SAMPLES = atmosphere.sample_shm(
             FID["n_shm"], rng=np.random.default_rng(SEED))
+    else:
+        data_dir = None
+    inputs = input_provenance(data_dir)
+    inputs_json = json.dumps(inputs, sort_keys=True)
 
     chunk = args.chunk if args.chunk is not None else (
         500 if pass_name == "halo" else (200 if NO_ATM else 2))
@@ -476,6 +572,8 @@ def main():
     print(f"axes: n_m={n_m} n_a={n_a} n_finite={n_finite} (lambda "
           f"{lam_finite.min():.2e}..{lam_finite.max():.2e})")
     print(f"FID={FID}  chunk={chunk}  workers={args.workers}")
+    print(f"f_dm_values={list(F_DM_VALUES)}  t_exposure_s={T_TOTAL:.0f}  "
+          f"efficiency_npz={efficiency.table_path()}")
     print(f"processing {len(seq)} ils: {seq}", flush=True)
 
     # --- expensive-first cell list (same for every shard of this pass) ---
@@ -517,6 +615,9 @@ def main():
             MU = np.full((3, n_a, n_m), np.nan)
             NT = np.full((n_a, n_m), np.nan)
             ST = np.ones((3, n_a, n_m), np.uint8)
+            P_F1 = np.full((3, n_a, n_m), np.nan)
+            MU_F1 = np.full((3, n_a, n_m), np.nan)
+            ST_F1 = np.ones((3, n_a, n_m), np.uint8)
 
         cells_done = 0
         with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx) as ex:
@@ -529,11 +630,14 @@ def main():
                         BMAX[ia, im] = bmax
                         ST[ia, im] = st
                 else:
-                    for im, ia, p3, mu3, n_t, st3 in res:
+                    for im, ia, p3, mu3, n_t, st3, p3f, mu3f, st3f in res:
                         P[:, ia, im] = p3
                         MU[:, ia, im] = mu3
                         NT[ia, im] = n_t
                         ST[:, ia, im] = st3
+                        P_F1[:, ia, im] = p3f
+                        MU_F1[:, ia, im] = mu3f
+                        ST_F1[:, ia, im] = st3f
                 cells_done += len(res)
                 if (k + 1) % 50 == 0:
                     el = time.time() - t0
@@ -554,10 +658,12 @@ def main():
                 il=il_stored, pass_name=pass_name, t_total=T_TOTAL, seed=SEED,
                 b_constrained_max=args.b_constrained_max,
                 schema_version=SCHEMA_VERSION, created=created, argv=argv_str,
-                hostname=hostname, wall_s=wall_s)
+                hostname=hostname, wall_s=wall_s, inputs_json=inputs_json)
         else:
             _atomic_savez(
-                path, p=P, mu=MU, n_transit=NT, status=ST, ms=MS,
+                path, p=P, mu=MU, n_transit=NT, status=ST,
+                p_f1=P_F1, mu_f1=MU_F1, status_f1=ST_F1,
+                f_dm_values=np.array(F_DM_VALUES, dtype=np.float64), ms=MS,
                 alphas_n=ALPHAS, lamb=(np.nan if massless else lamb),
                 massless=massless, lamb_ode=LAMB_ODE, il=il_stored,
                 pass_name=pass_name, q_min=Q_MIN, t_total=T_TOTAL, seed=SEED,
@@ -565,7 +671,8 @@ def main():
                 df=DF, fidelity=str(FID),
                 events_mode1=EVENTS_BY_MODE[0], events_mode2=EVENTS_BY_MODE[1],
                 events_mode3=EVENTS_BY_MODE[2], schema_version=SCHEMA_VERSION,
-                created=created, argv=argv_str, hostname=hostname, wall_s=wall_s)
+                created=created, argv=argv_str, hostname=hostname, wall_s=wall_s,
+                inputs_json=inputs_json)
 
         ils_done.append(label)
         print(f"[il={label}] wrote {path.name} in {wall_s:.0f}s", flush=True)
@@ -582,6 +689,11 @@ def main():
         fid=FID, hostname=hostname, workers=args.workers,
         start=start_iso, end=datetime.now(timezone.utc).isoformat(),
         ils_completed=ils_done,
+        schema_version=SCHEMA_VERSION,
+        # env-overridable inputs, resolved at runtime (closes the gap where a
+        # LUHDM_T_EXPOSURE / LUHDM_EFFICIENCY_NPZ / --data-dir override left no
+        # trace in run_config.json)
+        inputs=inputs,
         luhdm_version=getattr(luhdm, "__version__", "?"),
         numpy_version=np.__version__))
 
