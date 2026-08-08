@@ -10,7 +10,7 @@ abstract: >-
 type: software
 version: "0.1.0"
 date-released: "2026-08-08"
-# license: to be confirmed before public release. Add the SPDX identifier here.
+license: GPL-3.0-or-later
 # doi: to be assigned (archived code snapshot).
 keywords:
   - dark matter

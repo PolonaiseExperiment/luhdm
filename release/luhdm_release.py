@@ -1,5 +1,12 @@
 """Standalone reader for the POLONAISE ultra-heavy dark-matter (UHDM) data release.
 
+SPDX-License-Identifier: GPL-3.0-or-later
+
+This reader is code, so it is GPL-3.0-or-later like the rest of the analysis
+repository; the ``LICENSE`` file sitting next to it in the release directory is
+CC BY 4.0 and covers the *data*, not this file. See section 13 of the release
+``README.md``.
+
 Copy this single file next to the release ``.h5`` and ``import luhdm_release``.
 It needs **numpy** and **h5py** only (``pandas`` is imported lazily, inside
 :meth:`Release.to_dataframe`, and is optional). It deliberately does *not*

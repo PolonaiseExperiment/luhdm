@@ -16,7 +16,7 @@ any of our software.
 | **Release version** | `v5.0-night-m0p356mg-bcap10cm` |
 | **Dataset DOI** | to be assigned |
 | **Date** | 2026-08-08 (cube built 2026-08-08T12:10:42Z) |
-| **License** | to be confirmed before public release |
+| **License** | Data: [CC BY 4.0](LICENSE). Code, including `luhdm_release.py`: GPL-3.0-or-later. See [§13](#13-license-and-contact). |
 | **Code repository** | <https://github.com/PolonaiseExperiment/luhdm> |
 | **Contact** | Dorian W. P. Amaral, <damaral@ifae.es>, or open an issue on the code repository |
 | **Requirements** | Python with `numpy` and `h5py`. Nothing else. |
@@ -110,6 +110,7 @@ The file is plain HDF5 with dimension scales and per-dataset `units` and
 | `provenance.json` | 280 kB | Build-side record: assembly command line, per-input records, impact-parameter cap block. Not needed to use the data; the same information is in the file's own attributes. |
 | `CITATION.cff` | 3.5 kB | Machine-readable citation metadata. See [§12](#12-how-to-cite). |
 | `exclusion_massless_mode1.png` | 57 kB | The figure produced by [§6](#6-worked-example-the-published-limit), for reference. |
+| `LICENSE` | 19 kB | CC BY 4.0, the licence of the **data**. `luhdm_release.py` is code and is GPL-3.0-or-later instead. See [§13](#13-license-and-contact). |
 
 **The two files you need are `luhdm_datarelease_v5.h5` and this README.** Add
 `luhdm_release.py` if you want value-based selection instead of integer
@@ -1009,6 +1010,7 @@ provenance.json: OK
 CITATION.cff: OK
 exclusion_massless_mode1.png: OK
 README.md: OK
+LICENSE: OK
 ```
 
 The digest of the dataset itself is
@@ -1165,9 +1167,29 @@ apparatus is described in D. G. Uitenbroek, J. Langendorff and T. H. Oosterkamp,
 
 ## 13. License and contact
 
-**License: to be confirmed before public release.** Until a license is attached,
-no reuse terms are granted or implied. This line will be replaced by a named
-license and its full text before the release goes public.
+Two licences, because this release is part data and part code.
+
+**The data is CC BY 4.0.** `luhdm_datarelease_v5.h5`, and the `provenance.json`,
+`SHA256SUMS`, `CITATION.cff`, `exclusion_massless_mode1.png` and this `README.md`
+that travel with it, are released under the Creative Commons Attribution 4.0
+International licence. The full text is in [`LICENSE`](LICENSE) in this
+directory; the human-readable summary is at
+<https://creativecommons.org/licenses/by/4.0/>. You may share and adapt the data
+for any purpose, including commercially, provided you give attribution.
+**Attribution here means citing the paper and the dataset as set out in
+[§12](#12-how-to-cite).**
+
+**The code is GPL-3.0-or-later.** `luhdm_release.py` in this directory, and
+everything in the analysis repository, are released under the GNU General Public
+License, version 3 or (at your option) any later version. The full text is in
+[`LICENSE` at the repository root](https://github.com/PolonaiseExperiment/luhdm/blob/main/LICENSE).
+The `LICENSE` file next to `luhdm_release.py` is the CC BY 4.0 text and covers
+the data; it does not cover the reader, which carries its own
+`SPDX-License-Identifier: GPL-3.0-or-later` header.
+
+Nothing you compute *from* the data is a derivative of the code, so the copyleft
+does not reach your analysis; using `luhdm_release.py` to read the cube leaves
+your own work entirely yours.
 
 **Contact.** Dorian W. P. Amaral, <damaral@ifae.es>. For anything about the file
 itself, open an issue at

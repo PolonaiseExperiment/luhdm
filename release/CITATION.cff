@@ -13,10 +13,9 @@ abstract: >-
 type: dataset
 version: "v5.0-night-m0p356mg-bcap10cm"
 date-released: "2026-08-08"
+license: CC-BY-4.0
 # doi: to be assigned. Add the version DOI of the deposit here, and update
 # section 12 of README.md, when the dataset is deposited.
-# license: to be confirmed before public release. Add the SPDX identifier here
-# and the full license text to the release directory.
 keywords:
   - dark matter
   - ultraheavy dark matter

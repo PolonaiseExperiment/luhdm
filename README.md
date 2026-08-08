@@ -44,3 +44,9 @@ pip install -e ".[dev,notebooks]"
 pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 pytest
 ```
+
+## License
+
+Code is [GPL-3.0-or-later](LICENSE); the data release in `release/` is
+[CC BY 4.0](release/LICENSE), with attribution meaning the citation in
+[`release/README.md` §12](release/README.md#12-how-to-cite).
