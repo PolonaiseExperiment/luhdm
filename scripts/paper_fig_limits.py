@@ -41,12 +41,12 @@ and the caption speaks of "the mediator masses shown".
 RIGHT -- the composite-DM cross-section recast
 ----------------------------------------------
 The same exclusion at the paper's composite benchmark, recast as a limit on the
-DM-neutron cross section. Three things change with respect to the left panel and
-all three are stated in the caption: the mediator is the 20 um / 10 meV slice
-only, the abundance is the benchmark ``f_DM = 0.1``, and the three modes are
-combined (a point is excluded if any one mode excludes it -- the element-wise
-maximum of the extremeness, ``Release.composite``). The recast is the Monteiro
-convention,
+DM-neutron cross section. It is the SAME MODE as the left panel -- the Letter
+reports mode 1 and states that the three modes are searched independently and
+are not combined, so nothing here may be a composite over modes. Two things
+change with respect to the left panel and both are stated in the caption: the
+mediator is the 20 um / 10 meV slice only, and the abundance is the benchmark
+``f_DM = 0.1``. The recast is the Monteiro convention,
 
     sigma_chi-n = 4 pi (hbar c)^2 mu_chi-n^2 alpha_n^2 / q0^4,   q0 = mu_chi-n v0,
 
@@ -112,7 +112,8 @@ from luhdm import limits, release  # noqa: E402
 # --------------------------------------------------------------------------- #
 # What is drawn
 # --------------------------------------------------------------------------- #
-MODE = 1                 # the paper's headline channel; --mode selects another
+MODE = 1                 # the paper's headline channel, in BOTH panels; --mode
+                         # selects another. The modes are never combined.
 F_DM_LEFT = 1.0          # presentation convention: everything at f_DM = 1 ...
 F_DM_RIGHT = 0.1         # ... except the composite benchmark
 BENCH_LAM = "20um"       # benchmark mediator range, m_phi ~ 10 meV
@@ -632,21 +633,26 @@ def build_left(ax, rel, ref_dir, confidence, mode):
                 alpha_cell=cell)
 
 
-def build_right(ax, rel, ref_dir, confidence):
-    """The composite sigma_chi-n recast at the benchmark. Bookkeeping dict."""
+def build_right(ax, rel, ref_dir, confidence, mode):
+    """The composite-DM sigma_chi-n recast at the benchmark. Bookkeeping dict.
+
+    Same ``mode`` as the left panel: the modes are searched independently and
+    the Letter reports one of them, so this panel must not be a per-mode
+    maximum.
+    """
     alphas = rel.axes.alpha_n
     cell = float(np.diff(np.log10(alphas)).mean())
     tag, label, colour, dash, lw = next(
         e for e in LAMBDA_FAMILY if e[0] == BENCH_LAM)
 
-    plane = rel.composite("extremeness", lam=BENCH_LAM, atmosphere=True,
-                          f_dm=F_DM_RIGHT)
+    plane = rel.mass_plane("extremeness", mode=mode, lam=BENCH_LAM,
+                           atmosphere=True, f_dm=F_DM_RIGHT)
     pieces, shift = island_polygons(
         rel, plane, confidence, cell,
-        f"composite lambda={BENCH_LAM}, f_DM={F_DM_RIGHT}")
+        f"mode {mode} lambda={BENCH_LAM}, f_DM={F_DM_RIGHT}")
     if not pieces:
         raise AssertionError(
-            f"the composite benchmark excludes nothing at lambda={BENCH_LAM}; "
+            f"mode {mode} excludes nothing at the benchmark lambda={BENCH_LAM}; "
             f"there is no right panel to draw")
     curves = draw_island(ax, pieces, colour, (0, ()), 1.0, "_nolegend_",
                          transform=to_sigma, fill_alpha=FILL_ALPHA_SOLO)
@@ -714,7 +720,7 @@ def build_right(ax, rel, ref_dir, confidence):
         0.972, 0.045,
         "composite DM\n"
         f"$m_\\phi = 10$ meV\n"
-        f"$\\bar{{m}}_\\chi = 1$ keV\n"
+        f"$m_d = 1$ keV\n"
         f"$f_{{\\mathrm{{DM}}}} = {F_DM_RIGHT:g}$",
         transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5,
         linespacing=1.35, zorder=Z_TEXT)
@@ -832,13 +838,13 @@ def verify(fig, axes, arts):
                 f"under the 0.5 pt floor")
 
     # The two panels must be telling the same story about the benchmark: the
-    # right panel is the left panel's 10 meV island, composited over modes and
+    # right panel is the left panel's own 10 meV island, at f_DM = 0.1 and
     # recast, so its cross-section floor must be the recast of a coupling this
     # search actually reaches.
     assert arts[1]["islands"], "the right panel drew no island"
 
 
-def report_benchmark(rel, confidence):
+def report_benchmark(rel, confidence, mode):
     """Print the numbers a reader of the caption would want to check."""
     alphas = rel.axes.alpha_n
     for lam_tag, _lab, _c, _d, _lw in LAMBDA_FAMILY:
@@ -847,13 +853,18 @@ def report_benchmark(rel, confidence):
         m_phi_ev = float(rel.axes.m_phi_gev[il]) * 1e9
         print(f"  {lam_tag:>9s}: lambda = {lam_m:.4g} m, "
               f"m_phi = {m_phi_ev * 1e3:.4g} meV")
-    plane = rel.composite("extremeness", lam=BENCH_LAM, atmosphere=True,
-                          f_dm=F_DM_RIGHT)
+    plane = rel.mass_plane("extremeness", mode=mode, lam=BENCH_LAM,
+                           atmosphere=True, f_dm=F_DM_RIGHT)
     lo, _hi, _n, _h = excluded_band(plane, alphas, confidence)
     j = int(np.nanargmin(lo))
-    print(f"  composite alpha_n floor {lo[j]:.6g} at "
-          f"m_DM = {rel.axes.mass_gev[j]:.6g} GeV "
+    inside = np.isfinite(lo)
+    ms = rel.axes.mass_gev
+    print(f"  mode-{mode} alpha_n floor {lo[j]:.6g} at "
+          f"m_DM = {ms[j]:.6g} GeV "
           f"-> sigma_chi-n = {SIGMA_PER_ALPHA2 * lo[j] ** 2:.6g} cm^2")
+    print(f"  mode-{mode} benchmark island spans m_DM = "
+          f"{ms[inside].min():.6g}-{ms[inside].max():.6g} GeV "
+          f"(sigma from {SIGMA_PER_ALPHA2 * np.nanmin(lo) ** 2:.6g} cm^2 up)")
 
 
 # --------------------------------------------------------------------------- #
@@ -868,7 +879,7 @@ def main(argv=None):
     p.add_argument("--stem", default="results",
                    help="output basename without extension")
     p.add_argument("--mode", type=int, choices=(1, 2, 3), default=MODE,
-                   help="sensor mode whose exclusion the left panel draws "
+                   help="sensor mode whose exclusion BOTH panels draw "
                         "(default: %(default)s). Give a distinct --stem per "
                         "mode so the variants do not overwrite each other.")
     p.add_argument("--refdir", type=Path,
@@ -883,17 +894,17 @@ def main(argv=None):
         print(f"release: {args.release}  ({rel.version_tag})")
         print(f"left:  mode {args.mode}, f_DM = {F_DM_LEFT:g}, atmosphere on, "
               f"confidence {conf:g}")
-        print(f"right: composite over modes, f_DM = {F_DM_RIGHT:g}, "
+        print(f"right: mode {args.mode}, f_DM = {F_DM_RIGHT:g}, "
               f"atmosphere on, lambda = {BENCH_LAM}")
 
         fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=FIGSIZE)
         art_a = build_left(ax_a, rel, args.refdir, conf, args.mode)
-        art_b = build_right(ax_b, rel, args.refdir, conf)
+        art_b = build_right(ax_b, rel, args.refdir, conf, args.mode)
         verify(fig, (ax_a, ax_b), (art_a, art_b))
         print(f"  legend (left): {art_a['labels']}")
         tag = ps.preliminary_tag_text(rel.version_tag)
         print(f"  preliminary tag: {tag or '(none: v3+ cube)'}")
-        report_benchmark(rel, conf)
+        report_benchmark(rel, conf, args.mode)
 
     pdf = args.outdir / f"{args.stem}.pdf"
     png = args.outdir / f"{args.stem}.png"
