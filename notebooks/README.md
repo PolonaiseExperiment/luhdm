@@ -25,11 +25,13 @@ Of those, four are the ones the Supplemental Material actually includes:
 figure *derived from the cube* is stamped with that cube's version tag;
 notebooks 00 and 09 write unstamped figures, since neither reads a cube.
 
-The three Letter figures are drawn by scripts rather than notebooks:
-`scripts/paper_fig_efficiency.py` (impulse spectrum and efficiency),
-`scripts/paper_fig_limits.py` (the two-panel result) and
-`scripts/paper_fig_data_spectrum.py`. Figures `07_impact_parameter_cap` and
-`08_mass_coupling_degeneracy` likewise come from `scripts/`.
+The Letter's data-derived figures are drawn by scripts rather than notebooks:
+`scripts/paper_fig_data_spectrum.py --stem efficiency` (Fig. 2, the impulse
+spectrum with the mode-1 efficiency overlaid) and `scripts/paper_fig_limits.py`
+(Fig. 3, the two-panel result); `scripts/paper_fig_efficiency.py` draws the
+three-mode efficiency comparison, which is not a Letter figure. Figures
+`07_impact_parameter_cap` and `08_mass_coupling_degeneracy` likewise come from
+`scripts/`.
 
 ## Dark matter fraction
 
