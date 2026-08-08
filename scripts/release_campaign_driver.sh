@@ -13,30 +13,34 @@
 #
 # ── OPS (run these from the LOCAL machine) ──────────────────────────────────
 #
-# 1. Push code to remote-node (NEVER touches ~/release_shards; --delete only prunes
+# 0. Name the compute node once; every command below uses it. Any ssh alias or
+#    hostname works — the campaign itself is host-agnostic.
+#      export REMOTE_HOST="${REMOTE_HOST:-remote-node}"
+#
+# 1. Push code (NEVER touches ~/release_shards; --delete only prunes
 #    the luhdm/ and scripts/ trees under code/luhdm/):
-#      rsync -az --delete --exclude __pycache__ luhdm scripts remote-node:code/luhdm/
+#      rsync -az --delete --exclude __pycache__ luhdm scripts "$REMOTE_HOST":code/luhdm/
 #
 # 2. (optional) timing probe BEFORE the real launch — smallest-lambda ils on a
 #    tiny grid to sanity-check the sub-2 um ODE cost extrapolation:
-#      ssh remote-node 'cd code/luhdm && .venv/bin/python scripts/build_release.py \
+#      ssh "$REMOTE_HOST" 'cd code/luhdm && .venv/bin/python scripts/build_release.py \
 #          --pass atm --il-start 0 --il-end 3 --n-a 6 --m-tier 60 \
 #          --shard-dir /tmp/probe_shards --workers 80'
 #
 # 3. Launch the full campaign under nohup and detach:
-#      ssh remote-node 'cd code/luhdm && nohup bash scripts/release_campaign_driver.sh \
+#      ssh "$REMOTE_HOST" 'cd code/luhdm && nohup bash scripts/release_campaign_driver.sh \
 #          > release_build.log 2>&1 &'
 #
 # 4. Local watch/pull loop — mirror shards back every ~2.5 min until DONE:
-#      until ssh remote-node "grep -q '] DONE$' code/luhdm/release_build.log"; do
-#          rsync -az remote-node:release_shards/ ~/release_shards/
+#      until ssh "$REMOTE_HOST" "grep -q '] DONE$' code/luhdm/release_build.log"; do
+#          rsync -az "$REMOTE_HOST":release_shards/ ~/release_shards/
 #          sleep 150
 #      done
-#      rsync -az remote-node:release_shards/ ~/release_shards/   # final sync
+#      rsync -az "$REMOTE_HOST":release_shards/ ~/release_shards/   # final sync
 #
-# 5. Safe-kill the campaign on remote-node (the [b]racket trick keeps pkill from
+# 5. Safe-kill the campaign on the node (the [b]racket trick keeps pkill from
 #    matching its own command line):
-#      ssh remote-node 'pkill -f "[b]uild_release"'
+#      ssh "$REMOTE_HOST" 'pkill -f "[b]uild_release"'
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -u   # NOT -e: SHARD_FAIL must not abort the run
@@ -46,6 +50,11 @@ set -u   # NOT -e: SHARD_FAIL must not abort the run
 cd "${REPO_DIR:-$HOME/code/luhdm}"
 
 PY="${PYTHON_BIN:-.venv/bin/python}"
+
+# Label for the log banner. The campaign runs wherever it is started; this is
+# only what it calls itself when `hostname` is unavailable, and it is the same
+# knob the OPS block above uses to address the node from the local machine.
+REMOTE_HOST="${REMOTE_HOST:-remote-node}"
 
 OUT="${SHARD_OUT:-$HOME/release_shards}"
 WORKERS="${WORKERS:-$(nproc)}"
@@ -75,7 +84,7 @@ run_shard() {
     fi
 }
 
-echo "[$(ts)] campaign start  host=$(hostname)  workers=$WORKERS  out=$OUT"
+echo "[$(ts)] campaign start  host=$(hostname 2>/dev/null || echo "$REMOTE_HOST")  workers=$WORKERS  out=$OUT"
 
 # noatm first (cheap, full product), then atm tags-first (tag/massless slices
 # early for the V1 gate; remaining lambda smallest-first surfaces ODE blowups).

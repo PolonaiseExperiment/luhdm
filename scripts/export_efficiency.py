@@ -5,7 +5,7 @@ Reads the (git-ignored, local-only) analysis product
 ``data/selected_data_efficiency_curves.npz`` -- the per-segment-mean detection
 efficiency vs imparted momentum for each sensor mode -- converts the momentum
 axis from SI (kg m/s) to GeV, and writes a small committed table that the rate
-pipeline loads on any host (remote-node has no data/ dir).
+pipeline loads on any host (a compute node has no data/ dir).
 
     python scripts/export_efficiency.py
 

@@ -68,7 +68,7 @@ Usage
   python scripts/build_release.py --pass noatm --shard-dir /tmp/rel/noatm --quick
   python scripts/build_release.py --pass halo  --shard-dir /tmp/rel/halo  --quick
 
-  # remote-node production (one pass; tags + massless first as a launch-abort gate):
+  # compute-node production (one pass; tags + massless first as a launch-abort gate):
   python scripts/build_release.py --pass atm --shard-dir ~/release_shards/atm \
       --order tags-first --workers 80
 
@@ -111,8 +111,12 @@ MU_FLOOR = 0.2                              # matches limits.extremeness_and_mu
 # limits.extremeness_and_mu (whose own default is the historical 40.0) and is
 # recorded in the shard fidelity string, so build and single-cell recompute
 # always agree. Raised 40 -> 85 because the measured extremeness at mu ~ 40 is
-# far below 1 (as low as 0.0000), i.e. the 40 cap over-excluded; the true p only
-# saturates at 1.0000 by mu ~ 84, so 85 removes the shortcut bias with margin.
+# far below 1 (as low as 0.0000), i.e. the 40 cap over-excluded. The 85 cap has
+# real margin only in modes 1 and 2 (max mu among MC cells with p < 0.95 is
+# 16.2 and 38.9). Mode 3 has MC cells at mu = 84.9 with p as low as 0.0003, so
+# there its status-3 cells are an assertion of exclusion, not a computed result
+# -- see release/README.md section 9 "Known limitations". Do not read this cap
+# as validated for mode 3, and do not raise it on the strength of that reading.
 MU_CAP = 85.0
 SCHEMA_VERSION = 2                          # 2: added the f_DM=1 (*_f1) surfaces
 

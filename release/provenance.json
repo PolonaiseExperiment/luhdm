@@ -1,10 +1,10 @@
 {
   "assembly": {
     "created": "2026-08-08T12:10:42.851384+00:00",
-    "hostname": "laptop",
-    "platform": "Linux-7.1.4-arch1-1-x86_64-with-glibc2.44",
-    "argv": "scripts/assemble_release.py --atm-dir ~/code/uhdm/release_shards_v5/atm --noatm-dir ~/code/uhdm/release_shards_v5/noatm --halo-dir ~/code/uhdm/release_shards_v5/halo --out ~/code/luhdm/release/luhdm_datarelease_v5.h5 --version-tag v5.0-night-m0p356mg-bcap10cm --layout axes --data-dir ~/code/luhdm/notebooks",
-    "git_commit": "1ca2828dddaa859c5ceee3be74fc81b388748ce1",
+    "hostname": "build-host",
+    "platform": "Linux-x86_64",
+    "argv": "scripts/assemble_release.py --atm-dir ~/code/uhdm/release_shards_v5/atm --noatm-dir ~/code/uhdm/release_shards_v5/noatm --halo-dir ~/code/uhdm/release_shards_v5/halo --out release/luhdm_datarelease_v5.h5 --version-tag v5.0-night-m0p356mg-bcap10cm --layout axes --data-dir notebooks",
+    "git_commit": "ca347ce287a33995686a9c552a05e3809ad88aa7",
     "git_dirty": false,
     "packages": {
       "numpy": "2.5.1",
@@ -17,7 +17,7 @@
       "python": "3.14.6"
     },
     "version_tag": "v5.0-night-m0p356mg-bcap10cm",
-    "output": "~/code/luhdm/release/luhdm_datarelease_v5.h5",
+    "output": "release/luhdm_datarelease_v5.h5",
     "fidelity": {
       "n_ode": 400,
       "n_shm": 300000,
@@ -35,20 +35,20 @@
     ],
     "inputs": {
       "t_exposure_s": 790778.0,
-      "efficiency_npz": "~/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+      "efficiency_npz": "luhdm/reference_data/efficiency_curves.npz",
       "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
-      "events_dir": "~/code/luhdm/notebooks",
+      "events_dir": "notebooks",
       "events": {
         "data_mode1.txt": {
-          "path": "~/code/luhdm/notebooks/data_mode1.txt",
+          "path": "notebooks/data_mode1.txt",
           "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
         },
         "data_mode2.txt": {
-          "path": "~/code/luhdm/notebooks/data_mode2.txt",
+          "path": "notebooks/data_mode2.txt",
           "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
         },
         "data_mode3.txt": {
-          "path": "~/code/luhdm/notebooks/data_mode3.txt",
+          "path": "notebooks/data_mode3.txt",
           "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
         }
       },
@@ -62,23 +62,23 @@
   },
   "shard_inputs": {
     "atm": {
-      "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+      "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
       "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
       "env": {
-        "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+        "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz",
         "LUHDM_T_EXPOSURE": "790778"
       },
       "events": {
         "data_mode1.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+          "path": "cveto_inputs/data_mode1.txt",
           "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
         },
         "data_mode2.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+          "path": "cveto_inputs/data_mode2.txt",
           "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
         },
         "data_mode3.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+          "path": "cveto_inputs/data_mode3.txt",
           "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
         }
       },
@@ -90,23 +90,23 @@
       "t_exposure_s": 790778.0
     },
     "noatm": {
-      "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+      "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
       "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
       "env": {
-        "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+        "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz",
         "LUHDM_T_EXPOSURE": "790778"
       },
       "events": {
         "data_mode1.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+          "path": "cveto_inputs/data_mode1.txt",
           "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
         },
         "data_mode2.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+          "path": "cveto_inputs/data_mode2.txt",
           "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
         },
         "data_mode3.txt": {
-          "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+          "path": "cveto_inputs/data_mode3.txt",
           "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
         }
       },
@@ -118,10 +118,10 @@
       "t_exposure_s": 790778.0
     },
     "halo": {
-      "efficiency_npz": "~/code/luhdm/ignore/cveto_inputs/efficiency_curves_cveto.npz",
+      "efficiency_npz": "ignore/cveto_inputs/efficiency_curves_cveto.npz",
       "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
       "env": {
-        "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/ignore/cveto_inputs/efficiency_curves_cveto.npz",
+        "LUHDM_EFFICIENCY_NPZ": "ignore/cveto_inputs/efficiency_curves_cveto.npz",
         "LUHDM_T_EXPOSURE": "790778"
       },
       "events": {},
@@ -159,7 +159,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -198,25 +198,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -238,7 +238,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -277,25 +277,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -317,7 +317,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -356,25 +356,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -396,7 +396,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -435,25 +435,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -475,7 +475,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -514,25 +514,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -554,7 +554,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -593,25 +593,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -633,7 +633,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -672,25 +672,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -712,7 +712,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -751,25 +751,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -791,7 +791,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -830,25 +830,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -870,7 +870,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -909,25 +909,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -949,7 +949,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -988,25 +988,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1028,7 +1028,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1067,25 +1067,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1107,7 +1107,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1146,25 +1146,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1186,7 +1186,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1225,25 +1225,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1265,7 +1265,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1304,25 +1304,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1344,7 +1344,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1383,25 +1383,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1423,7 +1423,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1462,25 +1462,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1502,7 +1502,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1541,25 +1541,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1581,7 +1581,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1620,25 +1620,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1660,7 +1660,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1699,25 +1699,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1739,7 +1739,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1778,25 +1778,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1818,7 +1818,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1857,25 +1857,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1897,7 +1897,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -1936,25 +1936,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -1976,7 +1976,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2015,25 +2015,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2055,7 +2055,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2094,25 +2094,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2134,7 +2134,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2173,25 +2173,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2213,7 +2213,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2252,25 +2252,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2292,7 +2292,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2331,25 +2331,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2371,7 +2371,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2410,25 +2410,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2450,7 +2450,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2489,25 +2489,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2529,7 +2529,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2568,25 +2568,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2608,7 +2608,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2647,25 +2647,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2687,7 +2687,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2726,25 +2726,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2766,7 +2766,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2805,25 +2805,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2845,7 +2845,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2884,25 +2884,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -2924,7 +2924,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -2963,25 +2963,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3003,7 +3003,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3042,25 +3042,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3082,7 +3082,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3121,25 +3121,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3161,7 +3161,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3200,25 +3200,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3240,7 +3240,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3279,25 +3279,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3319,7 +3319,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3358,25 +3358,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3398,7 +3398,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3437,25 +3437,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3477,7 +3477,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3516,25 +3516,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3556,7 +3556,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3595,25 +3595,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3635,7 +3635,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3674,25 +3674,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3714,7 +3714,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3753,25 +3753,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3793,7 +3793,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3832,25 +3832,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3872,7 +3872,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3911,25 +3911,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -3951,7 +3951,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -3990,25 +3990,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4030,7 +4030,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4069,25 +4069,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4109,7 +4109,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4148,25 +4148,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4188,7 +4188,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4227,25 +4227,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4267,7 +4267,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4306,25 +4306,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4346,7 +4346,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4385,25 +4385,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4425,7 +4425,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4464,25 +4464,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4506,7 +4506,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4545,25 +4545,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4585,7 +4585,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4624,25 +4624,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4664,7 +4664,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4703,25 +4703,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4743,7 +4743,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4782,25 +4782,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4822,7 +4822,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4861,25 +4861,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4901,7 +4901,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -4940,25 +4940,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -4980,7 +4980,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5019,25 +5019,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5059,7 +5059,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5098,25 +5098,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5138,7 +5138,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5177,25 +5177,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5217,7 +5217,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5256,25 +5256,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5296,7 +5296,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5335,25 +5335,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5375,7 +5375,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5414,25 +5414,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5454,7 +5454,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5493,25 +5493,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5533,7 +5533,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5572,25 +5572,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5612,7 +5612,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5651,25 +5651,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5691,7 +5691,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5730,25 +5730,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5770,7 +5770,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5809,25 +5809,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5849,7 +5849,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5888,25 +5888,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -5928,7 +5928,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -5967,25 +5967,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6007,7 +6007,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6046,25 +6046,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6086,7 +6086,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6125,25 +6125,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6165,7 +6165,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6204,25 +6204,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6244,7 +6244,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6283,25 +6283,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6323,7 +6323,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6362,25 +6362,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6402,7 +6402,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6441,25 +6441,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6481,7 +6481,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6520,25 +6520,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6560,7 +6560,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6599,25 +6599,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6639,7 +6639,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6678,25 +6678,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6718,7 +6718,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6757,25 +6757,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6797,7 +6797,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6836,25 +6836,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6876,7 +6876,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6915,25 +6915,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -6955,7 +6955,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -6994,25 +6994,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7034,7 +7034,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7073,25 +7073,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7113,7 +7113,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7152,25 +7152,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7192,7 +7192,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7231,25 +7231,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7271,7 +7271,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7310,25 +7310,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7350,7 +7350,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7389,25 +7389,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7429,7 +7429,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7468,25 +7468,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7508,7 +7508,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7547,25 +7547,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7587,7 +7587,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7626,25 +7626,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7666,7 +7666,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7705,25 +7705,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7745,7 +7745,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7784,25 +7784,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7824,7 +7824,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7863,25 +7863,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7903,7 +7903,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -7942,25 +7942,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -7982,7 +7982,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8021,25 +8021,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8061,7 +8061,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8100,25 +8100,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8140,7 +8140,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8179,25 +8179,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8219,7 +8219,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8258,25 +8258,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8298,7 +8298,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8337,25 +8337,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8377,7 +8377,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8416,25 +8416,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8456,7 +8456,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8495,25 +8495,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8535,7 +8535,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8574,25 +8574,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8614,7 +8614,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8653,25 +8653,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8693,7 +8693,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8732,25 +8732,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8772,7 +8772,7 @@
           "--b-constrained-max",
           "0.1",
           "--data-dir",
-          "~/code/luhdm/cveto_inputs",
+          "cveto_inputs",
           "--m-tier",
           "119",
           "--workers",
@@ -8811,25 +8811,25 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {
             "data_mode1.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode1.txt",
+              "path": "cveto_inputs/data_mode1.txt",
               "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
             },
             "data_mode2.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode2.txt",
+              "path": "cveto_inputs/data_mode2.txt",
               "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
             },
             "data_mode3.txt": {
-              "path": "~/code/luhdm/cveto_inputs/data_mode3.txt",
+              "path": "cveto_inputs/data_mode3.txt",
               "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
             }
           },
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",
@@ -8866,7 +8866,7 @@
           "q_span": 30000.0,
           "n_mc": 10000
         },
-        "hostname": "laptop",
+        "hostname": "build-host",
         "workers": 22,
         "start": "2026-08-05T21:59:10.391344+00:00",
         "end": "2026-08-05T22:05:25.413057+00:00",
@@ -8935,12 +8935,12 @@
             1.0
           ],
           "f_x_base": 0.1,
-          "efficiency_npz": "~/code/luhdm/ignore/cveto_inputs/efficiency_curves_cveto.npz",
+          "efficiency_npz": "ignore/cveto_inputs/efficiency_curves_cveto.npz",
           "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
           "events": {},
           "env": {
             "LUHDM_T_EXPOSURE": "790778",
-            "LUHDM_EFFICIENCY_NPZ": "~/code/luhdm/ignore/cveto_inputs/efficiency_curves_cveto.npz"
+            "LUHDM_EFFICIENCY_NPZ": "ignore/cveto_inputs/efficiency_curves_cveto.npz"
           }
         },
         "luhdm_version": "0.1.0",

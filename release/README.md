@@ -104,10 +104,10 @@ The file is plain HDF5 with dimension scales and per-dataset `units` and
 | file | size | what it is |
 |---|---|---|
 | `luhdm_datarelease_v5.h5` | 14.8 MB | **The dataset.** Axes, results cube, detector inputs, halo diagnostics and reference curves. Self-describing; sufficient on its own. |
-| `luhdm_release.py` | 50 kB | **Optional** single-file reader. `numpy` and `h5py` only, `pandas` optional. Copy it next to the HDF5 and import it. Described in [§7](#7-the-standalone-reader). |
-| `README.md` | 57 kB | This document. |
-| `SHA256SUMS` | 0.5 kB | SHA-256 digest of every file above and below. See [§10](#10-integrity-provenance-and-environment). |
-| `provenance.json` | 280 kB | Build-side record: assembly command line, per-input records, impact-parameter cap block. Not needed to use the data; the same information is in the file's own attributes. |
+| `luhdm_release.py` | 51 kB | **Optional** single-file reader. `numpy` and `h5py` only, `pandas` optional. Copy it next to the HDF5 and import it. Described in [§7](#7-the-standalone-reader). |
+| `README.md` | 61 kB | This document. |
+| `SHA256SUMS` | 0.6 kB | SHA-256 digest of every file above and below. See [§10](#10-integrity-provenance-and-environment). |
+| `provenance.json` | 262 kB | Build-side record: assembly command line, per-input records, impact-parameter cap block. Not needed to use the data; the same information is in the file's own attributes. |
 | `CITATION.cff` | 3.5 kB | Machine-readable citation metadata. See [§12](#12-how-to-cite). |
 | `exclusion_massless_mode1.png` | 57 kB | The figure produced by [§6](#6-worked-example-the-published-limit), for reference. |
 | `LICENSE` | 19 kB | CC BY 4.0, the licence of the **data**. `luhdm_release.py` is code and is GPL-3.0-or-later instead. See [§13](#13-license-and-contact). |
@@ -159,10 +159,17 @@ chain as cross-checks. All three are in this file.
 
 After the full selection above the 100 GeV analysis threshold, the surviving
 impulse candidates number **8, 26 and 126** for modes 1, 2 and 3. Those lists
-are `detector/events_mode{1,2,3}`. The larger pre-selection lists (66, 99 and
-443 entries) ship alongside as `detector/all_blips_mode{1,2,3}` so the selection
-can be inspected or varied. **They are in different units**: see
-[§4.3](#43-detector).
+are `detector/events_mode{1,2,3}`, and `detector/exposure_s` is their live time.
+
+The larger lists (66, 99 and 443 entries) that ship alongside as
+`detector/all_blips_mode{1,2,3}` are **not** the night pre-selection of those
+candidates: they are every up-crossing above the 100 GeV threshold over the
+whole unvetoed run, about 469.7 h, so `detector/exposure_s` does **not**
+normalise them. They carry no per-blip time, segment or drive-state metadata,
+so the night selection cannot be re-derived or re-cut from them; they ship for
+context, to show the scale of the raw transient population the selection acts
+on. **They are also in different units** — eV, against GeV for the candidates:
+see [§4.3](#43-detector).
 
 ### The interaction model, in one paragraph
 
@@ -276,7 +283,7 @@ The analysis inputs.
 |---|---|---|---|---|
 | `exposure_s` | scalar | f8 | s | total live time, 790 778 s. |
 | `events_mode{1,2,3}` | (8,) (26,) (126,) | f8 | **GeV** | **the analysis event lists**: momentum kicks surviving the full selection. The limit is set on these. |
-| `all_blips_mode{1,2,3}` | (66,) (99,) (443,) | f8 | **eV** | pre-selection impulse momenta: every reconstructed transient above the analysis threshold, before the quality selection. Context only. |
+| `all_blips_mode{1,2,3}` | (66,) (99,) (443,) | f8 | **eV** | every reconstructed up-crossing above the 100 GeV threshold over the **whole unvetoed run** (~469.7 h), not the night pre-selection. `exposure_s` does not apply to them and they carry no time or drive-state metadata. Context only. |
 | `q_gev_{1,2,3}` | (400,) | f8 | GeV | momentum grid of the measured efficiency curves. |
 | `eff_{1,2,3}_df{2,3}` | (400,) | f8 | 1 | measured detection efficiency ε(q) per mode, for the two degrees-of-freedom hypotheses of the efficiency fit. The analysis used `df` = `attrs['df']` (3). |
 
@@ -418,16 +425,21 @@ parallel analyses:
 
 |  | `atmosphere = 1` (attenuated) | `atmosphere = 0` (bare halo) |
 |---|---|---|
-| **`f_dm = 0.1`** | the baseline published result | what the limit would be with no overburden |
-| **`f_dm = 1.0`** | this species is all of the dark matter | the same, with no overburden |
+| **`f_dm = 0.1`** | this species is a tenth of the dark matter; the plane the composite cross-section benchmark is quoted on | the same, with no overburden |
+| **`f_dm = 1.0`** | this species is all of the dark matter; the plane the paper's `alpha_n` limits are quoted on | the same, with no overburden |
 
 * **`f_dm`** is the fraction of the local dark-matter density carried by this
   species. It enters only as a flux normalisation, so `mu` and `n_transit` scale
   exactly linearly with it. The `extremeness` does not: it is a non-linear
-  function of `mu`. The baseline `f_DM = 0.1` is the conventional choice that
-  evades self-interaction constraints, and `attrs['f_dm_default']` records which
-  one the headline numbers use. The paper's coupling-limit figures are drawn at
-  `f_DM = 1`, the presentation convention of the optically levitated searches.
+  function of `mu`. **Both planes are used in the paper**: the coupling limits
+  are quoted at `f_DM = 1`, the presentation convention of the optically
+  levitated searches, and the composite cross-section benchmark at `f_DM = 0.1`,
+  the conventional subdominant choice that evades self-interaction constraints.
+  `attrs['f_dm_default']` records the value the loader falls back to when a
+  caller does not ask for one; it is not a statement about which plane a given
+  published number is quoted on. The two differ materially — the 200 µm mode-1
+  contour ends at 3.4 × 10⁹ GeV at `f_dm = 0.1` and 5.4 × 10¹⁰ GeV at
+  `f_dm = 1.0` — so pick the plane deliberately.
 * **`atmosphere`** selects whether the arrival flux has been propagated through
   the atmosphere and overburden. With attenuation ON, strongly coupled
   candidates are slowed or stopped before reaching the sensor, so the exclusion
@@ -702,7 +714,7 @@ halo diagnostics (own coarser alpha/mass grids)
 reference_curves: 20 datasets (showcase spectra / arrival-speed distributions)
 
 provenance
-  git_commit     1ca2828dddaa859c5ceee3be74fc81b388748ce1 (dirty=False)
+  git_commit     ca347ce287a33995686a9c552a05e3809ad88aa7 (dirty=False)
   seed           20260702
   MC fidelity    n_mc=10000 n_ode=400 n_shm=300000 n_q=240
   packages       {"numpy": "2.5.1", "scipy": "1.18.0", "h5py": "3.16.0", "optimum_interval": "0.3.0", "luhdm": "0.1.0", "matplotlib": "3.11.1", "pandas": "3.0.3", "python": "3.14.6"}
@@ -877,9 +889,11 @@ candidate lists and live time.
   same readout stream. Whether and how to combine them is an analysis choice the
   release does not make for you; the paper reports mode 1 and carries modes 2
   and 3 as cross-checks. See [§9](#9-known-limitations).
-* **Treating `all_blips_mode{n}` as a signal candidate list.** It is the
-  pre-selection sample, published so the selection can be inspected. The limit
-  is set on `events_mode{n}`.
+* **Treating `all_blips_mode{n}` as a signal candidate list, or as the night
+  pre-selection.** It is the raw up-crossing population of the whole unvetoed
+  run, published for context; it has no time metadata, so the night selection
+  cannot be re-derived from it, and `exposure_s` does not normalise it. The
+  limit is set on `events_mode{n}`.
 * **Quoting atmosphere-off results as two-sided bands.** They are one-sided
   lower bounds; the upper edge is where the coupling grid stopped. See
   [§9](#9-known-limitations).
@@ -1016,7 +1030,7 @@ LICENSE: OK
 The digest of the dataset itself is
 
 ```
-1d591f096db1a900639f288baab371dd4edccc2543148059a6b005dde2705733  luhdm_datarelease_v5.h5
+eab485a1905ddce01ddd6f539e52d372d364dfb2528f9af04723f6f835f6554c  luhdm_datarelease_v5.h5
 ```
 
 If you renamed the file, compare that digest directly: the digest is what
@@ -1042,7 +1056,7 @@ print("packages", json.loads(a["packages_json"]))
 ```
 version_tag            v5.0-night-m0p356mg-bcap10cm
 created                2026-08-08T12:10:42.831616+00:00
-git_commit             1ca2828dddaa859c5ceee3be74fc81b388748ce1
+git_commit             ca347ce287a33995686a9c552a05e3809ad88aa7
 git_dirty              False
 seed                   20260702
 t_exposure_s           790778.0
@@ -1068,9 +1082,22 @@ guess them: `rho_dm_gev4`, `f_x`, `n_neutrons`, `r_eff_m`, `q_thresh_gev`,
 `q_hi_ref_gev`, `m_planck_gev`, `t_exposure_s`.
 
 Some attributes (`efficiency_npz`, `events_dir`, `inputs_json`) and many entries
-in `provenance.json` record absolute paths on the machine the cube was built on.
-They identify which input file was read and are paired with its SHA-256; they
-carry no meaning for you, and nothing in the release needs them to be resolvable.
+in `provenance.json` name the input files the build read. They are recorded
+repository-relative where the input lives in the code repository, and otherwise
+`~`-relative, and each is paired with its SHA-256. **The digest, not the path,
+is what identifies an input**: nothing in the release needs any of these paths
+to resolve on your machine. Build host names in `provenance.json` are likewise
+generic labels (`remote-node` for the scan node, `build-host` for the machine
+that assembled the cube), not resolvable addresses.
+
+`git_commit` is a commit in the current published history of
+<https://github.com/PolonaiseExperiment/luhdm>. The repository's history was
+rewritten once before publication, to remove absolute paths and an internal
+hostname from old commits, so this attribute records the post-rewrite hash of
+the code that produced the cube rather than the hash that existed at build
+time. The tree it points at is the tree that was built from; only the commit
+identifier changed.
+
 The build timestamp in `provenance.json` is 20 µs later than the `created`
 attribute in the cube because the two records are written one after the other in
 the same run. They refer to the same build.

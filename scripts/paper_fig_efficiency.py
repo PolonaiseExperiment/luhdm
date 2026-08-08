@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """PRL figure: detection efficiency eps(q) for the three sensor modes (df = 3).
 
-One panel, three curves.  Mode 2 -- the channel the Letter's limit is set in --
-is drawn solid and in colour; modes 1 and 3 are muted greys with distinct dash
-patterns, so the three are separable in print grayscale and under any colour
-vision deficiency (no series is distinguished by hue alone).
+One panel, three curves.  This is a supporting three-mode comparison, not a
+single-channel figure: the Letter's limit is set on **mode 1** (see
+paper_fig_limits.py and paper_fig_data_spectrum.py, both MODE = 1).  Mode 2 is
+drawn solid and in colour purely as the visual anchor -- it is the middle
+threshold, so highlighting it puts one curve either side -- while modes 1 and 3
+are muted greys with distinct dash patterns, so the three are separable in print
+grayscale and under any colour vision deficiency (no series is distinguished by
+hue alone).
 
 The momentum at which each curve crosses eps = 0.5 is *measured* from the
 tabulated curve at run time by :func:`q_at_efficiency` -- never hard-coded --
@@ -45,7 +49,6 @@ import paper_style as ps  # noqa: E402
 from luhdm import release  # noqa: E402
 
 MODES = (1, 2, 3)
-PAPER_MODE = 2           # solid + coloured; the Letter's channel
 DF = 3                   # dof hypothesis
 
 # Plotted window: left edge matches the data-spectrum figure so the two panels
@@ -59,10 +62,11 @@ Y_LO, Y_HI = -0.05, 1.20
 #: (colour, dash, linewidth, z) per mode.  Dashes differ for every mode, so the
 #: figure survives grayscale printing and CVD (charter F9/F10).
 #:
-#: The muted modes sit at *higher* zorder than mode 2 on purpose: below ~400 GeV
-#: and above ~10 TeV all three curves coincide, and a broken line drawn over the
-#: solid one lets the reader see that they overlap instead of hiding two series
-#: under the third.  Mode 2 stays prominent through colour and line width.
+#: The muted modes sit at *higher* zorder than the coloured one on purpose:
+#: below ~400 GeV and above ~10 TeV all three curves coincide, and a broken line
+#: drawn over the solid one lets the reader see that they overlap instead of
+#: hiding two series under the third.  Mode 2, the middle threshold and so the
+#: visual anchor, stays prominent through colour and line width.
 STYLE = {
     1: dict(color="#7C7C7C", ls=(0, (4.0, 1.7)), lw=0.8, zorder=4, marker="s"),
     2: dict(color=ps.OI_BLUE, ls="-", lw=1.1, zorder=3, marker="o"),
@@ -73,7 +77,7 @@ STYLE = {
 
 # --------------------------------------------------------------------------- #
 # Efficiency-table numerics.  Shared with paper_fig_data_spectrum.py, which
-# overlays the same mode-2 curve on the candidate histogram.
+# overlays the mode-1 curve on the candidate histogram.
 # --------------------------------------------------------------------------- #
 def efficiency_interp(q_tab, eff_tab):
     """eps(q) with the analysis' extrapolation: 0 below the table, held above.
@@ -207,7 +211,10 @@ def main(argv=None):
                    default=Path(__file__).resolve().parents[1]
                    / "ignore" / "overleaf" / "figs",
                    help="output directory (default: %(default)s)")
-    p.add_argument("--stem", default="efficiency",
+    # NOT "efficiency": that stem is the Letter's Fig. 2, written by
+    # paper_fig_data_spectrum.py --stem efficiency, and a default run here
+    # would silently overwrite it.
+    p.add_argument("--stem", default="efficiency_modes123",
                    help="output basename without extension")
     args = p.parse_args(argv)
 

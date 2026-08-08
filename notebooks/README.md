@@ -2,8 +2,9 @@
 
 Every figure and number below is read from the data release cube tracked in
 [`release/`](../release), through `luhdm.release`. The notebooks do not recompute
-any physics, so a notebook run and a cluster run cannot drift apart. The one
-exception is notebook 00, which reads the raw instrument file.
+any physics, so a notebook run and a cluster run cannot drift apart. Two do not:
+notebook 00 reads the raw instrument file, and notebook 09 is closed-form
+pedagogy that reads no cube at all.
 
 ## What each notebook is for
 
@@ -20,8 +21,9 @@ exception is notebook 00, which reads the raw instrument file.
 
 Of those, four are the ones the Supplemental Material actually includes:
 `01_excluded_massless`, `01_sensitivity_vs_range`, `02_spectra` and
-`05_composite_noatm`. Figures are written to `png/`, `svg/` and `pdf/`, each
-stamped with the version tag of the cube that produced it.
+`05_composite_noatm`. Figures are written to `png/`, `svg/` and `pdf/`. Each
+figure *derived from the cube* is stamped with that cube's version tag;
+notebooks 00 and 09 write unstamped figures, since neither reads a cube.
 
 The three Letter figures are drawn by scripts rather than notebooks:
 `scripts/paper_fig_efficiency.py` (impulse spectrum and efficiency),
@@ -33,8 +35,11 @@ The three Letter figures are drawn by scripts rather than notebooks:
 
 The cube stores both `f_dm` planes, so which one a figure uses is a read option,
 not a recompute. Notebook 01 asks for `f_dm=1.0`, the fraction the Letter quotes
-its `alpha_n` limits at. Notebooks 04 and 05 do not pass `f_dm=` and therefore get
-the loader default, 0.1. Each notebook says which one it is using.
+its `alpha_n` limits at. Notebook 02 reads the loader default, 0.1, for its spot
+checks, so its boundary table is the 0.1 plane rather than the plane notebook 01
+publishes. Notebooks 03, 04 and 05 also take the loader default, 0.1. Notebook 06
+deliberately shows both planes side by side. (Notebook 09 reads no extremeness
+plane, so the question does not arise there.)
 
 ## Running them
 
@@ -49,8 +54,9 @@ jupyter lab
 
 Notebooks 01 to 06 and 09 then run start to finish with no environment variables
 set and no file from outside the repository, in about a minute for all seven
-together. They read the cube rather than recomputing it, which is why they are
-quick.
+together. Notebooks 01 to 06 read the cube rather than recomputing it, which is
+why they are quick; notebook 09 recomputes closed-form cross sections and a
+small Monte Carlo, and is quick for its own reasons.
 
 **Notebook 00 does not run from a fresh checkout.** It is the only one that reads
 the raw instrument file `data/fit_data_temp_lockin_transients_selected.hdf5`,

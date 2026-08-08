@@ -3,8 +3,8 @@
 
 Writes notebooks/flux_maps.npz through the same luhdm.rate functions the
 notebook uses inline when the cache is absent, so the two cannot drift.
-Cheap enough for a laptop; provided as a script so it can run on remote-node
-alongside scan_grid.py.
+Cheap enough for a laptop; provided as a script so it can also run on a compute
+node alongside scan_grid.py.
 
     python scripts/make_maps.py --lamb 2e-4 --out notebooks/flux_maps.npz
 """

@@ -1,4 +1,4 @@
-"""Detector-rate pipeline shared by the notebook and the remote-node scan scripts.
+"""Detector-rate pipeline shared by the notebooks and the batch scan scripts.
 
 One home for the physics that turns (coupling, mass, arrival distribution)
 into a momentum-kick spectrum, so notebooks/limit_contour.ipynb and

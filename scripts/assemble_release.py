@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Assemble the per-lambda npz shards into the release HDF5 (LOCAL machine only).
 
-remote-node writes float64 npz shards (no h5py there); this script — run on a host
-with h5py — stacks them into ``release/luhdm_datarelease_v2.h5``, the single
+The compute node writes float64 npz shards (no h5py there); this script — run on
+a host with h5py — stacks them into ``release/luhdm_datarelease_v5.h5``, the single
 source every notebook loads from. It also computes ``/reference_curves`` locally
 at production fidelity (notebook 02's showcase point), copies the detector
 products, embeds full provenance, and writes ``release/provenance.json`` +
