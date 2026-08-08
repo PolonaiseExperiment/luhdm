@@ -63,19 +63,27 @@ published numbers must stay reproducible) but it never lets it pass silently
 either: :meth:`Release.excluded_band` counts the undefined cells it saw,
 returns the count, and warns unless you pass ``nan_policy='ignore'``.
 
+Units of the detector lists
+---------------------------
+``detector/events_mode{n}`` is in **GeV** and ``detector/all_blips_mode{n}`` is
+in **eV**: a factor 1e9 between two datasets in the same group.
+:meth:`Release.events` and :meth:`Release.all_blips` return each list exactly as
+stored, so divide the blip momenta by 1e9 before comparing or plotting them on
+one axis. Every dataset carries its own ``units`` attribute.
+
 Quickstart
 ----------
 ::
 
     import luhdm_release
 
-    with luhdm_release.open_release("luhdm_datarelease_v4.h5") as rel:
+    with luhdm_release.open_release("luhdm_datarelease_v5.h5") as rel:
         rel.summary()
         sl = rel.get("extremeness", mode=1, lam="200um")   # (alpha_n, mass_gev)
         band = rel.excluded_band(mode=1, lam="200um")
         print(band.mass_range, band.alpha_lo, band.alpha_hi)
 
-From the shell, ``python luhdm_release.py luhdm_datarelease_v4.h5`` prints the
+From the shell, ``python luhdm_release.py luhdm_datarelease_v5.h5`` prints the
 same summary.
 """
 
@@ -354,7 +362,7 @@ def open_release(path):
     wherever you copied the file. Use it as a context manager, or call
     :meth:`Release.close` when you are done::
 
-        with open_release("luhdm_datarelease_v4.h5") as rel:
+        with open_release("luhdm_datarelease_v5.h5") as rel:
             ...
     """
     f = h5py.File(str(path), "r")
@@ -415,7 +423,7 @@ class Release:
     # -- metadata --------------------------------------------------------- #
     @property
     def version_tag(self):
-        """Human-readable cube version, e.g. ``'v4.0-night-m0p356mg-bcap10cm'``."""
+        """Human-readable cube version, e.g. ``'v5.0-night-m0p356mg-bcap10cm'``."""
         return str(self.attrs.get("version_tag")
                    or f"v{self.attrs.get('version', '?')}")
 
@@ -542,15 +550,22 @@ class Release:
 
     # -- detector inputs -------------------------------------------------- #
     def events(self, mode):
-        """Observed impulse candidates for one sensor mode, in GeV.
+        """Observed impulse candidates for one sensor mode, in **GeV**.
 
         This is the analysis event list the limit is set on -- the momentum
-        kicks surviving the full selection.
+        kicks surviving the full selection. Note the unit difference against
+        :meth:`all_blips`, which is in eV.
         """
         return self._f["detector"][f"events_mode{int(mode)}"][:]
 
     def all_blips(self, mode):
-        """All reconstructed blip momenta for one mode, in eV (pre-selection)."""
+        """Pre-selection impulse momenta for one mode, in **eV**.
+
+        Every reconstructed transient above the analysis threshold, before the
+        quality selection that produces :meth:`events`. Returned exactly as
+        stored, so **divide by 1e9 to compare with** :meth:`events`, which is in
+        GeV. Context only; the limit is not set on this list.
+        """
         return self._f["detector"][f"all_blips_mode{int(mode)}"][:]
 
     def efficiency_curve(self, mode, df=None):
@@ -932,7 +947,15 @@ class Release:
         Raises ``MemoryError`` if the selection would exceed ``max_rows``; pin
         another axis (or raise the limit deliberately).
         """
-        import pandas as pd  # noqa: PLC0415  (optional dependency, lazy on purpose)
+        try:
+            import pandas as pd  # noqa: PLC0415  (optional dep, lazy on purpose)
+        except ImportError as exc:
+            raise ImportError(
+                "to_dataframe() is the only method that needs pandas "
+                "('pip install pandas'). Everything else in this reader runs "
+                "on numpy and h5py alone; get() returns the same numbers as a "
+                "numpy array with its axes attached."
+            ) from exc
 
         level = self.confidence_recommended if confidence is None \
             else float(confidence)
@@ -1140,9 +1163,33 @@ class Release:
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) != 2:
+    _PROG = sys.argv[0].replace("\\", "/").rsplit("/", 1)[-1]
+    _USAGE = (
+        f"usage: python {_PROG} <luhdm_datarelease_*.h5>\n"
+        f"  Prints a summary of the release file: version tag, axes,\n"
+        f"  quantities, status-code counts, detector inputs and provenance.\n"
+        f"  For the API, import it instead: "
+        f"import luhdm_release; help(luhdm_release)"
+    )
+    _args = sys.argv[1:]
+    _asked_for_help = bool(_args) and _args[0] in ("-h", "--help", "help")
+
+    if _asked_for_help or len(_args) != 1:
         print(__doc__)
-        print(f"usage: python {sys.argv[0]} <luhdm_datarelease_*.h5>")
+        print(_USAGE)
+        raise SystemExit(0 if _asked_for_help else 2)
+    if _args[0].startswith("-"):
+        print(f"unrecognised option {_args[0]!r}. This script takes exactly "
+              f"one argument, the path to the release file.\n\n{_USAGE}",
+              file=sys.stderr)
         raise SystemExit(2)
-    with open_release(sys.argv[1]) as _rel:
+    try:
+        _f = open_release(_args[0])
+    except (FileNotFoundError, OSError) as _exc:
+        print(f"could not open {_args[0]!r}: {_exc}\n\n"
+              f"Pass the path to the release HDF5, for example "
+              f"'luhdm_datarelease_v5.h5'. See README.md for where to get "
+              f"it.\n\n{_USAGE}", file=sys.stderr)
+        raise SystemExit(2) from None
+    with _f as _rel:
         _rel.summary()

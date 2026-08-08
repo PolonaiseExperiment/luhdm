@@ -1,0 +1,80 @@
+cff-version: 1.2.0
+message: "If you use this dataset, please cite both the dataset and the paper it belongs to."
+title: "Data release for: First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle"
+abstract: >-
+  The complete limit-setting calculation behind the first ultraheavy dark matter
+  search with a magnetically levitated particle, as one self-describing HDF5
+  file. Over a grid in dark-matter fraction, atmospheric propagation, sensor
+  mode, per-neutron coupling, dark-matter mass and mediator range it stores the
+  optimum-interval extremeness, the expected detected signal, and the expected
+  number of in-reach transits, together with the measured per-mode detection
+  efficiency curves, the impulse candidate lists and the live time. Exclusion at
+  any confidence level is a level set of the stored extremeness.
+type: dataset
+version: "v5.0-night-m0p356mg-bcap10cm"
+date-released: "2026-08-08"
+# doi: to be assigned. Add the version DOI of the deposit here, and update
+# section 12 of README.md, when the dataset is deposited.
+# license: to be confirmed before public release. Add the SPDX identifier here
+# and the full license text to the release directory.
+keywords:
+  - dark matter
+  - ultraheavy dark matter
+  - levitated sensor
+  - magnetic levitation
+  - optimum interval
+  - direct detection
+repository-code: "https://github.com/PolonaiseExperiment/luhdm"
+authors:
+  - family-names: Uitenbroek
+    given-names: "Dennis G."
+    orcid: "https://orcid.org/0009-0008-3425-6406"
+    affiliation: "Leiden Institute of Physics, Leiden University"
+  - family-names: Amaral
+    given-names: "Dorian W. P."
+    orcid: "https://orcid.org/0000-0002-1414-932X"
+    affiliation: "Institut de Fisica d'Altes Energies (IFAE), The Barcelona Institute of Science and Technology"
+    email: damaral@ifae.es
+  - family-names: Qin
+    given-names: Juehang
+    affiliation: "Department of Physics and Astronomy, Rice University"
+  - family-names: Langendorff
+    given-names: Jurriaan
+    affiliation: "Leiden Institute of Physics, Leiden University"
+  - family-names: Gingerich
+    given-names: Andrew
+    orcid: "https://orcid.org/0009-0001-7363-1722"
+    affiliation: "Department of Physics and Astronomy, Rice University"
+  - family-names: Oosterkamp
+    given-names: "Tjerk H."
+    orcid: "https://orcid.org/0000-0001-6855-5190"
+    affiliation: "Leiden Institute of Physics, Leiden University"
+  - family-names: Tunnell
+    given-names: "Christopher D."
+    orcid: "https://orcid.org/0000-0001-8158-7795"
+    affiliation: "Department of Physics and Astronomy, Rice University"
+preferred-citation:
+  type: article
+  title: "First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle"
+  year: 2026
+  # arXiv identifier, journal reference and DOI to be assigned.
+  authors:
+    - family-names: Uitenbroek
+      given-names: "Dennis G."
+      orcid: "https://orcid.org/0009-0008-3425-6406"
+    - family-names: Amaral
+      given-names: "Dorian W. P."
+      orcid: "https://orcid.org/0000-0002-1414-932X"
+    - family-names: Qin
+      given-names: Juehang
+    - family-names: Langendorff
+      given-names: Jurriaan
+    - family-names: Gingerich
+      given-names: Andrew
+      orcid: "https://orcid.org/0009-0001-7363-1722"
+    - family-names: Oosterkamp
+      given-names: "Tjerk H."
+      orcid: "https://orcid.org/0000-0001-6855-5190"
+    - family-names: Tunnell
+      given-names: "Christopher D."
+      orcid: "https://orcid.org/0000-0001-8158-7795"

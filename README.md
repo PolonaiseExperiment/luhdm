@@ -17,10 +17,16 @@ notation unchanged. New here:
   (finite-range cross section, attenuation), limits come from scanning the
   coupling and taking level sets of the extremeness — see the notebook.
 
-**Main product:** the data release in [`release/`](release/README.md), a single
-self-describing HDF5 cube holding the whole limit-setting calculation, built by
-`scripts/build_release.py` and `scripts/assemble_release.py` on a many-core node.
-Everything else reads it.
+**Main product:** the [data release](release/README.md) in `release/`, a single
+self-describing HDF5 cube (14.8 MB) holding the whole limit-setting calculation
+for the paper: extremeness, expected signal and transit counts over the
+(f_DM, atmosphere, mode, alpha_n, m_DM, lambda) grid, plus the measured
+efficiency curves, candidate lists and live time. Five lines of `h5py` get you
+the excluded region, and [`release/README.md`](release/README.md) is the front
+door: quickstart, data dictionary, worked reproduction of the published limit,
+known limitations and how to cite. Built by `scripts/build_release.py` and
+`scripts/assemble_release.py` on a many-core node; everything else here reads
+it.
 
 **Notebooks:** [`notebooks/`](notebooks/README.md) has the index, including which
 paper figure each notebook reproduces.

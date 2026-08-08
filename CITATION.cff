@@ -1,10 +1,68 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite both the software and the paper it was written for."
 title: "luhdm: levitated-sensor ultraheavy dark matter analysis"
+abstract: >-
+  Physics models and limit setting for the search for ultraheavy dark matter
+  with a magnetically levitated particle: halo and atmospheric propagation, the
+  straight-line-impulse cross section, the bridge to the optimum_interval
+  statistics package, and the scripts and notebooks that build the data release
+  and every figure in the paper.
 type: software
+version: "0.1.0"
+date-released: "2026-08-08"
+# license: to be confirmed before public release. Add the SPDX identifier here.
+# doi: to be assigned (archived code snapshot).
+keywords:
+  - dark matter
+  - ultraheavy dark matter
+  - levitated sensor
+  - optimum interval
+  - direct detection
+repository-code: "https://github.com/PolonaiseExperiment/luhdm"
 authors:
   - family-names: Amaral
-    given-names: Dorian
+    given-names: "Dorian W. P."
+    orcid: "https://orcid.org/0000-0002-1414-932X"
+    affiliation: "Institut de Fisica d'Altes Energies (IFAE), The Barcelona Institute of Science and Technology"
+    email: damaral@ifae.es
   - family-names: Tunnell
-    given-names: Christopher
-repository-code: "https://github.com/PolonaiseExperiment/luhdm"
+    given-names: "Christopher D."
+    orcid: "https://orcid.org/0000-0001-8158-7795"
+    affiliation: "Department of Physics and Astronomy, Rice University"
+  - family-names: Qin
+    given-names: Juehang
+    affiliation: "Department of Physics and Astronomy, Rice University"
+references:
+  - type: software
+    title: "optimum_interval: Yellin optimum-interval statistics"
+    version: "0.3.0"
+    repository-code: "https://github.com/tunnell/optimum_interval"
+    authors:
+      - family-names: Tunnell
+        given-names: "Christopher D."
+        orcid: "https://orcid.org/0000-0001-8158-7795"
+preferred-citation:
+  type: article
+  title: "First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle"
+  year: 2026
+  # arXiv identifier, journal reference and DOI to be assigned.
+  authors:
+    - family-names: Uitenbroek
+      given-names: "Dennis G."
+      orcid: "https://orcid.org/0009-0008-3425-6406"
+    - family-names: Amaral
+      given-names: "Dorian W. P."
+      orcid: "https://orcid.org/0000-0002-1414-932X"
+    - family-names: Qin
+      given-names: Juehang
+    - family-names: Langendorff
+      given-names: Jurriaan
+    - family-names: Gingerich
+      given-names: Andrew
+      orcid: "https://orcid.org/0009-0001-7363-1722"
+    - family-names: Oosterkamp
+      given-names: "Tjerk H."
+      orcid: "https://orcid.org/0000-0001-6855-5190"
+    - family-names: Tunnell
+      given-names: "Christopher D."
+      orcid: "https://orcid.org/0000-0001-8158-7795"
