@@ -1165,6 +1165,7 @@ The dataset:
     author = "Uitenbroek, Dennis G. and Amaral, Dorian W. P. and Qin, Juehang
               and Langendorff, Jurriaan and Gingerich, Andrew and
               Oosterkamp, Tjerk H. and Tunnell, Christopher D.",
+    collaboration = "POLONAISE",
     title  = "{Data release for: First Search for Ultraheavy Dark Matter
               Using a Magnetically Levitated Particle}",
     year   = "2026",
