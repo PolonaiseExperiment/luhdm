@@ -1069,6 +1069,9 @@ Some attributes (`efficiency_npz`, `events_dir`, `inputs_json`) and many entries
 in `provenance.json` record absolute paths on the machine the cube was built on.
 They identify which input file was read and are paired with its SHA-256; they
 carry no meaning for you, and nothing in the release needs them to be resolvable.
+The build timestamp in `provenance.json` is 20 µs later than the `created`
+attribute in the cube because the two records are written one after the other in
+the same run. They refer to the same build.
 
 ### The environment it was built in
 
