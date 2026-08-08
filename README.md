@@ -17,23 +17,24 @@ notation unchanged. New here:
   (finite-range cross section, attenuation), limits come from scanning the
   coupling and taking level sets of the extremeness — see the notebook.
 
-**Main product:** [`notebooks/01_limit_contour.ipynb`](notebooks/01_limit_contour.ipynb)
-— event list in, excluded (m_DM, α_n) contours out, plus the machine-readable
-`notebooks/computation_cache/limit_contour_data.npz`. Companions:
-[`notebooks/02_methodology.ipynb`](notebooks/02_methodology.ipynb) (the
-physics and statistics pipeline, validations) and
-[`notebooks/03_understanding.ipynb`](notebooks/03_understanding.ipynb) (why
-the exclusion regions look the way they do). Figures are written to
-`notebooks/{png,svg,pdf}/NN_description.*`; the npz caches live in
-`notebooks/computation_cache/` (regenerate with `scripts/` on a many-core
-node). The physics that gets tweaked lives in `luhdm/rate.py` and
-`luhdm/config.py`, shared by the notebooks and the scripts.
+**Main product:** the data release in [`release/`](release/README.md), a single
+self-describing HDF5 cube holding the whole limit-setting calculation, built by
+`scripts/build_release.py` and `scripts/assemble_release.py` on a many-core node.
+Everything else reads it.
+
+**Notebooks:** [`notebooks/`](notebooks/README.md) has the index, including which
+paper figure each notebook reproduces.
+[`notebooks/01_limit_contour.ipynb`](notebooks/01_limit_contour.ipynb) is the one
+to start with: excluded (m_DM, α_n) contours read straight off the cube. Figures
+are written to `notebooks/{png,svg,pdf}/NN_description.*`. The physics that gets
+tweaked lives in `luhdm/rate.py` and `luhdm/config.py`, shared by the notebooks
+and the scripts.
 
 ## Install
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ~/code/optimum_interval   # statistics dependency
-pip install -e ".[dev]"
+pip install -e ".[dev,notebooks]"
+pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 pytest
 ```

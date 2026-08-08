@@ -16,7 +16,7 @@ dependencies = [
     "h5py",
 ]
 # Also requires optimum-interval (not on PyPI yet):
-#   pip install -e ~/code/optimum_interval
+#   pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "nbformat", "nbclient", "ipykernel"]
