@@ -63,9 +63,22 @@ mkdir -p "$OUT/atm" "$OUT/noatm"
 ts() { date '+%F %T'; }
 
 # run_shard PASS IL — one build_release invocation, timestamped sentinels.
+#
+# Env knobs (all optional; unset reproduces the historical capped campaign):
+#   BCAP=0.1     impact-parameter cap [m]; BCAP=none runs UNCAPPED (v7-quick)
+#   LSET=v7quick reduced lambda axis (20 um / 200 um / 2 mm + 200 m validation)
+#   QMIN=1000    analysis window [GeV]; unset => build_release's config.Q_THRESH
+#   MTIER / DATA_DIR / PASSES  as before
 run_shard() {
     local pass="$1" il="$2"
     local t0 wall
+    local extra=()
+    # BCAP=none (or empty) => omit the flag entirely => uncapped cross section.
+    case "${BCAP-0.1}" in
+        none|None|NONE|"") ;;
+        *) extra+=(--b-constrained-max "${BCAP-0.1}") ;;
+    esac
+    [ -n "${QMIN:-}" ] && extra+=(--q-min "$QMIN")
     t0=$(date +%s)
     echo "[$(ts)] SHARD_START pass=$pass il=$il workers=$WORKERS"
     if "$PY" scripts/build_release.py \
@@ -73,9 +86,10 @@ run_shard() {
             --il-start "$il" --il-end "$((il + 1))" \
             --shard-dir "$OUT/$pass" \
             --order tags-first \
-            --b-constrained-max "${BCAP:-0.1}" \
+            --lambda-set "${LSET:-full}" \
             --data-dir "${DATA_DIR:-notebooks}" \
             --m-tier "${MTIER:-119}" \
+            "${extra[@]}" \
             --workers "$WORKERS"; then
         wall=$(( $(date +%s) - t0 ))
         echo "[$(ts)] SHARD_DONE pass=$pass il=$il wall=${wall}s"
@@ -88,12 +102,13 @@ echo "[$(ts)] campaign start  host=$(hostname 2>/dev/null || echo "$REMOTE_HOST"
 
 # noatm first (cheap, full product), then atm tags-first (tag/massless slices
 # early for the V1 gate; remaining lambda smallest-first surfaces ODE blowups).
-for pass in noatm atm; do
+for pass in ${PASSES:-noatm atm}; do
+    mkdir -p "$OUT/$pass"
     echo "[$(ts)] pass start: $pass"
     # il execution order comes straight from build_release (single source of
     # truth for the lambda axis + massless virtual index).
     ils=$("$PY" scripts/build_release.py --pass "$pass" --shard-dir "$OUT/$pass" \
-              --order tags-first --print-order)
+              --order tags-first --lambda-set "${LSET:-full}" --print-order)
     if [ -z "$ils" ]; then
         echo "[$(ts)] SHARD_FAIL pass=$pass il=NONE (empty print-order)"
         continue

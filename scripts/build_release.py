@@ -132,6 +132,27 @@ F_DM_VALUES = (F_DM_BASE, F_DM_HIGH)
 # exact members of the finite axis; 0.2 (20 cm) fills the 2 cm -> 2 m gap
 TAGS = [2e-6, 1e-5, 2e-5, 2e-4, 2e-3, 2e-2, 0.2, 2.0]
 
+# --lambda-set v7quick: the reduced finite axis for the v7-quick campaign.
+# The three physics ranges (20 um, 200 um, 2 mm) are the figure set, and are
+# exact members of the full axis too, so a v7quick slice and a full-axis slice
+# at the same lambda are directly comparable. 200 m is a VALIDATION-ONLY slice
+# (m_phi ~ 1e-9 eV): it is far longer than every impact parameter in play, so
+# the finite-lambda code path must reproduce the analytic massless slice there.
+# It is not a physics point and must not be plotted as one.
+LAMBDA_SET_V7QUICK = [2e-5, 2e-4, 2e-3, 200.0]
+LAMBDA_VALIDATION = 200.0
+
+# Tabulation density for the dimensionless dsigma/dq_tilde interpolant.
+# rate.make_xsec's default (600) is the density every shipped finite-lambda
+# slice was built at, and it is what the physics slices must keep. The
+# validation slice is the one place it is not enough: at xi = R_eff/lambda =
+# 1.3e-6 the tabulated q_tilde range spans 1e-25 .. K1(xi) ~ 7.7e5, and linear
+# interpolation across that span leaves a ~2% bias against the analytic
+# massless result -- which would masquerade as a failure of the very code path
+# the slice exists to validate. 3000 points converges it to ~0.1%.
+# (Measured: max|dev| vs analytic massless 2.2e-2 at 600, 1.3e-3 at 3000.)
+N_POINTS_XSEC_VALIDATION = 3000
+
 FID_PROD = dict(n_ode=400, n_shm=300000, n_q=240, q_span=3e4, n_mc=10000,
                 mu_cap=MU_CAP)
 FID_QUICK = dict(n_ode=60, n_shm=20000, n_q=120, q_span=1e4, n_mc=1500,
@@ -459,8 +480,9 @@ def main():
     ap.add_argument("--n-shm", type=int, default=None)
     ap.add_argument("--n-q", type=int, default=None)
     ap.add_argument("--q-span", type=float, default=None)
-    ap.add_argument("--q-min", type=float, default=100.0,
-                    help="analysis / grid-floor momentum [GeV]")
+    ap.add_argument("--q-min", type=float, default=config.Q_THRESH,
+                    help="analysis / grid-floor momentum [GeV] (default: "
+                         "config.Q_THRESH = %(default)g)")
     ap.add_argument("--massless-lamb", type=float, default=2.0,
                     help="atmospheric-ODE regulator range for the massless slice [m]")
     ap.add_argument("--b-constrained-max", type=float, default=None,
@@ -473,6 +495,11 @@ def main():
                     help="print the il processing sequence and exit")
     ap.add_argument("--print-lambdas", action="store_true",
                     help="print the il -> lambda table and exit")
+    ap.add_argument("--lambda-set", choices=("full", "v7quick"), default="full",
+                    help="finite mediator-range axis: 'full' (the contract "
+                         "axis, default) or 'v7quick' (20 um / 200 um / 2 mm "
+                         "plus the 200 m massless-equivalence validation "
+                         "slice); --quick overrides both")
     ap.add_argument("--quick", action="store_true",
                     help="tiny smoke: lambda = the 7 tags + massless, quick FID, "
                          "n_a=6, 8-point mass axis")
@@ -486,6 +513,9 @@ def main():
         # all 7 tags so tag-slicing consumers (notebooks) can smoke end-to-end
         lam_finite = np.sort(np.array(TAGS))
         tags = TAGS
+    elif args.lambda_set == "v7quick":
+        lam_finite = np.sort(np.array(LAMBDA_SET_V7QUICK))
+        tags = list(LAMBDA_SET_V7QUICK)
     else:
         lam_finite = build_lambda_axis()
         tags = TAGS
@@ -546,6 +576,21 @@ def main():
 
     NO_ATM = pass_name == "noatm"
     Q_MIN = args.q_min
+    # The analysis window enters by two independent routes: Q_MIN sets the rate
+    # integral's lower endpoint (and, via Q_MIN/m/10, the atmospheric ODE floor),
+    # while rate.expected_transits / rate.transit_count_halo read config.Q_THRESH
+    # directly for the threshold reach b_max(q_thresh). If the two disagree the
+    # n_transit surface describes a different window than mu does, which is
+    # exactly the kind of drift that is invisible in the output.
+    if float(Q_MIN) != float(config.Q_THRESH):
+        print("*" * 72, flush=True)
+        print(f"WARNING: --q-min ({Q_MIN:g} GeV) != config.Q_THRESH "
+              f"({config.Q_THRESH:g} GeV).", flush=True)
+        print("         mu/p use --q-min; n_transit uses config.Q_THRESH. "
+              "The two surfaces", flush=True)
+        print("         in this cube will describe DIFFERENT analysis windows.",
+              flush=True)
+        print("*" * 72, flush=True)
 
     # --- pass-constant shared state (halo needs only MS/ALPHAS/XS) ---
     if pass_name != "halo":
@@ -603,8 +648,14 @@ def main():
         LAMB = lamb
         MASSLESS = massless
         LAMB_ODE = args.massless_lamb if massless else lamb   # unused on noatm/halo
+        # The validation slice needs a finer tabulation than the physics
+        # slices (see N_POINTS_XSEC_VALIDATION); every other lambda keeps
+        # make_xsec's shipped default so its tabulation is unchanged.
+        xsec_kw = ({} if massless or lamb != LAMBDA_VALIDATION
+                   else dict(N_points=N_POINTS_XSEC_VALIDATION))
         XS = rate.make_xsec(None if massless else lamb,       # auto dispatch
-                            b_constrained_max=args.b_constrained_max)
+                            b_constrained_max=args.b_constrained_max,
+                            **xsec_kw)
 
         print(f"[il={label}] lamb={lamb}  building shard "
               f"({total_cells} cells, {n_chunks} chunks) ...", flush=True)
