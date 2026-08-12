@@ -1,9 +1,12 @@
 """Measured detection efficiency epsilon(q) per sensor mode.
 
-The table is built by ``scripts/export_efficiency.py`` from the analysis product
-and committed as ``reference_data/efficiency_curves.npz`` so it is available on
-every host (no data/ dir needed). ``make_efficiency`` returns a vectorised
-callable epsilon(q_GeV) in [0, 1] for use as the ``eff`` argument of
+The table is built by ``scripts/export_efficiency.py`` from the detector
+group's efficiency product -- since 2026-08-12 the curves with the impulse
+arrival phase w marginalised (``reference_data/efficiency_curves_marginalise_w.npz``);
+before that, a product that fixed w = 1 -- and committed as
+``reference_data/efficiency_curves.npz`` so it is available on every host (no
+data/ dir needed). ``make_efficiency`` returns a vectorised callable
+epsilon(q_GeV) in [0, 1] for use as the ``eff`` argument of
 ``rate.differential_rate_trapz``.
 """
 import os
