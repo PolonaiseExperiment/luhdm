@@ -8,12 +8,20 @@ ranges pay the same, small, tabulation cost); writes an npz cache that the
 notebook loads if present.
 
     python scripts/scan_lambda.py --mass 1.82e7 --out scan_lambda.npz
+
+Release conventions (mu cap, per-mu MC table, finite-lambda axis) are imported
+from build_release.py rather than restated here, so a lambda scan and the
+release cube cannot drift apart. The DM fraction follows the same rule as the
+cube: luhdm.rate carries the config.F_X baseline internally and --f-dm rescales
+the rate (and n_transit) linearly on top of it, which is exactly how
+build_release materialises its f_DM = 1 surfaces.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -27,10 +35,15 @@ import numpy as np
 
 from luhdm import atmosphere, config, efficiency, limits, rate
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_release as _rel  # noqa: E402  (release conventions, imported not copied)
+
 Q_THRESH = config.Q_THRESH
 Q_HI_REF = 8.4e3   # fixed qs upper-momentum reference (see scan_grid.py)
 T_TOTAL = config.T_EXPOSURE  # dataset live-time (single source of truth in luhdm.config)
 SEED = 20260702
+MU_CAP = _rel.MU_CAP   # 85.0, the release cap; limits' own default is the historical 40
+assert SEED == _rel.SEED, "seed drifted from the release build"
 # default observed-event list; --data overrides it (e.g. per-mode data_mode{n}.txt)
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "notebooks" / "data_mode1.txt"
 
@@ -42,13 +55,17 @@ V_I_SAMPLES = None
 FID = None
 EVENTS = None
 EFF = None        # detection-efficiency callable eps(q_GeV), or None for raw rate
+F_SCALE = 1.0     # f_DM / config.F_X: linear flux rescaling of rate + n_transit
 
 _worker_state: dict = {}
 
 
 def _worker_init_lazy():
+    # PerMuTable (not a single table) shards the MC calibration by rounded mu, so
+    # the result is independent of evaluation order / worker count -- the release
+    # cube's reproducibility contract.
     if "table" not in _worker_state:
-        _worker_state["table"] = limits.new_table(seed=SEED)
+        _worker_state["table"] = _rel.PerMuTable(seed=SEED)
     return _worker_state
 
 
@@ -64,11 +81,12 @@ def scan_point(task):
             alpha_n, lamb, M_DM, V_I_SAMPLES, v_min=v_min, n_grid=FID["n_ode"])
         f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
         qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_HI_REF, FID["n_q"])
-        diff_rate = rate.differential_rate_trapz(qs, alpha_n, M_DM, f_v_f, xs,
-                                                 eff=EFF)
+        diff_rate = F_SCALE * rate.differential_rate_trapz(
+            qs, alpha_n, M_DM, f_v_f, xs, eff=EFF)
         p, mu = limits.extremeness_and_mu(
-            state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"])
-        n_t = rate.expected_transits(alpha_n, M_DM, f_v_f, xs, T_TOTAL)
+            state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"],
+            mu_cap=FID["mu_cap"])
+        n_t = F_SCALE * rate.expected_transits(alpha_n, M_DM, f_v_f, xs, T_TOTAL)
     except Exception as err:  # over-stopped/stiff corners: report, exclude nothing
         print(f"point (lamb={lamb:.1e}, a={alpha_n:.1e}) failed: {err}",
               flush=True)
@@ -77,7 +95,7 @@ def scan_point(task):
 
 
 def main():
-    global M_DM, XS_BY_IL, LAMBS, V_I_SAMPLES, FID, EVENTS, EFF
+    global M_DM, XS_BY_IL, LAMBS, V_I_SAMPLES, FID, EVENTS, EFF, F_SCALE
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
@@ -89,8 +107,22 @@ def main():
                     help="lowest mediator range in the grid, m (default: %(default)g)")
     ap.add_argument("--lamb-max", type=float, default=2.0,
                     help="highest mediator range in the grid, m (default: %(default)g)")
+    ap.add_argument("--lambda-axis", choices=("geom", "release"), default="geom",
+                    help="'geom': geomspace(--lamb-min, --lamb-max, n_l). "
+                         "'release': the release build's 54-point finite axis "
+                         "(0.1 um - 2 m, build_release.build_lambda_axis), whose "
+                         "members include the 20 um / 200 um / 2 mm tags exactly, "
+                         "so slices are directly comparable to the cube "
+                         "(default: %(default)s)")
     ap.add_argument("--a-min", type=float, default=10 ** -8.7,
-                    help="lowest coupling alpha_n in the grid (default: %(default).3g)")
+                    help="lowest coupling alpha_n in the grid (default: %(default).3g); "
+                         "pass 1e-10 with --n-a 44 to reproduce the release axis")
+    ap.add_argument("--f-dm", type=float, default=float(config.F_X),
+                    help="DM fraction hypothesis f_DM. luhdm.rate carries the "
+                         "config.F_X baseline, so the rate (and n_transit) are "
+                         "rescaled by f_DM/F_X -- the same linear scaling "
+                         "build_release uses for its f_DM=1 surfaces "
+                         "(default: %(default)g, i.e. no rescaling)")
     ap.add_argument("--n-l", type=int, default=None,
                     help="override number of mediator-range grid points")
     ap.add_argument("--n-a", type=int, default=None,
@@ -109,13 +141,17 @@ def main():
 
     if args.quick:
         FID = dict(n_ode=60, n_shm=int(2e4), n_q=120, q_span=1e4, n_mc=1500,
-                   n_l=6, n_a=8)
+                   n_l=6, n_a=8, mu_cap=MU_CAP)
     else:
         FID = dict(n_ode=400, n_shm=int(3e5), n_q=240, q_span=3e4, n_mc=10000,
-                   n_l=49, n_a=44)
+                   n_l=49, n_a=44, mu_cap=MU_CAP)
     for key, val in (("n_l", args.n_l), ("n_a", args.n_a)):
         if val is not None:
             FID[key] = val
+
+    F_SCALE = float(args.f_dm) / float(config.F_X)
+    print(f"f_DM = {args.f_dm:g} (rate scale {F_SCALE:g} x the F_X={config.F_X:g} "
+          f"baseline);  mu_cap = {FID['mu_cap']:g}")
 
     if args.mode is not None:
         EFF = efficiency.make_efficiency(args.mode, args.df)
@@ -127,8 +163,15 @@ def main():
 
     # mediator range and couplings (log-spaced); defaults span the planned
     # ranges (2 um to 2 m) and the mass-scan couplings
-    LAMBS = np.geomspace(args.lamb_min, args.lamb_max, FID["n_l"])
-    alphas_n = np.logspace(np.log10(args.a_min), 0.0, FID["n_a"])
+    if args.lambda_axis == "release":
+        LAMBS = _rel.build_lambda_axis()
+        FID["n_l"] = int(LAMBS.size)
+    else:
+        LAMBS = np.geomspace(args.lamb_min, args.lamb_max, FID["n_l"])
+    alphas_n = _rel.build_alpha_axis(args.a_min, FID["n_a"])
+    print(f"lambda axis '{args.lambda_axis}': {LAMBS.size} ranges "
+          f"{LAMBS[0]:.3g} - {LAMBS[-1]:.3g} m;  "
+          f"alpha axis: {alphas_n.size} points {alphas_n[0]:.3g} - {alphas_n[-1]:.3g}")
 
     # observed events from the analysis input (the same file the notebook reads,
     # so script and notebook cannot drift)
@@ -167,7 +210,10 @@ def main():
     np.savez(args.out, lambs=LAMBS, alphas_n=alphas_n, extremeness=P,
              counts=MU, n_transit=NT, events=EVENTS, m_dm=M_DM,
              mode=(args.mode if args.mode is not None else 0), df=args.df,
-             t_total=T_TOTAL, seed=SEED, fidelity=str(FID))
+             t_total=T_TOTAL, seed=SEED, fidelity=str(FID),
+             f_dm=float(args.f_dm), mu_cap=float(FID["mu_cap"]),
+             lambda_axis=args.lambda_axis, q_thresh=Q_THRESH,
+             b_constrained_max=np.nan)   # uncapped cross section, as in v8
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
 
