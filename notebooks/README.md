@@ -2,12 +2,11 @@
 
 Every figure and number below is read from a data release cube, through
 `luhdm.release`. The notebooks do not recompute any physics, so a notebook run
-and a cluster run cannot drift apart. Two are outside that rule: notebook 00
-reads the raw instrument file, and notebook 04 reads the internal full-lambda
-cube rather than a released one.
+and a cluster run cannot drift apart. One is outside that rule: notebook 00
+reads the raw instrument file.
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
-[`release/`](../release). Notebooks 01, 02 and 03 open
+[`release/`](../release). Notebooks 01, 02, 03 and 04 open
 `luhdm_datarelease_v7_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
 notebook 05 opens `luhdm_datarelease_v7_B_f0p1_noatm.h5` (f_DM = 0.1,
 attenuation off), which is its whole subject; notebook 06 opens both, since it
@@ -31,7 +30,7 @@ drawn as a dashed brown line rather than applied to the surfaces.
 | [`01_limit_contour`](01_limit_contour.ipynb) | the surfaces behind the left panel of the Letter results figure; per-mode exclusion views beyond what the paper prints | `01_excluded_massless`, `01_sensitivity_vs_range`\*, `01_excluded_region_200um`, `01_all_mediator_ranges` |
 | [`02_methodology`](02_methodology.ipynb) | SM, The Transferred Momentum: the halo, attenuation, cross-section and statistics chain (the SM's single-column spectra panel itself is drawn by `scripts/paper_fig_sm_spectra.py`) | `02_spectra`, `02_arrival_speed_distributions` |
 | [`03_understanding`](03_understanding.ipynb) | nothing directly; background on why the excluded region has the shape it does | `03_transit_reach_maps` |
-| [`04_mode_comparison`](04_mode_comparison.ipynb) | nothing directly; the per-mode cross-check behind the single-mode SM figures | `04_exclusion_modes123`, `04_mediator_vs_coupling`\*, `04_mediator_vs_coupling_zoom`\* |
+| [`04_mode_comparison`](04_mode_comparison.ipynb) | nothing directly; the per-mode cross-check behind the single-mode SM figures | `04_exclusion_modes123`, `04_exclusion_modes123_ranges`, `04_mediator_vs_coupling`\*, `04_mediator_vs_coupling_zoom`\* |
 | [`05_composite`](05_composite.ipynb) | the atmosphere-off companion scan, a release extra beyond what the paper prints | `05_composite_noatm` |
 | [`06_datarelease`](06_datarelease.ipynb) | SM, Analysis Code and Data Release: a guided tour of the two released cubes | none |
 | [`10_left_edge_anatomy`](10_left_edge_anatomy.ipynb) | nothing directly; anatomy of the exclusion region's left edge — the kinematic wall at `q_min`/`v_esc`, the halo-tail onset just above it, and a retrospective on why the old 0.1 TeV window had a soft edge instead | `10_kinematic_wall`, `10_contour_left_edge`, `10_halo_tail_onset`, `10_soft_vs_hard_edge` |
@@ -47,10 +46,17 @@ notebook 00 writes unstamped figures, since it does not read a cube.
 \* The figures marked with an asterisk scan the mediator range continuously and
 need the internal full-lambda cube (54 finite ranges, 0.1 µm to 2 m); the
 released cubes carry the 2 mm, 200 µm and 20 µm slices, a 200 m convergence
-check and the massless limit, so against them those cells report a skip instead
-of drawing. Every other figure in the table regenerates from the released files
-— with the exception of notebook 04's, which still read the internal cube, and
-notebook 00's, which need the raw instrument file.
+check and the massless limit, far too few to draw those bands. The cells that
+draw them are guarded on the candidate cube's own attributes rather than on its
+mere existence: it must carry the full finite-lambda axis, its `q_thresh_gev`
+must be the 1 TeV analysis window, and its `b_constrained_max_m` must be absent
+or NaN for an uncapped impact-parameter integral. The only internal cube built
+so far predates that scheme, so today those cells report a skip naming the
+condition that failed. Notebook 04's two asterisked figures are therefore not
+tracked in `png/`, `svg/` or `pdf/` at all; notebook 01's is, as the last
+version drawn from the internal cube. Every other figure in the table
+regenerates from the released files — with the exception of notebook 00's,
+which need the raw instrument file.
 
 The Letter's data-derived figures are drawn by scripts rather than notebooks:
 `scripts/paper_fig_data_spectrum.py --stem efficiency` (Fig. 2, the impulse
@@ -66,13 +72,12 @@ as background on the capped scheme, not as descriptions of the current release.
 ## Dark matter fraction
 
 Which fraction a figure uses is now a property of the file it opens, not a read
-option: each released cube carries one `f_dm` value. Notebooks 01, 02 and 03 read
-file A at `f_dm=1.0`, the fraction the Letter quotes its `alpha_n` limits at, and
-pass it explicitly on every call — the loader's fallback is
+option: each released cube carries one `f_dm` value. Notebooks 01, 02, 03 and 04
+read file A at `f_dm=1.0`, the fraction the Letter quotes its `alpha_n` limits
+at, and pass it explicitly on every call — the loader's fallback is
 `attrs['f_dm_default']` = 0.1, the build-side baseline, which is not on file A's
 axis and raises if it is used. Notebook 05 reads file B at `f_dm=0.1`, the
 composite-benchmark plane. Notebook 06 opens both and shows them side by side.
-Notebook 04 still reads the internal full-lambda cube, which carries both planes.
 
 The `/halo` diagnostic maps are the one exception in either file: they are stored
 once at the baseline `f_dm` = 0.1 with no fraction axis, so notebook 03's transit
@@ -89,18 +94,13 @@ pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 jupyter lab
 ```
 
-Notebooks 01, 02, 03, 05 and 06 then run start to finish with no environment
+Notebooks 01, 02, 03, 04, 05 and 06 then run start to finish with no environment
 variables set and no file from outside the repository, in about a minute for
-all five together; they read a released cube rather than recomputing it, which
+all six together; they read a released cube rather than recomputing it, which
 is why they are quick. Notebooks 10 and 11 run the same way from the released
-cubes.
-
-**Notebook 04 does not run from a fresh checkout either.** It calls
-`open_release()` with no argument, which resolves to
-`luhdm.release.DEFAULT_PATH`, the internal full-lambda cube. Only the two v7
-release files are tracked in git; the internal cube is local- and Zenodo-only,
-so without it the first cell stops with a `FileNotFoundError` naming that path.
-Its outputs are committed.
+cubes. The asterisked figures are the only cells that reach outside the released
+files, and they skip rather than fail when the cube they want is absent or built
+in an older scheme.
 
 **Notebook 00 does not run from a fresh checkout.** It is the only one that reads
 the raw instrument file `data/fit_data_temp_lockin_transients_selected.hdf5`,
