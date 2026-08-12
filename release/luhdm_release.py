@@ -520,9 +520,14 @@ class Release:
     def lambda_tags(self):
         """``{tag: lambda_m}`` named mediator ranges, read from the file.
 
-        The tags are exact members of the lambda axis, so ``lam='200um'`` is a
-        pure integer slice. ``'massless'`` is added here for the ``inf``
-        sentinel, which the file stores as a value rather than a tag.
+        Each tag value is an exact float, so a tag that is on the axis resolves
+        to a pure integer slice. The table is inherited from the parent scan and
+        may name ranges this file does not carry -- in the v7 release only three
+        of its eight tags are on the axis -- so a tag is not a promise that the
+        slice is here; filter against :meth:`axis` (``'lambda_m'``) if you are
+        iterating. Asking for an absent one raises and lists the axis.
+        ``'massless'`` is added here for the ``inf`` sentinel, which the file
+        stores as a value rather than a tag.
         """
         tags = {}
         raw = self._axis_attrs.get("lambda_m", {}).get("tags_json")
