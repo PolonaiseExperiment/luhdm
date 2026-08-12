@@ -4,15 +4,37 @@ impact-parameter cap ends the exclusion island.
 
 HISTORICAL in one respect. Everything here about the degeneracy and about the
 INNER cutoff at R_eff is current and unchanged. What has changed is the ending:
-the v7 release does NOT cap the impact-parameter integral, so the massless
-island is not closed by the cap discussed in panel B -- it runs to the Planck
-mass in the stored surfaces and is closed instead by the post-hoc flux cut
-m_cut, which requires N_req = 3 halo transits within the same 10 cm aperture
+the shipped data release does NOT cap the impact-parameter integral, so the
+massless island is not closed by the cap discussed in panel B -- it runs to the
+Planck mass in the stored surfaces and is closed instead by the post-hoc flux
+cut m_cut, which requires N_req = 3 halo transits within the same 10 cm aperture
 during the exposure (release/README.md section 5.4). The arithmetic of panel B
 is exactly the arithmetic behind that cut -- how much of mu comes from flybys
 beyond 10 cm -- so the panel is still the right picture of why a hardware-scale
 aperture bounds the claim. Read it as the geometric argument for m_cut rather
 than as a description of what the released cross section does.
+
+FROZEN AGAINST THE EFFICIENCY TABLE IT WAS MEASURED WITH. Every number here is
+anchored through the mode-1 detection efficiency, loaded from the canonical
+table at import (_EFF_F below), and the committed renders were measured with
+the earlier fixed-arrival-phase (w = 1) curves. The canonical table now holds
+the arrival-phase-marginalised curves, which are lower through the turn-on;
+under them the mu = 3 anchor re-solves upward and three of the gates below stop
+the script rather than let it redraw: the light-anchor edge suppression comes
+out around 9.3x against the pinned 12-17x band, and the two spectrum validity
+thresholds around 4.2e12 and 2.2e13 GeV against the pinned 6.54e12 and 3.52e13
+GeV. To reproduce the committed figure, pin the table it was built with:
+
+    LUHDM_EFFICIENCY_NPZ=<the w = 1 table> \\
+        python scripts/figure_mass_coupling_degeneracy.py
+
+That table is not in the tree any more; it is recoverable from git history --
+sha256 451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3,
+`git show 834294b^:luhdm/reference_data/efficiency_curves.npz`. Re-basing the
+figure on the canonical table instead is a separate decision, not a rerun: it
+means re-measuring and re-pinning every gate band below, redrawing the caption
+and the domain-of-validity line, and accepting that the current efficiency is
+then folded into cap-era physics.
 
 For a massless mediator the projected cross section is Rutherford,
 dsigma/dq = 2 pi alpha^2 / (v^2 q^3), and the halo number density scales as
@@ -38,11 +60,13 @@ sensor radius, so the b-integral starts at R_eff and the impulse saturates at
 above which dsigma/dq is identically zero. q_max carries a bare alpha, NOT the
 invariant alpha^2/m: along alpha propto sqrt(m) the endpoint moves as sqrt(m),
 so the LIGHTER the anchor the LOWER its endpoint. At the lightest anchor here
-(m = 1e10 GeV) q_max(v_esc) lands inside the 1e2-3e4 GeV analysis window and the
-detected spectrum is visibly suppressed towards the window edge, taking ~1.9% off
-mu. The two heavy anchors have their endpoints 2 and 4 decades above the window
-and stay degenerate at the 1e-5 level. The validity domain is computed, not
-asserted: DEG_M_SPECTRUM / DEG_M_MU below are root-solved thresholds.
+(m = 1e10 GeV) q_max(v_esc) lands inside the plotted 1e2-3e4 GeV window -- this
+figure's own momentum grid, which starts a decade below the 1 TeV analysis
+window the release is set in -- and the detected spectrum is visibly suppressed
+towards the upper edge, taking ~1.9% off mu. The two heavy anchors have their
+endpoints 2 and 4 decades above that window and stay degenerate at the 1e-5
+level. The validity domain is computed, not asserted: DEG_M_SPECTRUM /
+DEG_M_MU below are root-solved thresholds.
 
 (ii) The OUTER cap, panel B. The massless flyby reach is b_max(q) = 2 alpha/(q v),
 so along the same line the impact parameters that deliver a given kick grow as
@@ -71,9 +95,12 @@ at high alpha and is beside the geometric point), massless mediator, mode-1
 measured efficiency, exposure config.T_EXPOSURE. Every number is produced by the
 same luhdm.rate / luhdm.limits calls the data-release builder uses
 (scripts/build_release.py, noatm massless slice), and is cross-checked against
-the shipped cube (see CUBE below) at the cube's own 10 cm cap, at the exact grid
-points nearest the three anchor pairs (skipped with a note when the release file
-is not present -- it is gitignored and distributed via Zenodo).
+the internal capped parent cube (see CUBE below) at that cube's own 10 cm cap,
+at the exact grid points nearest the three anchor pairs. That cross-check is
+dormant today: the cube it wants is the internal full-lambda build behind
+luhdm.release.DEFAULT_PATH, which is not in the tree, so GATE 1 prints a skip.
+The tracked release files cannot stand in for it -- they carry no cap
+(b_constrained_max_m is NaN), which is the very quantity the gate compares.
 
 One deliberate departure from the production settings: panel B *differentiates*
 mu(<b) in log10 b, which divides the quadrature error of two neighbouring b
@@ -114,7 +141,13 @@ FID = dict(n_q=240, q_span=3e4)        # FID_PROD q grid
 # by the fixed 500-point, m-dependent v grid inside differential_rate_trapz --
 # so 8x the production grid buys all the smoothness that is available.
 N_Q_PANEL_B = 8 * FID["n_q"]           # 1920
-Q_MIN = 100.0                          # analysis threshold [GeV] = config.Q_THRESH
+# Where this figure's momentum grid starts. NOT the analysis threshold, and not
+# config.Q_THRESH, which is 1 TeV: 100 GeV is the reconstruction threshold of
+# the stored candidate lists and the window the capped scheme this figure
+# documents was set in. The value stays at 100.0 so the script reproduces its
+# committed renders; moving it to the 1 TeV window means re-pinning every gate
+# band below and redrawing the figure.
+Q_MIN = 100.0                          # q-grid floor [GeV]
 MODE = 1                               # measured efficiency mode
 
 B_CAP = 0.1                            # b_constrained_max [m] = 10 cm (production)
@@ -147,18 +180,31 @@ B_SCAN_LO, B_SCAN_HI, B_PER_DEC = R_EFF, R_EFF * 1e14, 40
 B_FLOOR_FRAC = 3e-3
 B_FLOOR_ABS = 0.05                     # [mu per decade], i.e. ~1% of the y axis
 
-# The shipped cube used by the cross-check: whatever this repository currently
-# releases, never a hardcoded filename, so the figure follows the cube instead
-# of pinning itself to a superseded one. From v5 on the release is built WITH
-# the R_eff inner cutoff, so the parity check runs through the figure's own
-# pipeline (GATE 1a) and switching the cutoff off becomes the counterfactual
-# whose size GATE 1b pins. Against a pre-v5 cube the two roles are exchanged;
-# see cube_crosscheck.
+# The cube used by the cross-check. luhdm.release.DEFAULT_PATH is the INTERNAL
+# full-lambda parent cube -- capped at 10 cm, built in the 0.1 TeV window and on
+# the fixed-arrival-phase efficiency, i.e. the scheme this figure documents. It
+# is deliberately not the shipped release: the tracked files are uncapped
+# (b_constrained_max_m = NaN), so they cannot serve a cap parity check. That
+# parent cube is not in the tree either, so GATE 1 prints a skip and the parity
+# check has been dormant since the release split into the current two files.
+# When a matching cube is present, the parent is built WITH the R_eff inner
+# cutoff, so the parity check runs through the figure's own pipeline (GATE 1a)
+# and switching the cutoff off becomes the counterfactual whose size GATE 1b
+# pins; against an older cube built without the cutoff the two roles are
+# exchanged (see cube_crosscheck).
 CUBE = str(release.DEFAULT_PATH)
 
 # ---------------------------------------------------------------------------
 # Pipeline: identical construction to build_release.py's noatm massless cell
 # ---------------------------------------------------------------------------
+# The one input that floats: this reads whatever efficiency table is canonical
+# at import time (LUHDM_EFFICIENCY_NPZ if it is set, otherwise the committed
+# luhdm/reference_data/efficiency_curves.npz). The committed renders were
+# measured with the fixed-arrival-phase (w = 1) curves and the gates below are
+# pinned to them, so regenerating this figure means setting
+# LUHDM_EFFICIENCY_NPZ to that table first -- see the module docstring for the
+# digest and how to recover it. Left unset, the canonical
+# arrival-phase-marginalised curves are loaded and the script stops at a gate.
 _EFF_F = efficiency.make_efficiency(MODE, DF)
 
 QS = np.geomspace(Q_MIN, FID["q_span"] * Q_HI_REF, FID["n_q"])
@@ -327,7 +373,9 @@ CUBE_HAS_INNER_CUTOFF = _cube_has_inner_cutoff(CUBE_CHECK)
 # inflates it are caught. Re-measured against v5
 # (v5.0-night-m0p356mg-bcap10cm): 2.67e-2, 8.69e-6, 6.02e-6, which are the same
 # numbers the v4 comparison gave from the other side (2.60e-2, 8.7e-6, 6.0e-6)
-# -- as they must be, since it is one and the same displacement.
+# -- as they must be, since it is one and the same displacement. Like the GATE 2
+# bands, these were measured with the fixed-arrival-phase efficiency table and
+# would have to be re-measured alongside a cube built on a different one.
 CUBE_CUT_BAND = [(1.5e-2, 4.0e-2), (0.0, 1e-4), (0.0, 1e-4)]
 if CUBE_CHECK is not None:
     for _i, (_a_pt, _m_pt, _mu_c, _mu_n, _rel_n, _mu_k, _rel_k) in \
@@ -423,6 +471,13 @@ DEG_M_MU = _threshold_mass(_mu_dev, 1e-3)
 # not. Both directions are pinned: a regression that restores perfect degeneracy
 # (inner cutoff lost) fails the breaking gates, and one that deforms the heavy
 # anchors fails the degeneracy gate.
+#
+# Every band below was measured with the fixed-arrival-phase (w = 1) efficiency
+# table, and the anchor is root-solved through eps(q), so all of them move with
+# the table: under the canonical arrival-phase-marginalised curves the anchor
+# coupling rises and (b) and (c) fail. That is the intended behaviour -- these
+# gates are what stops an unpinned rerun from quietly redrawing the figure with
+# a different efficiency. See the module docstring for the pin.
 # ---------------------------------------------------------------------------
 # (a) it HOLDS for the heavy pair: alpha^2/m exact to the v-quadrature floor
 assert DEV_HEAVY < 1e-4, \
@@ -450,7 +505,10 @@ assert Q_LO < Q_MAX_VESC[0] < Q_HI, (
 assert Q_MAX_VESC[1] > 10 * Q_HI and Q_MAX_VESC[2] > 10 * Q_HI, (
     "a heavy anchor's endpoint has entered the window: %s" % Q_MAX_VESC)
 
-# (c) the validity domain itself, pinned to +-25% in mass
+# (c) the validity domain itself, pinned to +-25% in mass. These three masses
+# are the ones printed in the figure's domain-of-validity line, so they are
+# pinned to the table the caption was written from; on the canonical table the
+# two spectrum thresholds land at 4.18e12 and 2.22e13 GeV instead.
 for _name, _val, _want in (("spectrum, 1e-3", DEG_M_SPECTRUM, 6.54e12),
                            ("spectrum, 1e-4", DEG_M_SPECTRUM_4, 3.52e13),
                            ("mu, 1e-3", DEG_M_MU, 1.97e11)):
@@ -866,6 +924,14 @@ axB.grid(True, which="major", color="#e9e9e9", lw=0.7)
 
 # ---------------------------------------------------------------------------
 # parameter box, caption + suptitle
+#
+# The first slot is fed Q_MIN, so the committed renders print "q_th = 100 GeV".
+# Read it as the q grid's lower end, not as the analysis threshold: the analysis
+# window opens at 1 TeV (config.Q_THRESH), and 100 GeV is the reconstruction
+# threshold of the stored candidate lists. The label is left as drawn because
+# relabelling it means regenerating the three committed renders, which cannot
+# be done without pinning the efficiency table (module docstring);
+# notebooks/README.md flags the same thing for readers of the figure.
 # ---------------------------------------------------------------------------
 _am, _ae = _mant_exp(ALPHA0_N)
 param_txt = (
@@ -952,6 +1018,11 @@ print("GATE 1  %s cube cross-check at the cube's own 10 cm cap"
       " (noatm, mode 1, massless slice)" % (CUBE_TAG or "release"))
 print("  cube: %s" % CUBE)
 if CUBE_CHECK is None:
+    # This is the path taken today: CUBE is the internal capped parent cube,
+    # which is not in the tree. The printed line below predates the split into
+    # the current tracked two-file release -- those files are here, but they are
+    # uncapped and so cannot serve this gate. Left as printed, since the string
+    # is part of the frozen run; see the CUBE comment above for what is true.
     print("  SKIPPED (release file not present).")
     print("  release/*.h5 is gitignored and distributed via Zenodo; the figure")
     print("  is unaffected -- every curve is computed from luhdm directly.")

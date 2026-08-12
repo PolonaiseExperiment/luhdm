@@ -22,8 +22,8 @@ self-describing HDF5 cubes (0.55 and 0.59 MB) holding the whole limit-setting
 calculation for the paper: extremeness, expected signal and transit counts over
 the (mode, alpha_n, m_DM, lambda) grid, plus the measured efficiency curves,
 candidate lists and live time. The two files are the two hypotheses the paper
-uses — `luhdm_datarelease_v7_A_f1_atm.h5` is f_DM = 1 with atmospheric
-propagation, `luhdm_datarelease_v7_B_f0p1_noatm.h5` is f_DM = 0.1 without — and
+uses — `luhdm_datarelease_v8_A_f1_atm.h5` is f_DM = 1 with atmospheric
+propagation, `luhdm_datarelease_v8_B_f0p1_noatm.h5` is f_DM = 0.1 without — and
 share every axis and every detector input. Five lines of `h5py` get you the
 excluded region, and [`release/README.md`](release/README.md) is the front door:
 quickstart, data dictionary, worked reproduction of the published limit, known
@@ -31,7 +31,7 @@ limitations and how to cite. Built by `scripts/build_release.py` and
 `scripts/assemble_release.py` on a many-core node; everything else here reads
 them.
 
-Two conventions of the v7 release that a reader has to know, both spelled out in
+Two conventions of the release that a reader has to know, both spelled out in
 [`release/README.md`](release/README.md): the analysis window starts at
 `config.Q_THRESH` = 1 TeV, and the impact-parameter integral is **uncapped**, so
 the excluded region is closed on the right not by the surfaces but by a
