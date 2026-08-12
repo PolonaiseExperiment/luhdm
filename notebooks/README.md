@@ -7,12 +7,12 @@ reads the raw instrument file.
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
 [`release/`](../release). Notebooks 01, 02, 03 and 04 open
-`luhdm_datarelease_v7_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
-notebook 05 opens `luhdm_datarelease_v7_B_f0p1_noatm.h5` (f_DM = 0.1,
+`luhdm_datarelease_v8_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
+notebook 05 opens `luhdm_datarelease_v8_B_f0p1_noatm.h5` (f_DM = 0.1,
 attenuation off), which is its whole subject; notebook 06 opens both, since it
 is the guided tour.
 
-**Two conventions of the v7 release** show up in every notebook that draws a
+**Two conventions of the release** show up in every notebook that draws a
 mass axis. The analysis window starts at `config.Q_THRESH` = 1 TeV, which puts a
 hard kinematic wall at 5.51 × 10⁵ GeV on the left. And the impact-parameter
 integral is uncapped, so nothing in the stored surfaces closes the massless
@@ -63,11 +63,26 @@ The Letter's data-derived figures are drawn by scripts rather than notebooks:
 spectrum with the mode-1 efficiency overlaid) and `scripts/paper_fig_limits.py`
 (Fig. 3, the two-panel result); `scripts/paper_fig_efficiency.py` draws the
 three-mode efficiency comparison, which is not a Letter figure. **Those scripts
-have not yet been moved to the v7 two-file layout and are under review; they
-still read the internal cube and its 0.1 TeV window.** Figures
-`07_impact_parameter_cap` and `08_mass_coupling_degeneracy` likewise come from
-`scripts/`, and both are explainers for the retired impact-parameter cap, kept
-as background on the capped scheme, not as descriptions of the current release.
+have not yet been moved to the two-file release layout and are under review;
+they still read the internal cube and its 0.1 TeV window.**
+
+Figures `07_impact_parameter_cap` and `08_mass_coupling_degeneracy` also come
+from `scripts/` rather than from a notebook. `07` is a standalone geometry
+explainer for the retired impact-parameter cap; it opens no cube and reads no
+efficiency table, so it still redraws exactly as committed. `08` is not retired
+wholesale: the α²/m degeneracy of the massless mediator and the sensor-radius
+cutoff that breaks it — panel A and the ratio strip — are the cross section the
+release is built on, and panel B's arithmetic, what share of μ is carried by
+flybys beyond 10 cm, is the geometric argument behind `m_cut`. Only its ending,
+which closes the exclusion island with the cap itself, describes the retired
+scheme. Its committed renders are frozen: the figure was measured with the
+earlier fixed-arrival-phase efficiency table and its validation gates are pinned
+to that table, so re-running it against the canonical one now stops at a gate
+rather than redrawing. Regenerating it means pinning the old table back through
+`LUHDM_EFFICIENCY_NPZ`, which the script's docstring spells out. One label in
+that figure to read with care: the parameter box along its bottom edge prints
+`q_th = 100 GeV`, which is where its momentum grid starts, not the analysis
+window — the window opens at 1 TeV.
 
 ## Dark matter fraction
 
