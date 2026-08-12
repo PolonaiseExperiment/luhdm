@@ -36,6 +36,8 @@ drawn as a dashed brown line rather than applied to the surfaces.
 | [`05_composite`](05_composite.ipynb) | the atmosphere-off companion scan, a release extra beyond what the paper prints | `05_composite_noatm` |
 | [`06_datarelease`](06_datarelease.ipynb) | SM, Analysis Code and Data Release: a guided tour of the two released cubes | none |
 | [`09_projection_peak`](09_projection_peak.ipynb) | nothing directly; **historical** — why the *capped* spectrum had a plateau and a horn. The v7 cross section has no cap, so the peak is not in the released spectra; the projection argument behind it still explains the endpoint at `q_max`. | `09_projection_peak`, `09_projection_peak_galaxy` |
+| [`10_left_edge_anatomy`](10_left_edge_anatomy.ipynb) | nothing directly; anatomy of the exclusion region's left edge — the kinematic wall at `q_min`/`v_esc`, the halo-tail onset just above it, and a retrospective on why the old 0.1 TeV window had a soft edge instead | `10_kinematic_wall`, `10_contour_left_edge`, `10_halo_tail_onset`, `10_soft_vs_hard_edge` |
+| [`11_right_edge_flux_cut`](11_right_edge_flux_cut.ipynb) | nothing directly; the right edge — the transit-count curve N(m), the flux mass cut `m_cut` (N_req = 3 assumption, with N_req = 6.8 drawn for comparison), and the shell-of-validity argument for the 10 cm aperture | `11_transit_curve`, `11_contour_vs_cut`, `11_capped_vs_flux_cut`, `11_shell_of_validity` |
 
 Of those, only the spectra panel appears in the paper (as the Supplemental
 Material's `02_spectra`, redrawn at single-column size by
