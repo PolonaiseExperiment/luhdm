@@ -2,10 +2,9 @@
 
 Every figure and number below is read from a data release cube, through
 `luhdm.release`. The notebooks do not recompute any physics, so a notebook run
-and a cluster run cannot drift apart. Three are outside that rule: notebook 00
-reads the raw instrument file, notebook 09 is closed-form pedagogy that reads no
-cube at all, and notebook 04 reads the internal full-lambda cube rather than a
-released one.
+and a cluster run cannot drift apart. Two are outside that rule: notebook 00
+reads the raw instrument file, and notebook 04 reads the internal full-lambda
+cube rather than a released one.
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
 [`release/`](../release). Notebooks 01, 02 and 03 open
@@ -35,7 +34,6 @@ drawn as a dashed brown line rather than applied to the surfaces.
 | [`04_mode_comparison`](04_mode_comparison.ipynb) | nothing directly; the per-mode cross-check behind the single-mode SM figures | `04_exclusion_modes123`, `04_mediator_vs_coupling`\*, `04_mediator_vs_coupling_zoom`\* |
 | [`05_composite`](05_composite.ipynb) | the atmosphere-off companion scan, a release extra beyond what the paper prints | `05_composite_noatm` |
 | [`06_datarelease`](06_datarelease.ipynb) | SM, Analysis Code and Data Release: a guided tour of the two released cubes | none |
-| [`09_projection_peak`](09_projection_peak.ipynb) | nothing directly; **historical** — why the *capped* spectrum had a plateau and a horn. The v7 cross section has no cap, so the peak is not in the released spectra; the projection argument behind it still explains the endpoint at `q_max`. | `09_projection_peak`, `09_projection_peak_galaxy` |
 | [`10_left_edge_anatomy`](10_left_edge_anatomy.ipynb) | nothing directly; anatomy of the exclusion region's left edge — the kinematic wall at `q_min`/`v_esc`, the halo-tail onset just above it, and a retrospective on why the old 0.1 TeV window had a soft edge instead | `10_kinematic_wall`, `10_contour_left_edge`, `10_halo_tail_onset`, `10_soft_vs_hard_edge` |
 | [`11_right_edge_flux_cut`](11_right_edge_flux_cut.ipynb) | nothing directly; the right edge — the transit-count curve N(m), the flux mass cut `m_cut` (N_req = 3 assumption, with N_req = 6.8 drawn for comparison), and the shell-of-validity argument for the 10 cm aperture | `11_transit_curve`, `11_contour_vs_cut`, `11_capped_vs_flux_cut`, `11_shell_of_validity` |
 
@@ -44,7 +42,7 @@ Material's `02_spectra`, redrawn at single-column size by
 `scripts/paper_fig_sm_spectra.py`); the per-mode and atmosphere-off views are
 release extras. Figures are written to `png/`, `svg/` and `pdf/`. Each
 figure *derived from the cube* is stamped with that cube's version tag;
-notebooks 00 and 09 write unstamped figures, since neither reads a cube.
+notebook 00 writes unstamped figures, since it does not read a cube.
 
 \* The figures marked with an asterisk scan the mediator range continuously and
 need the internal full-lambda cube (54 finite ranges, 0.1 µm to 2 m); the
@@ -62,9 +60,8 @@ three-mode efficiency comparison, which is not a Letter figure. **Those scripts
 have not yet been moved to the v7 two-file layout and are under review; they
 still read the internal cube and its 0.1 TeV window.** Figures
 `07_impact_parameter_cap` and `08_mass_coupling_degeneracy` likewise come from
-`scripts/`, and both are explainers for the retired impact-parameter cap: like
-notebook 09 they are kept as background on the capped scheme, not as
-descriptions of the current release.
+`scripts/`, and both are explainers for the retired impact-parameter cap, kept
+as background on the capped scheme, not as descriptions of the current release.
 
 ## Dark matter fraction
 
@@ -76,7 +73,6 @@ pass it explicitly on every call — the loader's fallback is
 axis and raises if it is used. Notebook 05 reads file B at `f_dm=0.1`, the
 composite-benchmark plane. Notebook 06 opens both and shows them side by side.
 Notebook 04 still reads the internal full-lambda cube, which carries both planes.
-(Notebook 09 reads no extremeness plane, so the question does not arise there.)
 
 The `/halo` diagnostic maps are the one exception in either file: they are stored
 once at the baseline `f_dm` = 0.1 with no fraction axis, so notebook 03's transit
@@ -93,11 +89,11 @@ pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 jupyter lab
 ```
 
-Notebooks 01, 02, 03, 05, 06 and 09 then run start to finish with no environment
-variables set and no file from outside the repository, in about a minute for all
-six together. The first five read a released cube rather than recomputing it,
-which is why they are quick; notebook 09 recomputes closed-form cross sections
-and a small Monte Carlo, and is quick for its own reasons.
+Notebooks 01, 02, 03, 05 and 06 then run start to finish with no environment
+variables set and no file from outside the repository, in about a minute for
+all five together; they read a released cube rather than recomputing it, which
+is why they are quick. Notebooks 10 and 11 run the same way from the released
+cubes.
 
 **Notebook 04 does not run from a fresh checkout either.** It calls
 `open_release()` with no argument, which resolves to
