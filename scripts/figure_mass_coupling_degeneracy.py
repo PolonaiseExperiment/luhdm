@@ -2,6 +2,18 @@
 where it holds exactly, where the sensor radius breaks it, and how the 10 cm
 impact-parameter cap ends the exclusion island.
 
+HISTORICAL in one respect. Everything here about the degeneracy and about the
+INNER cutoff at R_eff is current and unchanged. What has changed is the ending:
+the v7 release does NOT cap the impact-parameter integral, so the massless
+island is not closed by the cap discussed in panel B -- it runs to the Planck
+mass in the stored surfaces and is closed instead by the post-hoc flux cut
+m_cut, which requires N_req = 3 halo transits within the same 10 cm aperture
+during the exposure (release/README.md section 5.4). The arithmetic of panel B
+is exactly the arithmetic behind that cut -- how much of mu comes from flybys
+beyond 10 cm -- so the panel is still the right picture of why a hardware-scale
+aperture bounds the claim. Read it as the geometric argument for m_cut rather
+than as a description of what the released cross section does.
+
 For a massless mediator the projected cross section is Rutherford,
 dsigma/dq = 2 pi alpha^2 / (v^2 q^3), and the halo number density scales as
 1/m, so the detected spectrum carries the coupling and the mass only through the

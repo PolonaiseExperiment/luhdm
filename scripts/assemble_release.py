@@ -2,11 +2,14 @@
 """Assemble the per-lambda npz shards into the release HDF5 (LOCAL machine only).
 
 The compute node writes float64 npz shards (no h5py there); this script — run on
-a host with h5py — stacks them into ``release/luhdm_datarelease_v5.h5``, the single
-source every notebook loads from. It also computes ``/reference_curves`` locally
-at production fidelity (notebook 02's showcase point), copies the detector
-products, embeds full provenance, and writes ``release/provenance.json`` +
-``release/SHA256SUMS``.
+a host with h5py — stacks them into the cube named by ``--out``, the source every
+notebook loads from. It also computes ``/reference_curves`` locally at production
+fidelity (notebook 02's showcase point), copies the detector products, embeds
+full provenance, and writes the matching provenance JSON + ``SHA256SUMS`` beside
+it. ``--select`` splits the release by hypothesis: run it once per
+``(f_dm, atmosphere)`` plane to get the v7 two-file layout, each file with its
+own ``provenance_<stem>.json``; the default ``both`` keeps every plane in one
+cube and the historical ``provenance.json`` name.
 
     python scripts/assemble_release.py \
         --atm-dir   ~/release_shards/atm \

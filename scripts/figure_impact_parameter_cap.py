@@ -1,6 +1,14 @@
 """Two-panel figure explaining the impact-parameter cap in the cross section.
 
-This uses the REAL production cap b_constrained_max = 0.1 m (10 cm) and the
+HISTORICAL. The v7 data release has NO impact-parameter cap: the b-integral
+runs to infinity and ``b_constrained_max_m`` is NaN in both released cubes. The
+hardware scale this figure is about now enters only after the calculation, as
+the 10 cm aperture of the post-hoc flux cut ``m_cut`` (release/README.md
+section 5.4). Keep this figure as the explainer for the capped scheme used up
+to v6 -- it is why that spectrum had a plateau, and notebook 09 is its
+companion -- not as a description of the current release.
+
+This uses the v6 production cap b_constrained_max = 0.1 m (10 cm) and the
 MASSLESS (Coulomb) mediator slice, where the cap actually bites. The massless
 flyby reach is the clean power law
 
