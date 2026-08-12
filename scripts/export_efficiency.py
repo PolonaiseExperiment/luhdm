@@ -6,10 +6,14 @@ efficiency vs imparted momentum for each sensor mode -- converts the momentum
 axis from SI (kg m/s) to GeV, and writes the committed table that the rate
 pipeline loads on any host (a compute node has no data/ dir).
 
-The default source is ``luhdm/reference_data/efficiency_curves_marginalise_w.npz``,
-the curves with the impulse arrival phase w marginalised (Juehang, 2026-08-12).
-Before that the table was built from ``data/selected_data_efficiency_curves.npz``,
-which fixed w = 1; pass ``--src`` to rebuild from a different product.
+The default source is
+``luhdm/reference_data/efficiency_curves_marginalise_w_night.npz``, the
+night-selection curves with the impulse arrival phase w marginalised (Juehang,
+2026-08-12) — the same data selection as ``config.T_EXPOSURE``. Two superseded
+products remain for reference: ``efficiency_curves_marginalise_w.npz`` (w
+marginalised but averaged over the full unvetoed run) and
+``data/selected_data_efficiency_curves.npz`` (fixed w = 1); pass ``--src`` to
+rebuild from a different product.
 
     python scripts/export_efficiency.py
 
@@ -27,7 +31,7 @@ E_CHARGE = 1.602176634e-19   # J/eV
 GEV_PER_SI = C_LIGHT / E_CHARGE / 1e9   # p[GeV] = p[kg m/s] * this
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = REPO / "luhdm" / "reference_data" / "efficiency_curves_marginalise_w.npz"
+SRC = REPO / "luhdm" / "reference_data" / "efficiency_curves_marginalise_w_night.npz"
 OUT = REPO / "luhdm" / "reference_data" / "efficiency_curves.npz"
 MODES = (1, 2, 3)
 
