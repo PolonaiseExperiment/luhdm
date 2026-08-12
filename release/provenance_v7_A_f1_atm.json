@@ -1,0 +1,1236 @@
+{
+  "assembly": {
+    "created": "2026-08-12T06:01:23.583031+00:00",
+    "hostname": "laptop",
+    "platform": "Linux-7.1.4-arch1-1-x86_64-with-glibc2.44",
+    "argv": "scripts/assemble_release.py --atm-dir /home/tunnell/release_shards_v7quick/atm --noatm-dir /home/tunnell/release_shards_v7quick/noatm --halo-dir /home/tunnell/release_shards_v7quick/halo --out release_v7quick/luhdm_datarelease_v7quick_A_f1_atm.h5 --version-tag v7.0-quick-night-m0p356mg-q1TeV-nocap --select f1-atm",
+    "git_commit": "1f0c6fe2461b7a5b06221847ff447862da3dfea9",
+    "git_dirty": true,
+    "packages": {
+      "numpy": "2.5.1",
+      "scipy": "1.18.0",
+      "h5py": "3.16.0",
+      "optimum_interval": "0.3.0",
+      "luhdm": "0.1.0",
+      "matplotlib": "3.11.1",
+      "pandas": "3.0.3",
+      "python": "3.14.6"
+    },
+    "version_tag": "v7.0-quick-night-m0p356mg-q1TeV-nocap",
+    "output": "release_v7quick/luhdm_datarelease_v7quick_A_f1_atm.h5",
+    "fidelity": {
+      "n_ode": 400,
+      "n_shm": 300000,
+      "n_q": 240,
+      "q_span": 30000.0,
+      "n_mc": 10000,
+      "mu_cap": 85.0
+    },
+    "n_finite_lambda": 4,
+    "seed": 20260702,
+    "t_exposure_s": 790778.0,
+    "f_dm_values": [
+      0.1,
+      1.0
+    ],
+    "inputs": {
+      "t_exposure_s": 790778.0,
+      "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+      "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+      "events_dir": "/home/tunnell/code/luhdm/notebooks",
+      "events": {
+        "data_mode1.txt": {
+          "path": "/home/tunnell/code/luhdm/notebooks/data_mode1.txt",
+          "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+        },
+        "data_mode2.txt": {
+          "path": "/home/tunnell/code/luhdm/notebooks/data_mode2.txt",
+          "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+        },
+        "data_mode3.txt": {
+          "path": "/home/tunnell/code/luhdm/notebooks/data_mode3.txt",
+          "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+        }
+      },
+      "env": {}
+    }
+  },
+  "shard_dirs": {
+    "atm": "/home/tunnell/release_shards_v7quick/atm",
+    "noatm": "/home/tunnell/release_shards_v7quick/noatm",
+    "halo": "/home/tunnell/release_shards_v7quick/halo"
+  },
+  "shard_inputs": {
+    "atm": {
+      "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+      "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+      "env": {},
+      "events": {
+        "data_mode1.txt": {
+          "path": "notebooks/data_mode1.txt",
+          "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+        },
+        "data_mode2.txt": {
+          "path": "notebooks/data_mode2.txt",
+          "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+        },
+        "data_mode3.txt": {
+          "path": "notebooks/data_mode3.txt",
+          "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+        }
+      },
+      "f_dm_values": [
+        0.1,
+        1.0
+      ],
+      "f_x_base": 0.1,
+      "t_exposure_s": 790778.0
+    },
+    "noatm": {
+      "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+      "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+      "env": {},
+      "events": {
+        "data_mode1.txt": {
+          "path": "notebooks/data_mode1.txt",
+          "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+        },
+        "data_mode2.txt": {
+          "path": "notebooks/data_mode2.txt",
+          "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+        },
+        "data_mode3.txt": {
+          "path": "notebooks/data_mode3.txt",
+          "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+        }
+      },
+      "f_dm_values": [
+        0.1,
+        1.0
+      ],
+      "f_x_base": 0.1,
+      "t_exposure_s": 790778.0
+    },
+    "halo": {
+      "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+      "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+      "env": {},
+      "events": {},
+      "f_dm_values": [
+        0.1,
+        1.0
+      ],
+      "f_x_base": 0.1,
+      "t_exposure_s": 790778.0
+    }
+  },
+  "impact_parameter_cap": {
+    "b_constrained_max_m": null,
+    "shards_without_cap_flag": {
+      "atm": [
+        "shard_il00.npz",
+        "shard_il01.npz",
+        "shard_il02.npz",
+        "shard_il03.npz",
+        "shard_massless.npz"
+      ],
+      "noatm": [
+        "shard_il00.npz",
+        "shard_il01.npz",
+        "shard_il02.npz",
+        "shard_il03.npz",
+        "shard_massless.npz"
+      ],
+      "halo": [
+        "shard_halo_il00.npz",
+        "shard_halo_il01.npz",
+        "shard_halo_il02.npz",
+        "shard_halo_il03.npz",
+        "shard_halo_massless.npz"
+      ]
+    }
+  },
+  "run_config": {
+    "atm": [
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "atm",
+          "--il-start",
+          "3",
+          "--il-end",
+          "4",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/atm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "atm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:47:20.993354+00:00",
+        "end": "2026-08-11T21:08:37.254955+00:00",
+        "ils_completed": [
+          "3"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "atm",
+          "--il-start",
+          "2",
+          "--il-end",
+          "3",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/atm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "atm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T21:08:37.901397+00:00",
+        "end": "2026-08-11T21:46:26.874432+00:00",
+        "ils_completed": [
+          "2"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "atm",
+          "--il-start",
+          "1",
+          "--il-end",
+          "2",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/atm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "atm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T21:46:27.517077+00:00",
+        "end": "2026-08-11T22:34:38.508247+00:00",
+        "ils_completed": [
+          "1"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "atm",
+          "--il-start",
+          "0",
+          "--il-end",
+          "1",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/atm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "atm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T22:34:39.177515+00:00",
+        "end": "2026-08-11T23:33:28.463734+00:00",
+        "ils_completed": [
+          "0"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "atm",
+          "--il-start",
+          "4",
+          "--il-end",
+          "5",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/atm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "atm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T23:33:29.127470+00:00",
+        "end": "2026-08-11T23:52:21.202713+00:00",
+        "ils_completed": [
+          "massless"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      }
+    ],
+    "noatm": [
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "noatm",
+          "--il-start",
+          "3",
+          "--il-end",
+          "4",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/noatm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "noatm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:26:38.478230+00:00",
+        "end": "2026-08-11T20:31:18.148358+00:00",
+        "ils_completed": [
+          "3"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "noatm",
+          "--il-start",
+          "2",
+          "--il-end",
+          "3",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/noatm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "noatm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:31:18.865617+00:00",
+        "end": "2026-08-11T20:34:28.353200+00:00",
+        "ils_completed": [
+          "2"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "noatm",
+          "--il-start",
+          "1",
+          "--il-end",
+          "2",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/noatm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "noatm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:34:29.105106+00:00",
+        "end": "2026-08-11T20:37:04.335217+00:00",
+        "ils_completed": [
+          "1"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "noatm",
+          "--il-start",
+          "0",
+          "--il-end",
+          "1",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/noatm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "noatm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:37:05.028502+00:00",
+        "end": "2026-08-11T20:39:47.403542+00:00",
+        "ils_completed": [
+          "0"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "noatm",
+          "--il-start",
+          "4",
+          "--il-end",
+          "5",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/noatm",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "noatm",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 119,
+          "n_a": 44,
+          "n_l": 5,
+          "m_tier": 119,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:39:48.123952+00:00",
+        "end": "2026-08-11T20:41:53.915447+00:00",
+        "ils_completed": [
+          "massless"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {
+            "data_mode1.txt": {
+              "path": "notebooks/data_mode1.txt",
+              "sha256": "9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6"
+            },
+            "data_mode2.txt": {
+              "path": "notebooks/data_mode2.txt",
+              "sha256": "9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50"
+            },
+            "data_mode3.txt": {
+              "path": "notebooks/data_mode3.txt",
+              "sha256": "31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105"
+            }
+          },
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      }
+    ],
+    "halo": [
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "halo",
+          "--il-start",
+          "3",
+          "--il-end",
+          "4",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/halo",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "halo",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 64,
+          "n_a": 64,
+          "n_l": 5,
+          "m_tier": null,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:41:55.038015+00:00",
+        "end": "2026-08-11T20:44:48.753556+00:00",
+        "ils_completed": [
+          "3"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {},
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "halo",
+          "--il-start",
+          "2",
+          "--il-end",
+          "3",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/halo",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "halo",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 64,
+          "n_a": 64,
+          "n_l": 5,
+          "m_tier": null,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:44:49.355525+00:00",
+        "end": "2026-08-11T20:45:38.629932+00:00",
+        "ils_completed": [
+          "2"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {},
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "halo",
+          "--il-start",
+          "1",
+          "--il-end",
+          "2",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/halo",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "halo",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 64,
+          "n_a": 64,
+          "n_l": 5,
+          "m_tier": null,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:45:39.164515+00:00",
+        "end": "2026-08-11T20:46:23.094644+00:00",
+        "ils_completed": [
+          "1"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {},
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "halo",
+          "--il-start",
+          "0",
+          "--il-end",
+          "1",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/halo",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "halo",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 64,
+          "n_a": 64,
+          "n_l": 5,
+          "m_tier": null,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:46:23.692739+00:00",
+        "end": "2026-08-11T20:47:18.931304+00:00",
+        "ils_completed": [
+          "0"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {},
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      },
+      {
+        "argv": [
+          "scripts/build_release.py",
+          "--pass",
+          "halo",
+          "--il-start",
+          "4",
+          "--il-end",
+          "5",
+          "--shard-dir",
+          "/home/tunnell/release_shards_v7quick/halo",
+          "--order",
+          "tags-first",
+          "--lambda-set",
+          "v7quick",
+          "--data-dir",
+          "notebooks",
+          "--m-tier",
+          "119",
+          "--workers",
+          "80"
+        ],
+        "pass_name": "halo",
+        "b_constrained_max": null,
+        "axes": {
+          "n_m": 64,
+          "n_a": 64,
+          "n_l": 5,
+          "m_tier": null,
+          "lambda_min": 2e-05,
+          "lambda_max": 200.0
+        },
+        "fid": {
+          "n_ode": 400,
+          "n_shm": 300000,
+          "n_q": 240,
+          "q_span": 30000.0,
+          "n_mc": 10000,
+          "mu_cap": 85.0
+        },
+        "hostname": "fried",
+        "workers": 80,
+        "start": "2026-08-11T20:47:19.524780+00:00",
+        "end": "2026-08-11T20:47:19.786479+00:00",
+        "ils_completed": [
+          "massless"
+        ],
+        "schema_version": 2,
+        "inputs": {
+          "t_exposure_s": 790778.0,
+          "f_dm_values": [
+            0.1,
+            1.0
+          ],
+          "f_x_base": 0.1,
+          "efficiency_npz": "/home/tunnell/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+          "efficiency_npz_sha256": "451e6ca10c759ecbe4620672796f3571538914dd7c7dba63fd679710d04183b3",
+          "events": {},
+          "env": {}
+        },
+        "luhdm_version": "0.1.0",
+        "numpy_version": "2.2.6"
+      }
+    ]
+  }
+}
