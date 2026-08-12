@@ -164,8 +164,10 @@ def best_mass_index(p_finite, lambda_finite, alpha_n, confidence=0.95):
     dloga = np.mean(np.diff(np.log10(alpha)))
     # W[il, im] = (# alphas excluded at this mass/lambda) * mean d log alpha.
     # (p >= confidence).sum over the alpha axis -> (mass, lambda); transpose to
-    # (lambda, mass) to integrate over lambda along axis 0.
-    W = (p >= confidence).sum(axis=0).T * dloga          # (n_finite, n_mass)
+    # (lambda, mass) to integrate over lambda along axis 0. The level is taken
+    # at the file's float32 storage precision so a builder value exactly at the
+    # level survives the narrowing.
+    W = (p >= np.float32(confidence)).sum(axis=0).T * dloga  # (n_finite, n_mass)
     loglam = np.log10(lam)
     area = np.trapezoid(W, loglam, axis=0)               # (n_mass,)
     shortest = np.full(n_mass, np.inf)
@@ -640,7 +642,12 @@ class Release:
         il = self.at_lambda(lam, group)
         ds, pre = self._cube("extremeness", group, f_dm)
         column = ds[pre + (self._mode_index(mode), slice(None), im, il)]
-        return limits.excluded_band(axset.alpha_n, column, level=confidence)
+        # The level is pre-narrowed to the file's float32 storage precision so
+        # a builder value exactly at the level survives the narrowing
+        # (float32 -> float64 is exact, so this reproduces the float32 test
+        # without touching optimum_interval).
+        return limits.excluded_band(axset.alpha_n, column,
+                                    level=float(np.float32(confidence)))
 
     def cell(self, mass, alpha, lam, mode=1, group=None, f_dm=F_DM_DEFAULT,
              atmosphere=None):

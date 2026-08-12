@@ -151,7 +151,10 @@ def test_excluded_band_matches_limits(std, cube):
                                            atmosphere=atm)
             ext = rel_p.mass_plane("extremeness", mode=mode, lam=lam,
                                    group=group, f_dm=f_dm)
-            ref = np.array([limits.excluded_band(alpha, ext[:, im], level=0.95)
+            # same storage-precision level as both readers (see
+            # luhdm.release.Release.excluded_alpha_band)
+            lvl = float(np.float32(0.95))
+            ref = np.array([limits.excluded_band(alpha, ext[:, im], level=lvl)
                             for im in range(mass.size)])
             assert np.array_equal(ref[:, 0], band.alpha_lo, equal_nan=True)
             assert np.array_equal(ref[:, 1], band.alpha_hi, equal_nan=True)

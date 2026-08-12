@@ -237,6 +237,11 @@ def excluded_interval(params, extremeness, level=0.95):
     """
     params = np.asarray(params, dtype=float)
     ps = np.asarray(extremeness, dtype=float)
+    # The file stores extremeness as float32, so the level set is taken at the
+    # storage precision: a builder value exactly at the level narrows to just
+    # below it in float32 and would otherwise be dropped from the excluded set
+    # (float32 -> float64 is exact, so this reproduces the float32 comparison).
+    level = float(np.float32(level))
     above = ps >= level
     if not above.any():
         return np.nan, np.nan
@@ -1046,7 +1051,8 @@ class Release:
             nt_vals = np.repeat(np.expand_dims(nt_vals, axis),
                                 len(ext.axes["mode"]), axis=axis)
         data["n_transit"] = nt_vals.ravel()
-        data["excluded"] = data["extremeness"] >= level
+        # level set at storage precision (see excluded_interval)
+        data["excluded"] = data["extremeness"] >= np.float32(level)
 
         order = [c for c in ("f_dm", "atmosphere", "mode", "alpha_n", "mass_gev",
                              "lambda_m", "m_phi_gev", "extremeness", "mu",
