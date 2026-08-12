@@ -141,17 +141,9 @@ TAGS = [2e-6, 1e-5, 2e-5, 2e-4, 2e-3, 2e-2, 0.2, 2.0]
 # It is not a physics point and must not be plotted as one.
 LAMBDA_SET_V7QUICK = [2e-5, 2e-4, 2e-3, 200.0]
 LAMBDA_VALIDATION = 200.0
-
-# Tabulation density for the dimensionless dsigma/dq_tilde interpolant.
-# rate.make_xsec's default (600) is the density every shipped finite-lambda
-# slice was built at, and it is what the physics slices must keep. The
-# validation slice is the one place it is not enough: at xi = R_eff/lambda =
-# 1.3e-6 the tabulated q_tilde range spans 1e-25 .. K1(xi) ~ 7.7e5, and linear
-# interpolation across that span leaves a ~2% bias against the analytic
-# massless result -- which would masquerade as a failure of the very code path
-# the slice exists to validate. 3000 points converges it to ~0.1%.
-# (Measured: max|dev| vs analytic massless 2.2e-2 at 600, 1.3e-3 at 3000.)
-N_POINTS_XSEC_VALIDATION = 3000
+# The validation slice needs a denser dsigma/dq_tilde tabulation than the
+# physics slices; that rule lives in rate.tabulation_n_points, keyed on xi, so
+# every consumer (builder, verifier, contour refiner) resolves it identically.
 
 FID_PROD = dict(n_ode=400, n_shm=300000, n_q=240, q_span=3e4, n_mc=10000,
                 mu_cap=MU_CAP)
@@ -648,14 +640,10 @@ def main():
         LAMB = lamb
         MASSLESS = massless
         LAMB_ODE = args.massless_lamb if massless else lamb   # unused on noatm/halo
-        # The validation slice needs a finer tabulation than the physics
-        # slices (see N_POINTS_XSEC_VALIDATION); every other lambda keeps
-        # make_xsec's shipped default so its tabulation is unchanged.
-        xsec_kw = ({} if massless or lamb != LAMBDA_VALIDATION
-                   else dict(N_points=N_POINTS_XSEC_VALIDATION))
+        # Tabulation density is resolved from xi inside rate.make_xsec, so the
+        # builder and any later single-cell recompute cannot disagree about it.
         XS = rate.make_xsec(None if massless else lamb,       # auto dispatch
-                            b_constrained_max=args.b_constrained_max,
-                            **xsec_kw)
+                            b_constrained_max=args.b_constrained_max)
 
         print(f"[il={label}] lamb={lamb}  building shard "
               f"({total_cells} cells, {n_chunks} chunks) ...", flush=True)
