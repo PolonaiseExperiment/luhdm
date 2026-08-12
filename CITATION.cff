@@ -6,10 +6,10 @@ abstract: >-
   with a magnetically levitated particle: halo and atmospheric propagation, the
   straight-line-impulse cross section, the bridge to the optimum_interval
   statistics package, and the scripts and notebooks that build the data release
-  and every figure in the paper.
+  and the figures in the paper.
 type: software
 version: "0.1.0"
-date-released: "2026-08-08"
+date-released: "2026-08-12"
 license: GPL-3.0-or-later
 # doi: to be assigned (archived code snapshot).
 keywords:
