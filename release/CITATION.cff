@@ -3,16 +3,18 @@ message: "If you use this dataset, please cite both the dataset and the paper it
 title: "Data release for: First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle"
 abstract: >-
   The complete limit-setting calculation behind the first ultraheavy dark matter
-  search with a magnetically levitated particle, as one self-describing HDF5
-  file. Over a grid in dark-matter fraction, atmospheric propagation, sensor
-  mode, per-neutron coupling, dark-matter mass and mediator range it stores the
-  optimum-interval extremeness, the expected detected signal, and the expected
-  number of in-reach transits, together with the measured per-mode detection
-  efficiency curves, the impulse candidate lists and the live time. Exclusion at
-  any confidence level is a level set of the stored extremeness.
+  search with a magnetically levitated particle, as two self-describing HDF5
+  files, one per dark-matter-fraction and atmospheric-propagation hypothesis.
+  Over a grid in sensor mode, per-neutron coupling, dark-matter mass and
+  mediator range each stores the optimum-interval extremeness, the expected
+  detected signal, and the expected number of in-reach transits, together with
+  the measured per-mode detection efficiency curves, the impulse candidate lists
+  and the live time. Exclusion at any confidence level is a level set of the
+  stored extremeness, inside a mass window bounded by the kinematic wall and by
+  the halo flux cut recorded in the files' attributes.
 type: dataset
-version: "v5.0-night-m0p356mg-bcap10cm"
-date-released: "2026-08-08"
+version: "v7.0-quick-night-m0p356mg-q1TeV-nocap"
+date-released: "2026-08-12"
 license: CC-BY-4.0
 # doi: to be assigned. Add the version DOI of the deposit here, and update
 # section 12 of README.md, when the dataset is deposited.

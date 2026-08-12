@@ -82,7 +82,6 @@ import argparse
 import hashlib
 import json
 import os
-import socket
 import sys
 import time
 from datetime import datetime, timezone
@@ -131,6 +130,19 @@ F_DM_VALUES = (F_DM_BASE, F_DM_HIGH)
 
 # exact members of the finite axis; 0.2 (20 cm) fills the 2 cm -> 2 m gap
 TAGS = [2e-6, 1e-5, 2e-5, 2e-4, 2e-3, 2e-2, 0.2, 2.0]
+
+# --lambda-set v7quick: the reduced finite axis for the v7-quick campaign.
+# The three physics ranges (20 um, 200 um, 2 mm) are the figure set, and are
+# exact members of the full axis too, so a v7quick slice and a full-axis slice
+# at the same lambda are directly comparable. 200 m is a VALIDATION-ONLY slice
+# (m_phi ~ 1e-9 eV): it is far longer than every impact parameter in play, so
+# the finite-lambda code path must reproduce the analytic massless slice there.
+# It is not a physics point and must not be plotted as one.
+LAMBDA_SET_V7QUICK = [2e-5, 2e-4, 2e-3, 200.0]
+LAMBDA_VALIDATION = 200.0
+# The validation slice needs a denser dsigma/dq_tilde tabulation than the
+# physics slices; that rule lives in rate.tabulation_n_points, keyed on xi, so
+# every consumer (builder, verifier, contour refiner) resolves it identically.
 
 FID_PROD = dict(n_ode=400, n_shm=300000, n_q=240, q_span=3e4, n_mc=10000,
                 mu_cap=MU_CAP)
@@ -358,6 +370,15 @@ def shard_path(shard_dir, pass_name, il, n_finite):
     return shard_dir / name
 
 
+def _scrub_home(s):
+    """Home-relativise a provenance string: '/home/<user>/x' -> '~/x'.
+
+    Shard provenance flows into the shipped release files (Zenodo), so no
+    absolute home paths or usernames are recorded.
+    """
+    return s.replace(str(Path.home()), "~")
+
+
 def sha256_file(path):
     """sha256 of a file, or None if it cannot be read (never fatal)."""
     try:
@@ -385,7 +406,7 @@ def input_provenance(data_dir):
         "t_exposure_s": float(config.T_EXPOSURE),
         "f_dm_values": list(F_DM_VALUES),
         "f_x_base": F_DM_BASE,
-        "efficiency_npz": str(eff_table),
+        "efficiency_npz": _scrub_home(str(eff_table)),
         "efficiency_npz_sha256": sha256_file(eff_table),
         "events": {},
         "env": {k: os.environ[k] for k in
@@ -395,7 +416,7 @@ def input_provenance(data_dir):
         for n in (1, 2, 3):
             f = Path(data_dir) / f"data_mode{n}.txt"
             prov["events"][f"data_mode{n}.txt"] = {
-                "path": str(f), "sha256": sha256_file(f)}
+                "path": _scrub_home(str(f)), "sha256": sha256_file(f)}
     return prov
 
 
@@ -459,8 +480,9 @@ def main():
     ap.add_argument("--n-shm", type=int, default=None)
     ap.add_argument("--n-q", type=int, default=None)
     ap.add_argument("--q-span", type=float, default=None)
-    ap.add_argument("--q-min", type=float, default=100.0,
-                    help="analysis / grid-floor momentum [GeV]")
+    ap.add_argument("--q-min", type=float, default=config.Q_THRESH,
+                    help="analysis / grid-floor momentum [GeV] (default: "
+                         "config.Q_THRESH = %(default)g)")
     ap.add_argument("--massless-lamb", type=float, default=2.0,
                     help="atmospheric-ODE regulator range for the massless slice [m]")
     ap.add_argument("--b-constrained-max", type=float, default=None,
@@ -473,6 +495,11 @@ def main():
                     help="print the il processing sequence and exit")
     ap.add_argument("--print-lambdas", action="store_true",
                     help="print the il -> lambda table and exit")
+    ap.add_argument("--lambda-set", choices=("full", "v7quick"), default="full",
+                    help="finite mediator-range axis: 'full' (the contract "
+                         "axis, default) or 'v7quick' (20 um / 200 um / 2 mm "
+                         "plus the 200 m massless-equivalence validation "
+                         "slice); --quick overrides both")
     ap.add_argument("--quick", action="store_true",
                     help="tiny smoke: lambda = the 7 tags + massless, quick FID, "
                          "n_a=6, 8-point mass axis")
@@ -486,6 +513,9 @@ def main():
         # all 7 tags so tag-slicing consumers (notebooks) can smoke end-to-end
         lam_finite = np.sort(np.array(TAGS))
         tags = TAGS
+    elif args.lambda_set == "v7quick":
+        lam_finite = np.sort(np.array(LAMBDA_SET_V7QUICK))
+        tags = list(LAMBDA_SET_V7QUICK)
     else:
         lam_finite = build_lambda_axis()
         tags = TAGS
@@ -546,6 +576,21 @@ def main():
 
     NO_ATM = pass_name == "noatm"
     Q_MIN = args.q_min
+    # The analysis window enters by two independent routes: Q_MIN sets the rate
+    # integral's lower endpoint (and, via Q_MIN/m/10, the atmospheric ODE floor),
+    # while rate.expected_transits / rate.transit_count_halo read config.Q_THRESH
+    # directly for the threshold reach b_max(q_thresh). If the two disagree the
+    # n_transit surface describes a different window than mu does, which is
+    # exactly the kind of drift that is invisible in the output.
+    if float(Q_MIN) != float(config.Q_THRESH):
+        print("*" * 72, flush=True)
+        print(f"WARNING: --q-min ({Q_MIN:g} GeV) != config.Q_THRESH "
+              f"({config.Q_THRESH:g} GeV).", flush=True)
+        print("         mu/p use --q-min; n_transit uses config.Q_THRESH. "
+              "The two surfaces", flush=True)
+        print("         in this cube will describe DIFFERENT analysis windows.",
+              flush=True)
+        print("*" * 72, flush=True)
 
     # --- pass-constant shared state (halo needs only MS/ALPHAS/XS) ---
     if pass_name != "halo":
@@ -568,8 +613,10 @@ def main():
 
     shard_dir = Path(args.shard_dir)
     shard_dir.mkdir(parents=True, exist_ok=True)
-    hostname = socket.gethostname()
-    argv_str = " ".join(sys.argv)
+    # Hostname deliberately unrecorded (shipped provenance carries no host
+    # identifiers); the field stays for schema compatibility.
+    hostname = ""
+    argv_str = _scrub_home(" ".join(sys.argv))
     worker_fn = _process_chunk_halo if pass_name == "halo" else _process_chunk
 
     print(f"pass={pass_name}  shard-dir={shard_dir}  order={args.order}")
@@ -603,6 +650,8 @@ def main():
         LAMB = lamb
         MASSLESS = massless
         LAMB_ODE = args.massless_lamb if massless else lamb   # unused on noatm/halo
+        # Tabulation density is resolved from xi inside rate.make_xsec, so the
+        # builder and any later single-cell recompute cannot disagree about it.
         XS = rate.make_xsec(None if massless else lamb,       # auto dispatch
                             b_constrained_max=args.b_constrained_max)
 
@@ -682,7 +731,7 @@ def main():
         print(f"[il={label}] wrote {path.name} in {wall_s:.0f}s", flush=True)
 
     append_run_config(shard_dir, dict(
-        argv=sys.argv, pass_name=pass_name,
+        argv=[_scrub_home(a) for a in sys.argv], pass_name=pass_name,
         b_constrained_max=args.b_constrained_max,
         axes=dict(n_m=n_m, n_a=n_a, n_l=n_finite + 1, m_tier=(
             None if pass_name == "halo" else (

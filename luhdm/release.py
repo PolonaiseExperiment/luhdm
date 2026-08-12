@@ -1,10 +1,26 @@
 """Reader for the POLONAISE UHDM data release (HDF5).
 
-The release is a single self-describing HDF5 file
-(``release/luhdm_datarelease_v5.h5``) holding the analysis as a matrix over
-(sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range ``lambda``).
-It is produced by ``scripts/build_release.py`` (the per-lambda shard builder) and
+A release file is a self-describing HDF5 cube holding the analysis as a matrix
+over (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range
+``lambda``) for one or more ``(f_dm, atmosphere)`` hypotheses. It is produced by
+``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
+
+The **public** release is the v7 pair, one hypothesis per file:
+``release/luhdm_datarelease_v7_A_f1_atm.h5`` (f_DM = 1, attenuated) and
+``release/luhdm_datarelease_v7_B_f0p1_noatm.h5`` (f_DM = 0.1, bare halo). Pass
+the one you want to :func:`open_release`; note that a single-hypothesis file may
+not carry ``attrs['f_dm_default']``, so pass ``f_dm=`` explicitly rather than
+relying on the fallback. :data:`DEFAULT_PATH` is *not* one of them: it is the
+internal full-lambda parent cube (54 finite ranges, 0.1 um to 2 m, both f_DM
+planes, both atmosphere states, and the pre-v7 10 cm impact-parameter cap),
+which is kept out of git and is what the continuous-lambda figures need.
+
+Neither the release files nor this reader apply the release's mass cut
+``m_cut``: the v7 cross section is uncapped, so the surfaces report exclusion
+above the mass where the halo stops delivering transits through the apparatus,
+and the cut that closes the region is a root attribute (``m_cut_*``) the caller
+applies. See section 5.4 of ``release/README.md``.
 
 The file is intentionally plain HDF5 with dimension scales and rich per-dataset
 ``units``/``description`` attributes, so it can be opened by any HDF5 tool
@@ -60,6 +76,8 @@ import numpy as np
 
 from luhdm import limits
 
+# the internal full-lambda parent cube, not the public release: see the module
+# docstring. Kept out of git (release/*.h5 is gitignored bar the v7 pair).
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v5.h5"
 
 FORMAT_VERSION = 1            # v3 group layout (/atm, /noatm)

@@ -31,6 +31,26 @@ of the local dark-matter density carried by this species (a pure flux
 normalisation) and ``atmosphere`` is 1 when propagation through the
 atmosphere/overburden is applied, 0 for the bare halo flux.
 
+A release file may carry several values on those two axes or a single one. The
+v7 release ships **one hypothesis per file** (``_A_f1_atm`` is ``f_dm = 1`` with
+attenuation, ``_B_f0p1_noatm`` is ``f_dm = 0.1`` without), so both axes have
+length 1 and the layout is otherwise unchanged. Note that ``f_dm_default``,
+which every accessor falls back to when the caller names no fraction, is the
+build-side baseline 0.1 and is *not* on file A's axis: pass ``f_dm=1.0``
+explicitly when reading file A.
+
+The mass window
+---------------
+Nothing in this reader applies the release's mass cut. The stored surfaces are
+uncapped in impact parameter, so at very heavy masses they report exclusion
+where the halo delivers essentially no transits through the apparatus, and the
+release closes the region from the right with a separate, post-hoc flux cut
+stored in the ``m_cut_*`` root attributes (``m_cut_10cm_f1_gev`` in file A,
+``m_cut_10cm_f0.1_gev`` in file B), together with the ``N_req`` it assumes and
+a one-paragraph derivation. :meth:`Release.excluded_band` returns every mass the
+surfaces exclude; mask at ``mass_gev <= m_cut`` yourself. Section 5.4 of the
+release ``README.md`` is the full statement.
+
 The ``lambda_m`` axis is the finite mediator ranges in ascending order followed
 by ``inf`` as the last element: that is the **massless** (Coulomb-like) slice,
 for which ``axes/m_phi_gev`` is exactly ``0.0``. The number of finite entries is
@@ -84,13 +104,13 @@ Quickstart
 
     import luhdm_release
 
-    with luhdm_release.open_release("luhdm_datarelease_v5.h5") as rel:
+    with luhdm_release.open_release("luhdm_datarelease_v7_A_f1_atm.h5") as rel:
         rel.summary()
         sl = rel.get("extremeness", mode=1, lam="200um")   # (alpha_n, mass_gev)
         band = rel.excluded_band(mode=1, lam="200um")
         print(band.mass_range, band.alpha_lo, band.alpha_hi)
 
-From the shell, ``python luhdm_release.py luhdm_datarelease_v5.h5`` prints the
+From the shell, ``python luhdm_release.py luhdm_datarelease_v7_A_f1_atm.h5`` prints the
 same summary.
 """
 
@@ -369,7 +389,7 @@ def open_release(path):
     wherever you copied the file. Use it as a context manager, or call
     :meth:`Release.close` when you are done::
 
-        with open_release("luhdm_datarelease_v5.h5") as rel:
+        with open_release("luhdm_datarelease_v7_A_f1_atm.h5") as rel:
             ...
     """
     f = h5py.File(str(path), "r")
@@ -430,7 +450,7 @@ class Release:
     # -- metadata --------------------------------------------------------- #
     @property
     def version_tag(self):
-        """Human-readable cube version, e.g. ``'v5.0-night-m0p356mg-bcap10cm'``."""
+        """Human-readable cube version, e.g. ``'v7.0-quick-night-m0p356mg-q1TeV-nocap'``."""
         return str(self.attrs.get("version_tag")
                    or f"v{self.attrs.get('version', '?')}")
 
@@ -500,9 +520,14 @@ class Release:
     def lambda_tags(self):
         """``{tag: lambda_m}`` named mediator ranges, read from the file.
 
-        The tags are exact members of the lambda axis, so ``lam='200um'`` is a
-        pure integer slice. ``'massless'`` is added here for the ``inf``
-        sentinel, which the file stores as a value rather than a tag.
+        Each tag value is an exact float, so a tag that is on the axis resolves
+        to a pure integer slice. The table is inherited from the parent scan and
+        may name ranges this file does not carry -- in the v7 release only three
+        of its eight tags are on the axis -- so a tag is not a promise that the
+        slice is here; filter against :meth:`axis` (``'lambda_m'``) if you are
+        iterating. Asking for an absent one raises and lists the axis.
+        ``'massless'`` is added here for the ``inf`` sentinel, which the file
+        stores as a value rather than a tag.
         """
         tags = {}
         raw = self._axis_attrs.get("lambda_m", {}).get("tags_json")
@@ -851,6 +876,10 @@ class Release:
         ``extremeness >= confidence`` level set, log-interpolating each edge
         between the two bracketing grid points (see :func:`excluded_interval`).
 
+        The band covers every mass on the grid. It does **not** stop at the
+        release's flux cut ``m_cut`` (see the module docstring): mask the result
+        at ``mass_gev <= m_cut`` before quoting or plotting it.
+
         Parameters
         ----------
         mode : int
@@ -1195,7 +1224,7 @@ if __name__ == "__main__":
     except (FileNotFoundError, OSError) as _exc:
         print(f"could not open {_args[0]!r}: {_exc}\n\n"
               f"Pass the path to the release HDF5, for example "
-              f"'luhdm_datarelease_v5.h5'. See README.md for where to get "
+              f"'luhdm_datarelease_v7_A_f1_atm.h5'. See README.md for where to get "
               f"it.\n\n{_USAGE}", file=sys.stderr)
         raise SystemExit(2) from None
     with _f as _rel:

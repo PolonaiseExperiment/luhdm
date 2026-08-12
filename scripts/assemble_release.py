@@ -2,11 +2,14 @@
 """Assemble the per-lambda npz shards into the release HDF5 (LOCAL machine only).
 
 The compute node writes float64 npz shards (no h5py there); this script — run on
-a host with h5py — stacks them into ``release/luhdm_datarelease_v5.h5``, the single
-source every notebook loads from. It also computes ``/reference_curves`` locally
-at production fidelity (notebook 02's showcase point), copies the detector
-products, embeds full provenance, and writes ``release/provenance.json`` +
-``release/SHA256SUMS``.
+a host with h5py — stacks them into the cube named by ``--out``, the source every
+notebook loads from. It also computes ``/reference_curves`` locally at production
+fidelity (notebook 02's showcase point), copies the detector products, embeds
+full provenance, and writes the matching provenance JSON + ``SHA256SUMS`` beside
+it. ``--select`` splits the release by hypothesis: run it once per
+``(f_dm, atmosphere)`` plane to get the v7 two-file layout, each file with its
+own ``provenance_<stem>.json``; the default ``both`` keeps every plane in one
+cube and the historical ``provenance.json`` name.
 
     python scripts/assemble_release.py \
         --atm-dir   ~/release_shards/atm \
@@ -46,7 +49,6 @@ import hashlib
 import json
 import os
 import platform
-import socket
 import subprocess
 import sys
 import time
@@ -60,6 +62,31 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
+
+# Recorded provenance ships with the data release (Zenodo) and must carry no
+# absolute home paths or usernames; every path string is stored home-relative
+# ('~/...'), which stays copy-pasteable through shell expansion.
+HOME = str(Path.home())
+
+
+def _scrub_str(s):
+    return s.replace(HOME, "~")
+
+
+def scrub_home(x):
+    """Recursively home-relativise every string in a provenance tree.
+
+    Also blanks any nested ``hostname`` field: shards built before the writers
+    stopped recording hostnames replay them through run_config.json.
+    """
+    if isinstance(x, str):
+        return _scrub_str(x)
+    if isinstance(x, dict):
+        return {k: ("" if k == "hostname" else scrub_home(v))
+                for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [scrub_home(v) for v in x]
+    return x
 
 import h5py
 
@@ -95,8 +122,13 @@ def _iso_now():
 
 # ── git / package provenance ──────────────────────────────────────────────────
 def git_provenance():
-    """(commit, dirty) from the repo; read-only, never fatal."""
-    commit, dirty = "unknown", None
+    """(commit, dirty, dirty_files) from the repo; read-only, never fatal.
+
+    ``dirty_files`` names the repo-relative paths behind a True ``dirty`` flag,
+    so provenance shows *what* was uncommitted (e.g. display scripts held under
+    review) instead of an unexplained dirty build.
+    """
+    commit, dirty, dirty_files = "unknown", None, []
     try:
         commit = subprocess.run(
             ["git", "-C", str(REPO), "rev-parse", "HEAD"],
@@ -107,9 +139,10 @@ def git_provenance():
             capture_output=True, text=True, check=True, timeout=15,
         ).stdout.strip()
         dirty = bool(porcelain)
+        dirty_files = sorted(ln[3:] for ln in porcelain.splitlines())
     except Exception as err:  # noqa: BLE001
         print(f"WARNING: git provenance unavailable ({err})")
-    return commit, dirty
+    return commit, dirty, dirty_files
 
 
 def package_versions():
@@ -612,9 +645,13 @@ def load_efficiency_table(table=None):
 
 
 def assembly_inputs(data_dir, eff_table):
-    """Paths + sha256 of the detector inputs this assembly actually read."""
+    """Paths + sha256 of the detector inputs this assembly actually read.
+
+    Paths come back home-relativised (:func:`scrub_home`) so the file attrs and
+    provenance.json built from them are clean at birth.
+    """
     tbl = Path(eff_table) if eff_table else Path(efficiency.table_path())
-    return {
+    return scrub_home({
         "t_exposure_s": float(config.T_EXPOSURE),
         "efficiency_npz": str(tbl),
         "efficiency_npz_sha256": sha256_file(tbl),
@@ -626,7 +663,7 @@ def assembly_inputs(data_dir, eff_table):
             } for n in MODES},
         "env": {k: os.environ[k] for k in
                 ("LUHDM_T_EXPOSURE", "LUHDM_EFFICIENCY_NPZ") if k in os.environ},
-    }
+    })
 
 
 def extract_blips():
@@ -735,7 +772,97 @@ def _shared_mass_axis(atm, noatm):
         f"axis per pass.")
 
 
-def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales):
+M_CUT_B_CAP_M = 0.1          # aperture radius of the flux argument [m]
+M_CUT_N_TRANSITS = 3.0       # transits required within that aperture
+
+
+def halo_mean_speed_m_s():
+    """Flux-weighted <v> of the halo, in the pipeline's own convention.
+
+    rate.expected_transits / rate.transit_count_halo build the transit flux as
+    n_dm * <f(v) v> * area, with f the truncated standard halo model in units
+    of c and speeds converted by units.C_M_S. The same normalised first moment
+    is used here so m_cut and the stored n_transit surface describe the same
+    halo, not two different ones.
+    """
+    vs = np.linspace(1e-8, config.VESC, 200000)
+    f = halo.standard_halo_model(vs)
+    return float(np.trapezoid(f * vs, vs) / np.trapezoid(f, vs)) * units.C_M_S
+
+
+def mass_cut_flux(f_dm, b_cap=M_CUT_B_CAP_M, n_req=M_CUT_N_TRANSITS,
+                  t_total=None):
+    """Heaviest DM mass the halo still delivers through a b_cap aperture.
+
+    Flux-through-aperture: the number of DM particles passing within b_cap of
+    the sensor during the exposure is
+
+        N(m) = f_DM * (rho_0 / m) * <v> * T_obs * pi * b_cap^2,
+
+    with rho_0 = 0.3 GeV/cm^3 the local density the transit diagnostics use.
+    N falls as 1/m, so requiring N >= n_req sets a largest mass
+
+        m_cut = f_DM * rho_0 * <v> * T_obs * pi * b_cap^2 / n_req.
+
+    Above m_cut the halo simply does not supply enough close passages for the
+    exposure to constrain anything, however large the cross section is. This
+    is a statement about the flux, not about the cross section, which is why
+    it is applied as a post-facto cut in mass rather than as a cap inside the
+    impact-parameter integral: the stored mu/extremeness surfaces stay
+    uncapped and auditable, and the cut is a line a reader can move.
+
+    Returns (m_cut [GeV], derivation string).
+    """
+    t_total = float(config.T_EXPOSURE if t_total is None else t_total)
+    rho0 = 0.3 * 1e6                     # 0.3 GeV/cm^3 -> GeV/m^3
+    v_mean = halo_mean_speed_m_s()
+    m_cut = (float(f_dm) * rho0 * v_mean * t_total * np.pi * b_cap ** 2
+             / float(n_req))
+    derivation = (
+        "m_cut = f_DM * rho_0 * <v> * T_obs * pi * b_cap^2 / N_req, the "
+        "largest DM mass for which the halo delivers at least N_req particles "
+        "within b_cap of the sensor during the exposure "
+        "(N(m) = f_DM (rho_0/m) <v> T_obs pi b_cap^2 falls as 1/m). "
+        f"Inputs: f_DM = {float(f_dm):g}, rho_0 = 0.3 GeV/cm^3 = {rho0:g} "
+        f"GeV/m^3, <v> = {v_mean:.6g} m/s (flux-weighted first moment of the "
+        f"truncated standard halo model, the same convention as the "
+        f"n_transit surface), T_obs = {t_total:g} s, b_cap = {b_cap:g} m, "
+        f"N_req = {float(n_req):g}  =>  m_cut = {m_cut:.6g} GeV. "
+        "NOT baked into mu/extremeness: the stored surfaces are uncapped, and "
+        "this is the mass line beyond which they should not be read as a "
+        "limit.")
+    return m_cut, derivation
+
+
+def resolve_selection(choice, f_dm_values):
+    """(f_DM indices, plane indices) written by ``--select``.
+
+    The cube axes are f_dm = f_dm_values (baseline then the f_DM=1 surface)
+    and atmosphere = [1, 0] (atm plane then noatm). A selection subsets those
+    two axes only: the schema, the scales and every other group are unchanged,
+    so a one-hypothesis file is read exactly like the full cube -- the axes
+    just have length 1. Cross-checks still run over everything that was
+    loaded; only what is WRITTEN is subset.
+    """
+    n_f = len(f_dm_values)
+    i_f1 = n_f - 1                      # f_DM = 1.0 is the last f_dm value
+    table = {
+        "both": (list(range(n_f)), [0, 1]),
+        "f1-atm": ([i_f1], [0]),        # File A: f_DM = 1, WITH atmosphere
+        "f-base-noatm": ([0], [1]),     # File B: f_DM = baseline, NO atmosphere
+    }
+    if choice not in table:
+        sys.exit(f"FATAL: unknown --select {choice!r}; "
+                 f"expected one of {sorted(table)}")
+    f_sel, plane_sel = table[choice]
+    if choice != "both" and n_f < 2:
+        sys.exit(f"FATAL: --select {choice} needs both f_DM surfaces; these "
+                 f"shards carry only f_DM={f_dm_values}")
+    return f_sel, plane_sel
+
+
+def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales,
+                        f_sel=None, plane_sel=None):
     """``/results``: one array per quantity over (f_dm, atmosphere, ...).
 
     Every element explicitly carries its (f_DM, atmosphere) hypothesis: the
@@ -743,27 +870,37 @@ def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales):
     and the f_dm axis holds the baseline then the f_DM=1 surface. n_transit is
     materialised at full shape too — it is atmosphere-dependent and exactly
     linear in f_DM.
+
+    ``f_sel`` / ``plane_sel`` (see :func:`resolve_selection`) subset those two
+    axes; None means write everything.
     """
     d_fdm, d_atm, d_mode, d_alpha, d_mass, d_lam = scales
-    n_f = len(f_dm_values)
+    if f_sel is None:
+        f_sel = list(range(len(f_dm_values)))
+    if plane_sel is None:
+        plane_sel = [0, 1]
+    n_f = len(f_sel)
+    n_p = len(plane_sel)
     n_a = atm["alphas_n"].size
     n_m = atm["ms"].size
     g = h5.create_group("results")
 
     # plane order follows the axis values: atmosphere = [1, 0] -> [atm, noatm]
-    passes = [atm, noatm]
-    scale_f1 = f_dm_values[1] / f_dm_values[0] if n_f > 1 else None
+    passes = [[atm, noatm][i] for i in plane_sel]
+    scale_f1 = (f_dm_values[1] / f_dm_values[0]
+                if len(f_dm_values) > 1 else None)
 
     def stack(key_base, dtype, fill):
-        """(n_f, 2, 3, n_a, n_m, L) from the per-pass, per-f_DM planes."""
-        out = np.full((n_f, 2) + (3, n_a, n_m, L), fill, dtype=dtype)
+        """(n_f, n_p, 3, n_a, n_m, L) from the per-pass, per-f_DM planes."""
+        out = np.full((n_f, n_p) + (3, n_a, n_m, L), fill, dtype=dtype)
         for i_at, pd_ in enumerate(passes):
-            out[0, i_at] = pd_[key_base]
-            if n_f > 1:
-                out[1, i_at] = pd_[key_base + "_f1"]
+            for i_f, f_idx in enumerate(f_sel):
+                # f_idx 0 = the unsuffixed baseline arrays, else the _f1 ones
+                out[i_f, i_at] = pd_[key_base if f_idx == 0
+                                     else key_base + "_f1"]
         return out
 
-    cube = (n_f, 2, 3, n_a, n_m, L)
+    cube = (n_f, n_p, 3, n_a, n_m, L)
     ch = (1, 1, 1) + cube[3:]              # one (alpha, mass, lambda) plane
     ext = _ds(g, "extremeness", stack("p", np.float32, np.nan), "1",
               "optimum-interval extremeness / confidence; NaN where status==1",
@@ -780,17 +917,17 @@ def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales):
                         "lambda_m"),
                        "f_dm,atmosphere,mode,alpha_n,mass_gev,lambda_m")
 
-    # n_transit: mode-less, so (n_f, 2, n_a, n_m, L). The f_DM=1 plane is
+    # n_transit: mode-less, so (n_f, n_p, n_a, n_m, L). The f_DM=1 plane is
     # materialised as scale_f1 x the baseline (n_dm ∝ f_DM, geometry unchanged).
-    nt = np.full((n_f, 2, n_a, n_m, L), np.nan, dtype=np.float32)
+    nt = np.full((n_f, n_p, n_a, n_m, L), np.nan, dtype=np.float32)
     for i_at, pd_ in enumerate(passes):
         base = np.maximum(pd_["n_transit"], 0.0).astype(np.float32)
-        nt[0, i_at] = base
-        if n_f > 1:
+        for i_f, f_idx in enumerate(f_sel):
             # scale the STORED float32 baseline, so the materialised plane is
             # exactly scale_f1 x what a reader sees at f_dm[0] (and identical to
             # what the group layout produces by scaling on read).
-            nt[1, i_at] = base * np.float32(scale_f1)
+            nt[i_f, i_at] = (base if f_idx == 0
+                             else base * np.float32(scale_f1))
     ntd = _ds(g, "n_transit", nt, "counts",
               "expected within-reach transits; clipped >=0 (KDE tail can "
               "oscillate slightly negative). Exactly linear in f_DM.",
@@ -802,7 +939,8 @@ def _write_results_axes(h5, atm, noatm, f_dm_values, L, scales):
 
 
 def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
-             version_tag, quick_reference, inputs, layout="axes"):
+             version_tag, quick_reference, inputs, layout="axes",
+             select="both", m_cut=None):
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.with_suffix(out_path.suffix + ".tmp")
@@ -816,10 +954,11 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
     L = lambda_m.size
     n_finite = lambda_finite.size
 
-    commit, dirty = git_provenance()
+    commit, dirty, dirty_files = git_provenance()
     pkgs = package_versions()
     fid = atm["fidelity"]
     f_dm_values = atm["f_dm_values"] or [float(config.F_X)]
+    f_sel, plane_sel = resolve_selection(select, f_dm_values)
     if axis_layout:
         shared_ms = _shared_mass_axis(atm, noatm)
         if not atm["has_f1"] or len(f_dm_values) < 2:
@@ -840,10 +979,12 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
             d_mass = _ds(ax, "mass_gev", shared_ms, "GeV",
                          "dark-matter mass (shared by both atmosphere planes)")
             d_mass_no = d_mass
-            d_fdm = _ds(ax, "f_dm", np.asarray(f_dm_values, dtype=np.float64),
+            d_fdm = _ds(ax, "f_dm",
+                        np.asarray(f_dm_values, dtype=np.float64)[f_sel],
                         "1", "dark-matter fraction hypothesis of this species; "
                         "a pure flux normalisation (n_dm ∝ f_DM)")
-            d_atmos = _ds(ax, "atmosphere", np.array([1, 0], dtype=np.int8),
+            d_atmos = _ds(ax, "atmosphere",
+                          np.array([1, 0], dtype=np.int8)[plane_sel],
                           "bool", "1 = attenuation through the atmosphere/earth "
                           "applied (atm pass); 0 = bare halo flux (noatm pass)")
         else:
@@ -872,7 +1013,9 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # ── /results (axis-based) or /atm + /noatm (v3 group layout) ──
         if axis_layout:
             _write_results_axes(h5, atm, noatm, f_dm_values, L,
-                                (d_fdm, d_atmos, d_mode, d_alpha, d_mass, d_lam))
+                                (d_fdm, d_atmos, d_mode, d_alpha, d_mass,
+                                 d_lam),
+                                f_sel=f_sel, plane_sel=plane_sel)
         for grp_name, pd_, mass_scale in ([] if axis_layout else
                                           (("atm", atm, d_mass),
                                            ("noatm", noatm, d_mass_no))):
@@ -992,6 +1135,7 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["created"] = _iso_now()
         a["git_commit"] = commit
         a["git_dirty"] = bool(dirty) if dirty is not None else False
+        a["git_dirty_files_json"] = json.dumps(dirty_files)
         a["seed"] = SEED
         a["q_thresh_gev"] = float(config.Q_THRESH)
         a["r_eff_m"] = float(config.R_EFF)
@@ -1016,6 +1160,21 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # reach. NaN = uncapped (the b-integral runs to the full b_max(q)).
         cap = atm["b_constrained_max"]
         a["b_constrained_max_m"] = float("nan") if cap is None else float(cap)
+        # Post-facto mass cut. With the cross section uncapped, the right edge
+        # of the excluded region is set by the halo flux through a b_cap
+        # aperture rather than by an in-integral cap; see mass_cut_flux. One
+        # value per f_DM actually written to this file.
+        if m_cut is not None:
+            for f_val in np.asarray(f_dm_values, dtype=np.float64)[f_sel]:
+                mc, deriv = mass_cut_flux(f_val, b_cap=m_cut["b_cap"],
+                                          n_req=m_cut["n_req"],
+                                          t_total=atm["t_total"])
+                key = f"m_cut_{m_cut['label']}_f{f_val:g}_gev"
+                a[key] = float(mc)
+                a[key + "_derivation"] = deriv
+            a["m_cut_b_cap_m"] = float(m_cut["b_cap"])
+            a["m_cut_n_transits_required"] = float(m_cut["n_req"])
+            a["m_cut_applied_to_stored_surfaces"] = False
         a["fid_n_ode"] = int(fid.get("n_ode", -1))
         a["fid_n_shm"] = int(fid.get("n_shm", -1))
         a["fid_n_q"] = int(fid.get("n_q", -1))
@@ -1043,7 +1202,7 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["packages_json"] = json.dumps(pkgs)
 
     os.replace(tmp, out_path)
-    return out_path, commit, dirty, pkgs
+    return out_path, commit, dirty, dirty_files, pkgs
 
 
 # ── provenance.json + SHA256SUMS ─────────────────────────────────────────────
@@ -1059,16 +1218,18 @@ def _read_run_config(shard_dir):
 
 
 def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
-                     halo_d, commit, dirty, pkgs, out_path, version_tag,
-                     inputs):
+                     halo_d, commit, dirty, dirty_files, pkgs, out_path,
+                     version_tag, inputs, name=None):
+    # No hostname: provenance ships with the release and carries no host
+    # identifiers (platform/package versions cover reproducibility).
     prov = {
         "assembly": {
             "created": _iso_now(),
-            "hostname": socket.gethostname(),
             "platform": platform.platform(),
             "argv": " ".join(sys.argv),
             "git_commit": commit,
             "git_dirty": bool(dirty) if dirty is not None else None,
+            "git_dirty_files": dirty_files,
             "packages": pkgs,
             "version_tag": version_tag,
             "output": str(out_path),
@@ -1104,21 +1265,37 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             "halo": _read_run_config(halo_dir),
         },
     }
-    f = Path(release_dir) / "provenance.json"
+    # Shard-level provenance (inputs_json, run_config.json) was written on the
+    # compute node with that node's paths; the tree scrub cleans those too.
+    prov = scrub_home(prov)
+    f = Path(release_dir) / (name or "provenance.json")
     f.write_text(json.dumps(prov, indent=2, default=str))
     print(f"wrote {f}")
     return f
 
 
 def write_sha256(release_dir, out_path):
+    """Record this file's sha256, KEEPING any other files already listed.
+
+    A release can be more than one HDF5 (the v7 split writes one file per
+    hypothesis), so this merges by filename instead of truncating: the entry
+    for this output is replaced, every other entry is preserved.
+    """
     h = hashlib.sha256()
     with open(out_path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
-    line = f"{h.hexdigest()}  {Path(out_path).name}\n"
+    name = Path(out_path).name
     f = Path(release_dir) / "SHA256SUMS"
-    f.write_text(line)
-    print(f"wrote {f}: {line.strip()}")
+    entries = {}
+    if f.exists():
+        for ln in f.read_text().splitlines():
+            parts = ln.split(None, 1)
+            if len(parts) == 2:
+                entries[parts[1].strip()] = parts[0].strip()
+    entries[name] = h.hexdigest()
+    f.write_text("".join(f"{entries[k]}  {k}\n" for k in sorted(entries)))
+    print(f"wrote {f}: {h.hexdigest()}  {name}")
     return f
 
 
@@ -1150,6 +1327,24 @@ def main():
                     help="reference curves at quick fidelity (n_grid=80, "
                          "n_shm=1e5) for smoke runs; default is production "
                          "(n_grid=400, n_shm=3e5)")
+    ap.add_argument("--select", default="both",
+                    choices=("both", "f1-atm", "f-base-noatm"),
+                    help="which (f_DM, atmosphere) hypothesis to WRITE: "
+                         "'both' (default, the full cube), 'f1-atm' "
+                         "(f_DM=1 with atmosphere), or 'f-base-noatm' "
+                         "(f_DM=f_x with no atmosphere). Subsets only the "
+                         "f_dm and atmosphere axes; cross-checks still run "
+                         "over every loaded shard.")
+    ap.add_argument("--m-cut-b-cap", type=float, default=M_CUT_B_CAP_M,
+                    help="aperture radius [m] of the post-facto flux mass cut "
+                         "(default %(default)g); stored as an attribute, "
+                         "never applied to the stored surfaces")
+    ap.add_argument("--m-cut-n-transits", type=float,
+                    default=M_CUT_N_TRANSITS,
+                    help="transits required within the aperture for the mass "
+                         "cut (default %(default)g)")
+    ap.add_argument("--no-m-cut", action="store_true",
+                    help="omit the post-facto mass-cut attributes")
     args = ap.parse_args()
 
     print("=" * 72)
@@ -1205,16 +1400,32 @@ def main():
     blips = extract_blips()
     detector = {"events": events, "efficiency": efficiency_table, "blips": blips}
 
-    print(f"\nwriting HDF5 (layout={args.layout}) ...")
-    out_path, commit, dirty, pkgs = write_h5(
+    m_cut = None if args.no_m_cut else dict(
+        b_cap=args.m_cut_b_cap, n_req=args.m_cut_n_transits,
+        label=f"{args.m_cut_b_cap * 100:g}cm")
+    if m_cut is not None:
+        for f_val in (atm["f_dm_values"] or [float(config.F_X)]):
+            mc, _ = mass_cut_flux(f_val, b_cap=m_cut["b_cap"],
+                                  n_req=m_cut["n_req"], t_total=atm["t_total"])
+            print(f"  post-facto mass cut  f_DM={f_val:<5g} "
+                  f"b_cap={m_cut['b_cap']:g} m  N>={m_cut['n_req']:g}  "
+                  f"=>  m_cut = {mc:.4e} GeV")
+
+    print(f"\nwriting HDF5 (layout={args.layout}, select={args.select}) ...")
+    out_path, commit, dirty, dirty_files, pkgs = write_h5(
         args.out, atm, noatm, halo_d, lambda_finite, ref, detector,
-        args.version_tag, args.quick_reference, inputs, args.layout)
+        args.version_tag, args.quick_reference, inputs, args.layout,
+        select=args.select, m_cut=m_cut)
     print(f"wrote {out_path}  ({out_path.stat().st_size / 1e6:.2f} MB)")
 
     release_dir = out_path.parent
+    # One provenance file per HDF5 when the release is split by hypothesis;
+    # the unsplit default keeps the historical provenance.json name.
+    prov_name = ("provenance.json" if args.select == "both"
+                 else f"provenance_{out_path.stem}.json")
     write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
-                     atm, noatm, halo_d, commit, dirty, pkgs, out_path,
-                     args.version_tag, inputs)
+                     atm, noatm, halo_d, commit, dirty, dirty_files, pkgs,
+                     out_path, args.version_tag, inputs, name=prov_name)
     write_sha256(release_dir, out_path)
 
     print("\n" + "=" * 72)

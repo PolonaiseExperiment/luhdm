@@ -79,7 +79,11 @@ sys.path.insert(0, {str(READER.parent)!r})
 import luhdm_release
 with luhdm_release.open_release({str(cube)!r}) as rel:
     rel.summary()
-    rel.excluded_band(mode=rel.modes[0], lam="massless", nan_policy="ignore")
+    # the hypothesis comes from the cube: a v7 file carries exactly one, and it
+    # need not be the reader's f_dm_default / atmosphere=True fallback
+    rel.excluded_band(mode=rel.modes[0], lam="massless", nan_policy="ignore",
+                      f_dm=rel.f_dm_values[0],
+                      atmosphere=rel.atmosphere_values[0])
 assert not [m for m in sys.modules if m.split(".")[0] in ("luhdm", "optimum_interval")]
 print("OK")
 """)
@@ -90,10 +94,16 @@ print("OK")
 
 
 def _points(rel_s):
-    """A varied sample: every mode x f_dm x atmosphere, several lambdas."""
+    """A varied sample: every mode x f_dm x atmosphere, several lambdas.
+
+    ``lambda_tags`` is inherited from the parent scan and can name ranges this
+    cube does not carry, so tags are filtered against the axis before use.
+    """
     lam_axis = rel_s.axis("lambda_m")
     n_fin = rel_s.n_finite_lambda
-    lams = ["massless", *sorted(t for t in rel_s.lambda_tags if t != "massless")]
+    on_axis = {t for t in rel_s.lambda_tags
+               if t == "massless" or np.isin(rel_s.lambda_tags[t], lam_axis)}
+    lams = ["massless", *sorted(t for t in on_axis if t != "massless")]
     lams += [float(lam_axis[i]) for i in (0, n_fin // 3, n_fin - 1)]
     return list(itertools.product(rel_s.modes, rel_s.f_dm_values,
                                   rel_s.atmosphere_values, lams))
@@ -107,7 +117,8 @@ def test_planes_match_package_loader(std, cube):
     rel_s = std.open_release(cube)
     try:
         points = _points(rel_s)
-        assert len(points) >= 30
+        # one hypothesis per file in the v7 layout, several in older cubes
+        assert len(points) >= 3 * len(rel_s.modes)
         for mode, f_dm, atm, lam in points:
             group = "atm" if atm else "noatm"
             for q in ("extremeness", "mu", "status"):

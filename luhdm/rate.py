@@ -19,11 +19,47 @@ Q_THRESH = config.Q_THRESH
 R_EFF = config.R_EFF
 
 
-def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False,
+# ── tabulation density of the dimensionless dsigma/dq_tilde interpolant ──
+# The interpolant is tabulated on q_tilde in [1e-25, K1(xi)] and read by LINEAR
+# interpolation, so its accuracy depends on how many points span that range --
+# and the range grows without bound as xi -> 0, because K1(xi) ~ 1/xi.
+#
+# Every mediator range the analysis actually uses sits at comfortable xi: the
+# shipped finite axis tops out at lambda = 2 m, i.e. xi = 1.3e-4, and the
+# figure ranges (20 um .. 2 mm) are xi = 13 .. 0.13. There N_POINTS_DEFAULT is
+# sub-percent and is the density every shipped slice was built at.
+#
+# Very light mediators -- lambda of tens of metres and up, used to check the
+# finite-lambda path against the analytic massless limit -- are a different
+# regime: at xi = 1.3e-6 the tabulated span reaches 1e-25 .. 7.7e5 and the
+# default density leaves a ~2% bias against analytic massless, which would read
+# as a failure of the code path being validated. Measured max|dev| vs analytic
+# massless at that xi: 2.2e-2 at 600 points, 1.3e-3 at 3000.
+#
+# The density is keyed on xi HERE, in the one place every consumer goes
+# through, rather than passed in by each caller: a cube built with one density
+# and later spot-recomputed with another is not reproducible, and that
+# disagreement is invisible in the output. XI_DENSE_TABULATION is set well
+# below the smallest xi on the shipped axis (1.3e-4 at lambda = 2 m), so no
+# shipped slice changes density.
+N_POINTS_DEFAULT = 600
+N_POINTS_DENSE = 3000
+XI_DENSE_TABULATION = 1e-5          # lambda greater than ~26 m at R_eff = 0.26 mm
+
+
+def tabulation_n_points(xi):
+    """Interpolant density for this xi = R_eff/lamb (see the notes above)."""
+    return N_POINTS_DENSE if xi < XI_DENSE_TABULATION else N_POINTS_DEFAULT
+
+
+def make_xsec(lamb, R_eff=R_EFF, N_points=None, force_ln=False,
               b_constrained_max=None):
     """Build the cross-section handle for one mediator range.
 
     lamb : mediator range in meters, or None for massless (analytic).
+    N_points : interpolant density; None (default) resolves it from xi via
+    :func:`tabulation_n_points`, which is what keeps a build and a later
+    single-cell recompute in agreement. Pass a number only to override.
     force_ln : use the (fast, trapz-based) log-space tabulation even at small
     xi, e.g. when tabulating many ranges; validated against the direct path
     in tests/test_cross_section_ln.py.
@@ -39,6 +75,8 @@ def make_xsec(lamb, R_eff=R_EFF, N_points=600, force_ln=False,
         return dict(lamb=None, use_ln=False, interp=None, R_eff=R_eff,
                     b_constrained_max=b_constrained_max)
     xi = R_eff / lamb
+    if N_points is None:
+        N_points = tabulation_n_points(xi)
     use_ln = force_ln or xi > 30
     if use_ln:
         interp = cross_section.make_ln_dsigma_dq_interpolant(
