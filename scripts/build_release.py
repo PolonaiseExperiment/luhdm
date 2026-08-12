@@ -82,7 +82,6 @@ import argparse
 import hashlib
 import json
 import os
-import socket
 import sys
 import time
 from datetime import datetime, timezone
@@ -371,6 +370,15 @@ def shard_path(shard_dir, pass_name, il, n_finite):
     return shard_dir / name
 
 
+def _scrub_home(s):
+    """Home-relativise a provenance string: '/home/<user>/x' -> '~/x'.
+
+    Shard provenance flows into the shipped release files (Zenodo), so no
+    absolute home paths or usernames are recorded.
+    """
+    return s.replace(str(Path.home()), "~")
+
+
 def sha256_file(path):
     """sha256 of a file, or None if it cannot be read (never fatal)."""
     try:
@@ -398,7 +406,7 @@ def input_provenance(data_dir):
         "t_exposure_s": float(config.T_EXPOSURE),
         "f_dm_values": list(F_DM_VALUES),
         "f_x_base": F_DM_BASE,
-        "efficiency_npz": str(eff_table),
+        "efficiency_npz": _scrub_home(str(eff_table)),
         "efficiency_npz_sha256": sha256_file(eff_table),
         "events": {},
         "env": {k: os.environ[k] for k in
@@ -408,7 +416,7 @@ def input_provenance(data_dir):
         for n in (1, 2, 3):
             f = Path(data_dir) / f"data_mode{n}.txt"
             prov["events"][f"data_mode{n}.txt"] = {
-                "path": str(f), "sha256": sha256_file(f)}
+                "path": _scrub_home(str(f)), "sha256": sha256_file(f)}
     return prov
 
 
@@ -605,8 +613,10 @@ def main():
 
     shard_dir = Path(args.shard_dir)
     shard_dir.mkdir(parents=True, exist_ok=True)
-    hostname = socket.gethostname()
-    argv_str = " ".join(sys.argv)
+    # Hostname deliberately unrecorded (shipped provenance carries no host
+    # identifiers); the field stays for schema compatibility.
+    hostname = ""
+    argv_str = _scrub_home(" ".join(sys.argv))
     worker_fn = _process_chunk_halo if pass_name == "halo" else _process_chunk
 
     print(f"pass={pass_name}  shard-dir={shard_dir}  order={args.order}")
@@ -721,7 +731,7 @@ def main():
         print(f"[il={label}] wrote {path.name} in {wall_s:.0f}s", flush=True)
 
     append_run_config(shard_dir, dict(
-        argv=sys.argv, pass_name=pass_name,
+        argv=[_scrub_home(a) for a in sys.argv], pass_name=pass_name,
         b_constrained_max=args.b_constrained_max,
         axes=dict(n_m=n_m, n_a=n_a, n_l=n_finite + 1, m_tier=(
             None if pass_name == "halo" else (

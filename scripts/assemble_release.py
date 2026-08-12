@@ -49,7 +49,6 @@ import hashlib
 import json
 import os
 import platform
-import socket
 import subprocess
 import sys
 import time
@@ -63,6 +62,31 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
+
+# Recorded provenance ships with the data release (Zenodo) and must carry no
+# absolute home paths or usernames; every path string is stored home-relative
+# ('~/...'), which stays copy-pasteable through shell expansion.
+HOME = str(Path.home())
+
+
+def _scrub_str(s):
+    return s.replace(HOME, "~")
+
+
+def scrub_home(x):
+    """Recursively home-relativise every string in a provenance tree.
+
+    Also blanks any nested ``hostname`` field: shards built before the writers
+    stopped recording hostnames replay them through run_config.json.
+    """
+    if isinstance(x, str):
+        return _scrub_str(x)
+    if isinstance(x, dict):
+        return {k: ("" if k == "hostname" else scrub_home(v))
+                for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [scrub_home(v) for v in x]
+    return x
 
 import h5py
 
@@ -98,8 +122,13 @@ def _iso_now():
 
 # ── git / package provenance ──────────────────────────────────────────────────
 def git_provenance():
-    """(commit, dirty) from the repo; read-only, never fatal."""
-    commit, dirty = "unknown", None
+    """(commit, dirty, dirty_files) from the repo; read-only, never fatal.
+
+    ``dirty_files`` names the repo-relative paths behind a True ``dirty`` flag,
+    so provenance shows *what* was uncommitted (e.g. display scripts held under
+    review) instead of an unexplained dirty build.
+    """
+    commit, dirty, dirty_files = "unknown", None, []
     try:
         commit = subprocess.run(
             ["git", "-C", str(REPO), "rev-parse", "HEAD"],
@@ -110,9 +139,10 @@ def git_provenance():
             capture_output=True, text=True, check=True, timeout=15,
         ).stdout.strip()
         dirty = bool(porcelain)
+        dirty_files = sorted(ln[3:] for ln in porcelain.splitlines())
     except Exception as err:  # noqa: BLE001
         print(f"WARNING: git provenance unavailable ({err})")
-    return commit, dirty
+    return commit, dirty, dirty_files
 
 
 def package_versions():
@@ -615,9 +645,13 @@ def load_efficiency_table(table=None):
 
 
 def assembly_inputs(data_dir, eff_table):
-    """Paths + sha256 of the detector inputs this assembly actually read."""
+    """Paths + sha256 of the detector inputs this assembly actually read.
+
+    Paths come back home-relativised (:func:`scrub_home`) so the file attrs and
+    provenance.json built from them are clean at birth.
+    """
     tbl = Path(eff_table) if eff_table else Path(efficiency.table_path())
-    return {
+    return scrub_home({
         "t_exposure_s": float(config.T_EXPOSURE),
         "efficiency_npz": str(tbl),
         "efficiency_npz_sha256": sha256_file(tbl),
@@ -629,7 +663,7 @@ def assembly_inputs(data_dir, eff_table):
             } for n in MODES},
         "env": {k: os.environ[k] for k in
                 ("LUHDM_T_EXPOSURE", "LUHDM_EFFICIENCY_NPZ") if k in os.environ},
-    }
+    })
 
 
 def extract_blips():
@@ -920,7 +954,7 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
     L = lambda_m.size
     n_finite = lambda_finite.size
 
-    commit, dirty = git_provenance()
+    commit, dirty, dirty_files = git_provenance()
     pkgs = package_versions()
     fid = atm["fidelity"]
     f_dm_values = atm["f_dm_values"] or [float(config.F_X)]
@@ -1101,6 +1135,7 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["created"] = _iso_now()
         a["git_commit"] = commit
         a["git_dirty"] = bool(dirty) if dirty is not None else False
+        a["git_dirty_files_json"] = json.dumps(dirty_files)
         a["seed"] = SEED
         a["q_thresh_gev"] = float(config.Q_THRESH)
         a["r_eff_m"] = float(config.R_EFF)
@@ -1167,7 +1202,7 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["packages_json"] = json.dumps(pkgs)
 
     os.replace(tmp, out_path)
-    return out_path, commit, dirty, pkgs
+    return out_path, commit, dirty, dirty_files, pkgs
 
 
 # ── provenance.json + SHA256SUMS ─────────────────────────────────────────────
@@ -1183,16 +1218,18 @@ def _read_run_config(shard_dir):
 
 
 def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
-                     halo_d, commit, dirty, pkgs, out_path, version_tag,
-                     inputs, name=None):
+                     halo_d, commit, dirty, dirty_files, pkgs, out_path,
+                     version_tag, inputs, name=None):
+    # No hostname: provenance ships with the release and carries no host
+    # identifiers (platform/package versions cover reproducibility).
     prov = {
         "assembly": {
             "created": _iso_now(),
-            "hostname": socket.gethostname(),
             "platform": platform.platform(),
             "argv": " ".join(sys.argv),
             "git_commit": commit,
             "git_dirty": bool(dirty) if dirty is not None else None,
+            "git_dirty_files": dirty_files,
             "packages": pkgs,
             "version_tag": version_tag,
             "output": str(out_path),
@@ -1228,6 +1265,9 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             "halo": _read_run_config(halo_dir),
         },
     }
+    # Shard-level provenance (inputs_json, run_config.json) was written on the
+    # compute node with that node's paths; the tree scrub cleans those too.
+    prov = scrub_home(prov)
     f = Path(release_dir) / (name or "provenance.json")
     f.write_text(json.dumps(prov, indent=2, default=str))
     print(f"wrote {f}")
@@ -1372,7 +1412,7 @@ def main():
                   f"=>  m_cut = {mc:.4e} GeV")
 
     print(f"\nwriting HDF5 (layout={args.layout}, select={args.select}) ...")
-    out_path, commit, dirty, pkgs = write_h5(
+    out_path, commit, dirty, dirty_files, pkgs = write_h5(
         args.out, atm, noatm, halo_d, lambda_finite, ref, detector,
         args.version_tag, args.quick_reference, inputs, args.layout,
         select=args.select, m_cut=m_cut)
@@ -1384,8 +1424,8 @@ def main():
     prov_name = ("provenance.json" if args.select == "both"
                  else f"provenance_{out_path.stem}.json")
     write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
-                     atm, noatm, halo_d, commit, dirty, pkgs, out_path,
-                     args.version_tag, inputs, name=prov_name)
+                     atm, noatm, halo_d, commit, dirty, dirty_files, pkgs,
+                     out_path, args.version_tag, inputs, name=prov_name)
     write_sha256(release_dir, out_path)
 
     print("\n" + "=" * 72)
