@@ -24,6 +24,8 @@ notebooks/computation_cache_noatm/
 release/*.h5
 !release/luhdm_datarelease_v7_A_f1_atm.h5
 !release/luhdm_datarelease_v7_B_f0p1_noatm.h5
+!release/luhdm_datarelease_v8_A_f1_atm.h5
+!release/luhdm_datarelease_v8_B_f0p1_noatm.h5
 # superseded by provenance_v7_A_f1_atm.json / provenance_v7_B_f0p1_noatm.json;
 # it is the v5 parent's build record and stays local alongside that cube.
 release/provenance.json
