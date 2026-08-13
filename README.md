@@ -41,7 +41,7 @@ that cut for you.
 
 **Notebooks:** [`notebooks/`](notebooks/README.md) has the index, including which
 paper figure each notebook reproduces.
-[`notebooks/01_limit_contour.ipynb`](notebooks/01_limit_contour.ipynb) is the one
+[`notebooks/01_the_limit.ipynb`](notebooks/01_the_limit.ipynb) is the one
 to start with: excluded (m_DM, α_n) contours read straight off the cube. Figures
 are written to `notebooks/{png,svg,pdf}/NN_description.*`. The physics that gets
 tweaked lives in `luhdm/rate.py` and `luhdm/config.py`, shared by the notebooks

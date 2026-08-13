@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Parallel (lambda, alpha_n) extremeness scan at a fixed DM mass.
 
-The companion to scan_grid.py for the mediator-range figure: fix m_DM at the
+The companion to scan_grid.py for the mediator-range figures of notebook 01
+(section 5, via the release's lambda-scan sidecar): fix m_DM at the
 most sensitive mass and scan the mediator range against the coupling. Same
 physics through luhdm.rate (log-space tabulation for every range, so all
 ranges pay the same, small, tabulation cost); writes an npz cache that the

@@ -153,7 +153,7 @@ MODE = 1                               # measured efficiency mode
 B_CAP = 0.1                            # b_constrained_max [m] = 10 cm (production)
 R_EFF = config.R_EFF                   # sensor radius [m] (260 um)
 
-MU_TARGET = 3.0                        # <N> = 3 zero-event benchmark (notebooks 01/04)
+MU_TARGET = 3.0                        # <N> = 3 zero-event benchmark (notebook 01)
 
 MASSES = np.array([1e10, 1e14, 1e18])  # degeneracy-line masses [GeV]
 K_REF = 2                              # the degenerate reference anchor (heaviest)

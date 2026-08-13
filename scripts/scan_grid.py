@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Parallel (m_DM, alpha_n) extremeness scan for the limit contours.
 
-Runs the same physics as notebooks/limit_contour.ipynb, through the shared
+Runs the same physics as notebooks/01_the_limit.ipynb, through the shared
 luhdm.rate module (so script and notebook cannot drift), parallelized over
 grid points (each is independent: attenuation ODE -> dR/dq ->
 optimum-interval extremeness). Designed for a many-core node; writes an npz

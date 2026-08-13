@@ -1,22 +1,39 @@
 # Notebooks
 
-Every figure and number below is read from a data release cube, through
-`luhdm.release`. The notebooks do not recompute any physics, so a notebook run
-and a cluster run cannot drift apart. One is outside that rule: notebook 00
-reads the raw instrument file.
+Six notebooks, one narrative arc: **what the instrument delivered → the limit →
+how the limit is made → why it stops where it stops → the atmosphere-off
+benchmark → how to use the released files yourself.** Read them in that order
+and nothing is referenced before it is explained.
+
+Every figure and number is read from a data release cube, through
+`luhdm.release`, so a notebook run and a cluster run cannot drift apart. The
+only recomputation anywhere is the handful of one-minute inline calculations
+that *illustrate* a convention — notebook 02's two projection kernels, notebook
+03's replication of the cube's own `mu` cells — and each of those is checked
+against the released numbers in the same cell.
+
+| # | notebook | in one line |
+|---|---|---|
+| 00 | [`00_data_and_selection`](00_data_and_selection.ipynb) | the measured efficiency, the exposure, every blip, the night candidate lists — and why the selection is the night one |
+| 01 | [`01_the_limit`](01_the_limit.ipynb) | the result: excluded (mass, coupling) regions, the refined boundary, all three modes, and the mediator-range planes |
+| 02 | [`02_how_the_limit_is_made`](02_how_the_limit_is_made.ipynb) | the pipeline: halo → atmosphere → cross section → **projection kernel** → rate → optimum interval |
+| 03 | [`03_the_edges`](03_the_edges.ipynb) | why the region stops where it does: kinematic wall on the left, flux cut on the right, transit/reach maps in between |
+| 04 | [`04_composite_benchmark`](04_composite_benchmark.ipynb) | file B: three modes combined, atmosphere off, f_DM = 0.1 — the surfaces the composite benchmark is recast from |
+| 05 | [`05_using_the_data_release`](05_using_the_data_release.ipynb) | a guided tour of the released files, from raw `h5py` to the loader, ending in the worked example the release ships a figure of |
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
-[`release/`](../release). Notebooks 01, 02, 03 and 04 open
+[`release/`](../release). Notebooks 00, 01, 02 and 03 open
 `luhdm_datarelease_v9_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
-notebook 05 opens `luhdm_datarelease_v9_B_f0p1_noatm.h5` (f_DM = 0.1,
-attenuation off), which is its whole subject; notebook 06 opens both, since it
-is the guided tour. One more released file sits beside them,
-`luhdm_lambda_scan_v9.npz`: a mediator-range sidecar to file A, holding each
+notebook 04 opens `luhdm_datarelease_v9_B_f0p1_noatm.h5` (f_DM = 0.1,
+attenuation off), which is its whole subject; notebooks 02, 03, 04 and 05 open
+both — 02 and 03 because their replication checks need the bare-halo pass, 04
+for its side-by-side figure, 05 because it is the guided tour. Two more released files sit beside the cubes:
+`luhdm_contours_v9_A_f1_atm.json`, the root-found 95% boundary notebook 01
+publishes, and `luhdm_lambda_scan_v9.npz`, a mediator-range sidecar holding each
 mode's (coupling, range) planes on a 54-point range axis from 0.1 µm to 2 m at
-that mode's best dark matter mass. Notebook 04 opens it for its two
-mediator-range figures — the cube's four finite ranges are too few to draw a
-band — and checks its provenance record against the cube before drawing. All
-three files are checksummed together in `release/SHA256SUMS`.
+that mode's best dark matter mass. Notebook 01 opens both and checks their
+provenance records against the cube before drawing. All four files are
+checksummed together in `release/SHA256SUMS`.
 
 **Two conventions of the release** show up in every notebook that draws a
 mass axis. The analysis window starts at `config.Q_THRESH` = 1 TeV, which puts a
@@ -26,53 +43,125 @@ contour on the right: the region is closed instead by the halo flux cut `m_cut`
 from the files' attributes (6.11 × 10¹⁴ GeV at f_DM = 1, 6.11 × 10¹³ at
 f_DM = 0.1), which assumes N_req = 3 expected transits within 10 cm during the
 exposure. That assumption is stated wherever the cut is drawn, and the cut is
-drawn as a dashed brown line rather than applied to the surfaces.
+drawn as a dashed brown line rather than applied to the surfaces. Notebook 03
+takes both edges apart.
+
+**A third convention, and the one a referee will ask about.** The v9 cubes were
+built with the **isotropic-folded** projection kernel (the A18 convention:
+coefficient 8π/3, shell fraction x³), while `luhdm.cross_section.KERNEL_DEFAULT`
+is still the historical `planar-signed` one (2π, arcsine). Every file records
+its own choice in the `projection_kernel` root attribute, and
+`Release.make_xsec` threads it into a recomputation handle. Recomputing a
+released cell through the module default instead is a silent physics error worth
+13% in μ at the exclusion boundary. Notebook 02 has the argument, the two
+kernels side by side, and the demonstration.
 
 ## What each notebook is for
 
-| notebook | what it reproduces in the paper | figures written |
-|---|---|---|
-| [`00_efficiency_and_blips`](00_efficiency_and_blips.ipynb) | the measured detection efficiency and candidate lists behind Letter Fig. 2 | `00_efficiency_curves`, `00_blip_momentum_spectrum` |
-| [`01_limit_contour`](01_limit_contour.ipynb) | the surfaces behind the left panel of the Letter results figure; per-mode exclusion views beyond what the paper prints | `01_excluded_massless`, `01_sensitivity_vs_range`\*, `01_excluded_region_200um`, `01_all_mediator_ranges`, `01_refined_vs_grid` |
-| [`02_methodology`](02_methodology.ipynb) | SM, The Transferred Momentum: the halo, attenuation, cross-section and statistics chain (the SM's single-column spectra panel itself is drawn by `scripts/paper_fig_sm_spectra.py`) | `02_spectra`, `02_arrival_speed_distributions` |
-| [`03_understanding`](03_understanding.ipynb) | nothing directly; background on why the excluded region has the shape it does | `03_transit_reach_maps` |
-| [`04_mode_comparison`](04_mode_comparison.ipynb) | nothing directly; the per-mode cross-check behind the single-mode SM figures | `04_exclusion_modes123`, `04_exclusion_modes123_ranges`, `04_mediator_vs_coupling`, `04_mediator_vs_coupling_zoom` |
-| [`05_composite`](05_composite.ipynb) | the atmosphere-off companion scan, a release extra beyond what the paper prints | `05_composite_noatm` |
-| [`06_datarelease`](06_datarelease.ipynb) | SM, Analysis Code and Data Release: a guided tour of the two released cubes | none |
-| [`10_left_edge_anatomy`](10_left_edge_anatomy.ipynb) | nothing directly; anatomy of the exclusion region's left edge — the kinematic wall at `q_min`/`v_esc`, the halo-tail onset just above it, and a retrospective on why the old 0.1 TeV window had a soft edge instead | `10_kinematic_wall`, `10_contour_left_edge`, `10_halo_tail_onset`, `10_soft_vs_hard_edge` |
-| [`11_right_edge_flux_cut`](11_right_edge_flux_cut.ipynb) | nothing directly; the right edge — the transit-count curve N(m), the flux mass cut `m_cut` (N_req = 3 assumption, with N_req = 6.8 drawn for comparison), and the shell-of-validity argument for the 10 cm aperture | `11_transit_curve`, `11_contour_vs_cut`, `11_capped_vs_flux_cut`, `11_shell_of_validity` |
+### 00 — the data and the selection
 
-Of those, only the spectra panel appears in the paper (as the Supplemental
-Material's `02_spectra`, redrawn at single-column size by
-`scripts/paper_fig_sm_spectra.py`); the per-mode and atmosphere-off views are
-release extras. Figures are written to `png/`, `svg/` and `pdf/`. Each
-figure *derived from the cube* is stamped with that cube's version tag;
-notebook 00 writes unstamped figures, since it does not read a cube.
+The measured inputs, before any physics model touches them: the per-mode
+detection efficiency ε(q) marginalised over the impulse arrival phase, the three
+efficiency products against each other (night / full run / fixed w = 1), the
+exposure and duty cycle, every reconstructed blip in the run, the night-selected
+candidate lists, and the argument for the night selection. It reproduces the
+measured products behind Letter Fig. 2; the Letter figure itself is drawn by
+`scripts/paper_fig_data_spectrum.py`.
 
-\* One figure still carries the asterisk: notebook 01's
-`01_sensitivity_vs_range`, which reads its continuous mediator-range scan out of
-the internal full-lambda cube (54 finite ranges, 0.1 µm to 2 m). The released
-cubes carry the 2 mm, 200 µm and 20 µm slices, a 200 m convergence check and the
-massless limit, far too few to draw that band. The cell is guarded on the
-candidate cube's own attributes rather than on its mere existence: it must carry
-the full finite-lambda axis, its `q_thresh_gev` must be the 1 TeV analysis
-window, its `b_constrained_max_m` must be absent or NaN for an uncapped
-impact-parameter integral, and it must have been built against the same
-efficiency table as the release. The only internal cube built so far predates
-that scheme, so today the cell reports a skip naming the condition that failed,
-and the figure is not tracked in `png/`, `svg/` or `pdf/`. Notebook 04's two
-mediator-range figures stood in the same place until the release gained its
-lambda-scan sidecar; they now draw from that released file and are tracked with
-everything else. Every other figure in the table regenerates from the released
-files — with the exception of notebook 00's, which need the raw instrument file.
+Figures: `00_efficiency_curves`, `00_efficiency_products`,
+`00_blip_momentum_spectrum`.
+
+### 01 — the limit
+
+The paper's result. Per-mode excluded regions at the reference range and for a
+massless mediator; the whole released range family on one plane; the **refined
+boundary** from `luhdm_contours_v9_A_f1_atm.json` against the contour of the
+stored grid — at 0.476 dex per coupling cell the grid contour is a drawing
+convention and the Letter quotes the root-found boundary; the three sensor modes
+compared on the mass plane; and the excluded band swept over the mediator range
+from the lambda-scan sidecar, down to each mode's pinch-off. Backs the left
+panel of the Letter's results figure and the Supplemental Material's
+single-mode limit figures.
+
+Figures: `01_excluded_region_200um`, `01_excluded_massless`,
+`01_all_mediator_ranges`, `01_refined_vs_grid`, `01_sensitivity_vs_range`,
+`04_exclusion_modes123`, `04_exclusion_modes123_ranges`,
+`04_mediator_vs_coupling`, `04_mediator_vs_coupling_zoom`.
+
+### 02 — how the limit is made
+
+One section per stage of the pipeline: the SHM speed distribution, what the
+atmosphere does to it per mediator range, the finite-range cross section, the
+**projection kernel** (what "dσ/dq" means when the read-out measures one
+component of an impulse, why v9 changed the convention, and why the massless
+floor barely moved while everything bulk-dominated gained 4/3), the rate
+assembly, the optimum-interval statistic, and the validation appendix. This is
+the Supplemental Material companion; its spectra panel is redrawn at
+single-column size by `scripts/paper_fig_sm_spectra.py`.
+
+Figures: `02_arrival_speed_distributions`, `02_spectra`, `02_projection_kernel`.
+
+### 03 — the edges
+
+Both ends of the mass window and the map between them, in one story. Sections
+1–4: the kinematic wall q_min/v_esc, where the measured edge lands on the grid,
+the halo-tail onset just above it, and a retrospective on why the superseded
+0.1 TeV window had a *soft* left edge instead. Section 5: transit-count and
+reach maps from the cube's `/halo` group, which is where every edge of the
+region can be read off at once. Sections 6–9: the transit curve N(m), the
+uncapped contour against the flux cut, what N_req = 3 versus 6.8 buys, and the
+shell-of-validity argument for the 10 cm aperture. Section 10 re-checks all
+twelve numerical claims.
+
+Figures: `10_kinematic_wall`, `10_contour_left_edge`, `10_halo_tail_onset`,
+`10_soft_vs_hard_edge`, `03_transit_reach_maps`, `11_transit_curve`,
+`11_contour_vs_cut`, `11_capped_vs_flux_cut`, `11_shell_of_validity`.
+
+### 04 — the composite benchmark
+
+File B: the three sensor modes combined (a point is excluded if *any* mode
+excludes it) with atmospheric attenuation switched off, at f_DM = 0.1. Those are
+the surfaces the Letter's composite-dark-matter benchmark is recast from — the
+20 µm, m_φ ≈ 10 meV slice — although the recast into a nucleon cross section is
+done by `scripts/paper_fig_limits.py` and not here. The notebook also puts the
+two released hypotheses on one plane, and is explicit that they differ in *both*
+f_DM and atmosphere, so the gap between them is not "what the atmosphere costs".
+
+Figures: `05_composite_noatm`, `04_released_hypotheses`.
+
+### 05 — using the data release
+
+The guided tour: the whole tree straight from `h5py` with no `luhdm` code, then
+the standalone single-file reader, then the package loader; the two-files-one-
+hypothesis-each layout; the exclusion-band convention and the mass cut that is
+not in the surfaces; status codes and the NaN policy; detector inputs and how to
+verify what you downloaded; and the worked example that reproduces the headline
+number in plain numpy and writes
+[`release/exclusion_massless_mode1.png`](../release/exclusion_massless_mode1.png),
+the figure the release ships so a reader can check their copy against ours.
+Backs the Supplemental Material's Analysis Code and Data Release section.
+
+Writes no figure into `png/`; its one output goes to `release/`.
+
+## Figure names, and where the paper's figures come from
+
+Figures are written to `png/`, `svg/` and `pdf/`, and each is stamped with the
+version tag of the cube it came from.
+
+**Figure basenames are stable identifiers, not notebook numbers.** They were
+assigned when the notebooks were numbered differently and are deliberately kept
+across the restructure, because the manuscript and its Supplemental Material
+reference several of them by name. So notebook 01 writes the `04_*`
+mode-comparison figures it absorbed, and notebook 03 writes the `03_*`, `10_*`
+and `11_*` figures of the three notebooks it merges. The per-notebook lists
+above are the authoritative mapping.
 
 The Letter's data-derived figures are drawn by scripts rather than notebooks:
 `scripts/paper_fig_data_spectrum.py --stem efficiency` (Fig. 2, the impulse
 spectrum with the mode-1 efficiency overlaid) and `scripts/paper_fig_limits.py`
 (Fig. 3, the two-panel result); `scripts/paper_fig_efficiency.py` draws the
 three-mode efficiency comparison, which is not a Letter figure. **Those scripts
-have not yet been moved to the two-file release layout and are under review;
-they still read the internal cube and its 0.1 TeV window.**
+are under review and are not yet on the two-file release layout.**
 
 Figures `07_impact_parameter_cap` and `08_mass_coupling_degeneracy` also come
 from `scripts/` rather than from a notebook. `07` is a standalone geometry
@@ -94,17 +183,18 @@ window — the window opens at 1 TeV.
 
 ## Dark matter fraction
 
-Which fraction a figure uses is now a property of the file it opens, not a read
-option: each released cube carries one `f_dm` value. Notebooks 01, 02, 03 and 04
+Which fraction a figure uses is a property of the file it opens, not a read
+option: each released cube carries one `f_dm` value. Notebooks 00, 01, 02 and 03
 read file A at `f_dm=1.0`, the fraction the Letter quotes its `alpha_n` limits
-at, and pass it explicitly on every call — the loader's fallback is
-`attrs['f_dm_default']` = 0.1, the build-side baseline, which is not on file A's
-axis and raises if it is used. Notebook 05 reads file B at `f_dm=0.1`, the
-composite-benchmark plane. Notebook 06 opens both and shows them side by side.
+at, and pass it explicitly on every call — the loader's fallback is the
+build-side baseline 0.1, which is not on file A's axis and raises if it is used.
+Notebook 04 reads file B at `f_dm=0.1`, the composite-benchmark plane. Notebooks
+02, 03, 04 and 05 open both.
 
 The `/halo` diagnostic maps are the one exception in either file: they are stored
-once at the baseline `f_dm` = 0.1 with no fraction axis, so notebook 03's transit
-counts are a factor of ten below the `/results` ones at the same point.
+once at the baseline `f_dm` = 0.1 with no fraction axis, so notebook 03's
+section-5 transit counts are a factor of ten below the `/results` ones at the
+same point.
 
 ## Running them
 
@@ -117,16 +207,17 @@ pip install "optimum_interval @ git+https://github.com/tunnell/optimum_interval"
 jupyter lab
 ```
 
-Notebooks 01, 02, 03, 04, 05 and 06 then run start to finish with no environment
-variables set and no file from outside the repository, in about a minute for
-all six together; they read a released cube rather than recomputing it, which
-is why they are quick. Notebooks 10 and 11 run the same way from the released
-cubes. The one asterisked figure is the only cell that reaches outside the
-released files, and it skips rather than fails when the cube it wants is absent
-or built in an older scheme.
+All six then run start to finish with no environment variables set and no file
+from outside the repository, in a few minutes for the set; they read released
+files rather than recomputing surfaces, which is why they are quick. Every
+assertion in them is meant to pass on a clean checkout — including the
+kernel-consistency assertion in 02 and the twelve self-consistency checks in 03.
 
-**Notebook 00 does not run from a fresh checkout.** It is the only one that reads
-the raw instrument file `data/fit_data_temp_lockin_transients_selected.hdf5`,
-which is too large for git and is not distributed. Without it the first cell stops
-with a `FileNotFoundError` naming that path. Its outputs are committed, so the
-figures and numbers it produced can still be read.
+**One block needs a file that is not distributed.** Notebook 00's full-run
+exposure and duty cycle come from the raw instrument file
+`data/fit_data_temp_lockin_transients_selected.hdf5`, which is far too large for
+git. That block is guarded on the file's presence: with it, the notebook
+additionally re-derives every blip momentum from the raw transients and checks
+them against the release; without it, the block prints one line and skips. Every
+other product notebook 00 shows — the efficiency table, the candidate lists, all
+the reconstructed blips — is read from the release's `/detector` group.
