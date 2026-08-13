@@ -595,42 +595,67 @@ def release_spot_check(release_path, atm_shards, noatm_shards, n_spot):
                   f"shards={shard_kernels}")
             ok = False
         lam_axis = h5["axes/lambda_m"][:]
-        # Layout-agnostic read of the f_DM = 0.1 extremeness surface, which is
-        # what the shards' "p" array holds. Axis layout: one /results cube
-        # indexed by (f_dm, atmosphere, ...). v3 layout: one group per pass.
+        # Spot-check every (f_dm, atmosphere) plane the FILE carries (from v7
+        # a release file is a --select'ed single plane, not the full cube).
+        # The shards' "p" array is the f_DM = config.F_X baseline plane only;
+        # other-f_dm planes are derived at assembly, so they are checked
+        # through mu, which rescales linearly by f_dm/F_X (extremeness does
+        # not: it re-enters the MC table). v3 layout: one group per pass.
         axis_layout = "results" in h5
         if axis_layout:
-            i_f = int(np.argmin(np.abs(h5["axes/f_dm"][:] - 0.1)))
+            f_axis = h5["axes/f_dm"][:]
             atmos = h5["axes/atmosphere"][:]
         for pass_name, shards in (("atm", atm_shards), ("noatm", noatm_shards)):
             if not shards:
                 continue
+            planes = []          # (i_f, i_at, f_dm) the file has for this pass
             if axis_layout:
-                i_at = int(np.where(atmos == (1 if pass_name == "atm" else 0))[0][0])
-                ext = h5["results/extremeness"][i_f, i_at]
-            else:
-                ext = h5[pass_name]["extremeness"]
-            for s in shards[: max(1, n_spot // 4)]:
-                if s["massless"]:
-                    hits = np.where(np.isinf(lam_axis))[0]
-                else:
-                    hits = np.where(np.isclose(lam_axis, s["lamb"],
-                                               rtol=1e-9, atol=0))[0]
-                if hits.size == 0:
+                want = 1 if pass_name == "atm" else 0
+                for i_f, f_val in enumerate(f_axis):
+                    for i_at in np.where(atmos == want)[0]:
+                        planes.append((i_f, int(i_at), float(f_val)))
+                if not planes:
+                    print(f"  [{pass_name}] no such plane in this file; skip")
                     continue
-                li = int(hits[0])
-                for _ in range(3):
-                    mi = int(rng.integers(0, 3))
-                    ia = int(rng.integers(0, s["alphas_n"].size))
-                    im = int(rng.integers(0, s["ms"].size))
-                    fv = float(ext[mi, ia, im, li])
-                    cv = float(s["p"][mi, ia, im])
-                    if np.isnan(cv):
+            else:
+                planes = [(None, None, float(config.F_X))]
+            for i_f, i_at, f_val in planes:
+                baseline = np.isclose(f_val, config.F_X, rtol=1e-9)
+                if axis_layout:
+                    surf = h5["results/extremeness" if baseline
+                              else "results/mu"][i_f, i_at]
+                else:
+                    surf = h5[pass_name]["extremeness"]
+                scale = 1.0 if baseline else f_val / config.F_X
+                for s in shards[: max(1, n_spot // 4)]:
+                    if s["massless"]:
+                        hits = np.where(np.isinf(lam_axis))[0]
+                    else:
+                        hits = np.where(np.isclose(lam_axis, s["lamb"],
+                                                   rtol=1e-9, atol=0))[0]
+                    if hits.size == 0:
                         continue
-                    if abs(fv - cv) > 1e-4:
-                        print(f"  [{pass_name}] f4 mismatch mode{mi+1} "
-                              f"a{ia} m{im}: h5={fv} shard={cv}")
-                        ok = False
+                    li = int(hits[0])
+                    for _ in range(3):
+                        mi = int(rng.integers(0, 3))
+                        ia = int(rng.integers(0, s["alphas_n"].size))
+                        im = int(rng.integers(0, s["ms"].size))
+                        fv = float(surf[mi, ia, im, li])
+                        cv = float((s["p"] if baseline else s["mu"])
+                                   [mi, ia, im]) * scale
+                        if np.isnan(cv):
+                            continue
+                        # p: absolute f4 tolerance. mu: relative (spans
+                        # decades; f4 storage rounds at ~6e-8 relative).
+                        bad = (abs(fv - cv) > 1e-4 if baseline
+                               else not np.isclose(fv, cv, rtol=1e-5,
+                                                   atol=1e-30))
+                        if bad:
+                            print(f"  [{pass_name} f_dm={f_val:g} "
+                                  f"{'p' if baseline else 'mu'}] f4 mismatch "
+                                  f"mode{mi+1} a{ia} m{im}: h5={fv} "
+                                  f"shard={cv}")
+                            ok = False
     print(f"Vh verdict: {'PASS' if ok else 'FAIL'}")
     return ok
 
