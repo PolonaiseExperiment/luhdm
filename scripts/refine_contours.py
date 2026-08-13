@@ -52,6 +52,24 @@ same thing happens along the mass axis: an island still excluded at the last
 mass the cube carries has no tip to localize on that side, and the sidecar's
 ``tips`` entry says ``open_at_mass_axis_edge`` instead of a bisected end.
 
+The mass cut
+------------
+A halo of mass-m particles delivers N(m) = f_DM (rho_0/m) <v> T_obs pi b_cap^2
+of them within the impact-parameter cap during the exposure, so above
+m_cut = f_DM rho_0 <v> T_obs pi b_cap^2 / N_req fewer than N_req cross the
+aperture and the excluded region cannot be read as a limit. The cut is a flux
+argument applied after the fact: the cube's stored surfaces stay uncapped, but
+the cube records the line (``m_cut_<cap>_f<f_DM>_gev``, with
+``m_cut_n_transits_required`` and ``m_cut_b_cap_m``), and the RELEASED contour
+is truncated at it -- m_cut is the right edge. Mass columns above m_cut are
+dropped before any phase runs (nothing is refined that the release drops), one
+exact column at m = m_cut is refined as the polyline's last vertex, and the
+right tip is not traced: the island does not end inside the cube, the cut ends
+it (the sidecar's ``tips`` entry says ``cut_at_m_cut`` and names N_req and
+b_cap). A cube that records no such attribute is refined untruncated -- the cut
+is read back, never invented -- and ``--no-m-cut`` disables the truncation for
+audit runs.
+
 Nothing in luhdm/ or the cube builder changes; the output is a standalone
 sidecar (JSON) with the refined (mass, floor, ceiling) polyline per surface
 plus full provenance (cube sha256 + version tag, tolerances, seed policy,
@@ -597,6 +615,49 @@ def inserted_task(m_new, va, vb, cell, tol_dex, alpha_top):
 
 
 # --------------------------------------------------------------------------- #
+# Mass cut (the release's right edge)
+# --------------------------------------------------------------------------- #
+def resolve_m_cut(attrs, f_dm, enabled=True):
+    """The flux-argument mass cut this cube records for the f_DM plane.
+
+    From v8 the release carries one ``m_cut_<cap>_f<f_DM:g>_gev`` root
+    attribute per hypothesis plane (``m_cut_10cm_f1_gev``,
+    ``m_cut_10cm_f0.1_gev``) beside ``m_cut_n_transits_required`` and
+    ``m_cut_b_cap_m``, and leaves the stored surfaces uncapped
+    (``m_cut_applied_to_stored_surfaces`` False). Exactly one key can match a
+    given plane; a cube carrying none -- or ``enabled=False`` -- gives a null
+    cut and no truncation anywhere. The companion ``..._gev_derivation`` string
+    does not match the suffix.
+    """
+    suffix = f"_f{float(f_dm):g}_gev"
+    keys = sorted(k for k in attrs
+                  if k.startswith("m_cut_") and k.endswith(suffix))
+    if not enabled or not keys:
+        return dict(m_cut=None, n_req=None, b_cap=None, attr=None)
+    assert len(keys) == 1, (
+        f"cube records {len(keys)} mass cuts for f_dm={float(f_dm):g}: {keys}; "
+        f"the plane's cut is ambiguous")
+
+    def _opt(k):
+        return None if attrs.get(k) is None else float(attrs[k])
+    return dict(m_cut=float(attrs[keys[0]]),
+                n_req=_opt("m_cut_n_transits_required"),
+                b_cap=_opt("m_cut_b_cap_m"), attr=keys[0])
+
+
+def drop_above_m_cut(tasks, m_cut):
+    """Drop the column tasks the release truncates away. (kept, n_dropped).
+
+    Above m_cut the exclusion is not a limit, so those columns carry no vertex
+    and are not worth an oracle call in any phase.
+    """
+    if m_cut is None:
+        return tasks, 0
+    keep = [t for t in tasks if t["m"] <= m_cut]
+    return keep, len(tasks) - len(keep)
+
+
+# --------------------------------------------------------------------------- #
 # Tip localization (worker task: one whole tip trace)
 # --------------------------------------------------------------------------- #
 def trace_tip(task):
@@ -706,20 +767,36 @@ def _run_pool(tasks, fn, workers, ctx):
     return out
 
 
-def refine_surface(name, plane, alphas, ms, args, ctx):
-    """All three phases for one surface; returns (vertices, meta, evals)."""
+def refine_surface(name, plane, alphas, ms, args, ctx, mcut=None):
+    """All three phases for one surface; returns (vertices, meta, evals).
+
+    ``mcut`` is :func:`resolve_m_cut`'s dict for this surface's plane. The
+    truncation is active only when the exclusion actually runs past the cut
+    (excluded cube columns above it): the surface then loses those columns,
+    gains an exact column at m = m_cut, and traces no right tip. A surface
+    whose island closes below the cut -- or a cube that records none -- is
+    refined exactly as before.
+    """
     t0 = time.time()
     columns = ([int(c) for c in args.columns.split(",")]
                if args.columns else None)
     alpha_top = float(alphas[-1])
     tasks, widened, cell = grid_column_tasks(plane, alphas, ms,
                                              args.tol_alpha, columns)
+    mcut = mcut or dict(m_cut=None, n_req=None, b_cap=None)
+    m_cut = mcut["m_cut"]
+    tasks, n_dropped = drop_above_m_cut(tasks, m_cut)
+    truncated = bool(n_dropped)
     n_open = sum(bool(t["open_top"]) for t in tasks)
     print(f"  [{name}] {len(tasks)} excluded cube columns"
           + (f" ({n_open} open-topped: no ceiling)" if n_open else "")
           + (f" (restricted to {columns})" if columns else "")
           + (f"; {len(widened)} bracket(s) widened at marginal cells"
              if widened else ""))
+    if truncated:
+        print(f"  [{name}] m_cut = {m_cut:.4e} GeV (N_req={mcut['n_req']}, "
+              f"b_cap={mcut['b_cap']} m): {n_dropped} excluded cube column(s) "
+              f"above it dropped; an exact m_cut column will close the polyline")
     results = _run_pool(tasks, refine_column, args.workers, ctx)
     verts = [r for r in results if r["excluded"]]
     evals = [h for r in results for h in r["history"]]
@@ -729,8 +806,34 @@ def refine_surface(name, plane, alphas, ms, args, ctx):
             print(f"  [{name}] WARNING: grid column im={r['im']} "
                   f"m={r['m']:.3e} failed: {r['flags']}")
 
-    # -- phase 2: adaptive mass insertion (waves; pairs are independent) ---- #
+    # -- phase 2a: the exact m_cut column ----------------------------------- #
+    # Refined by the wall-insertion path (validated brackets, one coarse alpha
+    # cell either side of the last refined column's edges, open-topped iff that
+    # column is), so the release's right edge is an ordinary refined vertex --
+    # same oracle, same seeding, same tolerance. It is inserted BEFORE the
+    # insertion waves so the wall between it and the last cube column is
+    # resolved like any other.
     n_inserted = 0
+    if truncated and verts:
+        verts.sort(key=lambda v: v["m"])
+        v_last = verts[-1]
+        res = _run_pool([inserted_task(m_cut, v_last, v_last, cell,
+                                       args.tol_alpha, alpha_top)],
+                        refine_column, 1, ctx)[0]
+        evals.extend(res.pop("history"))
+        if res["excluded"]:
+            res["flags"].append("m_cut_truncation")
+            verts.append(res)
+            n_inserted += 1
+            print(f"  [{name}] m_cut column refined: floor={res['floor']:.4e}"
+                  + (", no ceiling (open-topped)" if res["ceiling"] is None
+                     else f", ceiling={res['ceiling']:.4e}"))
+        else:
+            print(f"  [{name}] WARNING: no exclusion at m_cut "
+                  f"({m_cut:.4e} GeV): {res['flags']}; the polyline stops at "
+                  f"the last refined column below the cut")
+
+    # -- phase 2: adaptive mass insertion (waves; pairs are independent) ---- #
     if not args.no_insert:
         while True:
             verts.sort(key=lambda v: v["m"])
@@ -743,10 +846,12 @@ def refine_surface(name, plane, alphas, ms, args, ctx):
                 if va["ceiling"] is not None and vb["ceiling"] is not None:
                     jump = max(jump,
                                abs(np.log10(vb["ceiling"] / va["ceiling"])))
+                m_new = float(np.sqrt(va["m"] * vb["m"]))
+                if m_cut is not None and m_new > m_cut:
+                    continue                 # never refine past the right edge
                 if jump > args.tol_wall:
-                    wave.append(inserted_task(np.sqrt(va["m"] * vb["m"]),
-                                              va, vb, cell, args.tol_alpha,
-                                              alpha_top))
+                    wave.append(inserted_task(m_new, va, vb, cell,
+                                              args.tol_alpha, alpha_top))
             if not wave or n_inserted >= args.max_insert:
                 if wave:
                     print(f"  [{name}] WARNING: insertion cap "
@@ -773,6 +878,17 @@ def refine_surface(name, plane, alphas, ms, args, ctx):
         for side, v_edge, im_edge, step in (
                 ("left", verts[0], grid_ims[0], -1),
                 ("right", verts[-1], grid_ims[-1], +1)):
+            if side == "right" and truncated:
+                # No tip on this side to find: the island does not end inside
+                # the cube, the release's mass cut ends it, and the polyline's
+                # last vertex is the exact m_cut column.
+                tips[side] = dict(side=side, cut_at_m_cut=True,
+                                  m_cut_gev=float(m_cut),
+                                  n_req=mcut["n_req"], b_cap_m=mcut["b_cap"],
+                                  n_scans=0, wall_s=0.0)
+                print(f"  [{name}] right island end is the mass cut "
+                      f"(m_cut={m_cut:.4e} GeV); no tip to trace")
+                continue
             im_out = im_edge + step
             if not (0 <= im_out < len(ms)):
                 # The exclusion runs off the end of the cube's mass axis on
@@ -812,6 +928,11 @@ def refine_surface(name, plane, alphas, ms, args, ctx):
                                            for v in verts)),
                 n_open_top_grid_columns=int(n_open),
                 n_inserted=n_inserted, widened=widened, tips=tips,
+                # the release's right edge: the cut this cube records for the
+                # surface's f_DM plane (null when it records none, or
+                # --no-m-cut), and whether it actually truncated this island.
+                m_cut_gev=(None if m_cut is None else float(m_cut)),
+                m_cut_truncated=bool(truncated),
                 n_oracle_calls=calls, wall_s=wall)
     med = float(np.median([h[4] for h in evals])) if evals else float("nan")
     print(f"  [{name}] {len(verts)} vertices, {calls} oracle calls "
@@ -928,6 +1049,12 @@ def main():
                          "coarse resolution")
     ap.add_argument("--no-insert", action="store_true")
     ap.add_argument("--no-tips", action="store_true")
+    ap.add_argument("--no-m-cut", action="store_true",
+                    help="refine the stored (uncapped) surfaces past the "
+                         "cube's flux mass cut: no dropped columns, no exact "
+                         "m_cut column, right tips traced as usual. Audit "
+                         "escape hatch; the released contour truncates at "
+                         "m_cut")
     ap.add_argument("--spot", type=int, default=0,
                     help="recompute this many coarse bracket cells per surface "
                          "and compare to the cube bit-for-bit")
@@ -1025,6 +1152,9 @@ def main():
     print(f"mode {args.mode}, level {LEVEL}, tol_alpha {args.tol_alpha} dex, "
           f"tol_wall {args.tol_wall} dex, mass_res {args.mass_res} dex, "
           f"workers {args.workers}")
+    if args.no_m_cut:
+        print("--no-m-cut: contours run past the cube's flux mass cut "
+              "(the released convention truncates at m_cut)")
 
     def write_sidecar(done):
         """Assemble and atomically write the sidecar for the surfaces DONE.
@@ -1109,14 +1239,17 @@ def main():
         print(f"[surface {n}] lambda={tag} ({lam_m[n]} m), f_dm={f_dm}, "
               f"atmosphere={atm}, F_SCALE={F_SCALE:g}"
               + (f", q_endpoint_factor={q_epf:g}" if lamb is None else ""))
+        mcut = resolve_m_cut(attrs, f_dm, enabled=not args.no_m_cut)
         if args.spot:
             tasks, _w, _c = grid_column_tasks(
                 planes[n], alphas, ms, args.tol_alpha,
                 [int(c) for c in args.columns.split(",")] if args.columns
                 else None)
+            # spot-check the cells the refinement will actually use
+            tasks, _n_cut = drop_above_m_cut(tasks, mcut["m_cut"])
             spot_max[n] = spot_check(tasks, planes[n], alphas, args.spot, rng)
         verts, meta, evals = refine_surface(n, planes[n], alphas, ms,
-                                            args, ctx)
+                                            args, ctx, mcut)
         surfaces_out[n] = dict(
             mode=args.mode, lambda_tag=tag,
             lambda_m=(None if lamb is None else lamb), f_dm=f_dm,
