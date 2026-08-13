@@ -125,6 +125,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import sys
 import time
 from datetime import datetime, timezone
@@ -289,32 +290,58 @@ def _worker_tables():
     return _worker_state
 
 
+# A stalled atmosphere ODE (step-size collapse at an extreme off-grid probe)
+# runs forever at 100% CPU and blocks its whole insertion wave; 600 s is 60x
+# the median oracle call, far beyond any healthy cell. On timeout the cell is
+# treated exactly like a build_release status-1 cell: p = NaN reads as "not
+# excluded" everywhere downstream, which can only shrink the island.
+ORACLE_TIMEOUT_S = 600
+
+
+class OracleTimeout(Exception):
+    pass
+
+
+def _oracle_alarm(signum, frame):
+    raise OracleTimeout
+
+
 def oracle(alpha, m, history=None, kind=""):
     """p, mu at one off- or on-grid (alpha, m) -- the build_release cell body."""
     t0 = time.time()
-    state = _worker_tables()
-    if ATMOSPHERE:
-        v_min = Q_MIN / m / 10      # ODE floor follows the analysis threshold
-        v_f_samples = atmosphere.compute_v_f_distribution(
-            alpha, LAMB_ODE, m, V_I, v_min=v_min, n_grid=FID["n_ode"])
-        f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
-    else:
-        # no-overburden pass: the arrival distribution IS the halo one, the
-        # same for every (m, alpha) -- build_release._arrival_f_v_f, NO_ATM.
-        f_v_f = halo.standard_halo_model
-    raw = rate.differential_rate_trapz(QS, alpha, m, f_v_f, XS, eff=None)
-    detected = raw * EFF * F_SCALE
-    p, mu = limits.extremeness_and_mu(
-        state["table"], EVENTS, QS, detected, T_TOTAL,
-        n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
-    # Two-tier MC (v7 fidelity contract), verbatim build_release.eval_extremeness:
-    # a base p at or above p_hi_lo (but not shortcut-saturated) is re-evaluated
-    # on the hi-tier table. Cubes without n_mc_hi take the base result as-is.
-    n_hi = FID.get("n_mc_hi")
-    if n_hi and FID.get("p_hi_lo", P_HI_LO) <= p < 1.0:
+    signal.signal(signal.SIGALRM, _oracle_alarm)
+    signal.alarm(ORACLE_TIMEOUT_S)
+    try:
+        state = _worker_tables()
+        if ATMOSPHERE:
+            v_min = Q_MIN / m / 10  # ODE floor follows the analysis threshold
+            v_f_samples = atmosphere.compute_v_f_distribution(
+                alpha, LAMB_ODE, m, V_I, v_min=v_min, n_grid=FID["n_ode"])
+            f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
+        else:
+            # no-overburden pass: the arrival distribution IS the halo one, the
+            # same for every (m, alpha) -- build_release._arrival_f_v_f, NO_ATM.
+            f_v_f = halo.standard_halo_model
+        raw = rate.differential_rate_trapz(QS, alpha, m, f_v_f, XS, eff=None)
+        detected = raw * EFF * F_SCALE
         p, mu = limits.extremeness_and_mu(
-            state["table_hi"], EVENTS, QS, detected, T_TOTAL,
-            n_mc=n_hi, mu_cap=FID["mu_cap"])
+            state["table"], EVENTS, QS, detected, T_TOTAL,
+            n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+        # Two-tier MC (v7 fidelity contract), verbatim build_release.eval_extremeness:
+        # a base p at or above p_hi_lo (but not shortcut-saturated) is re-evaluated
+        # on the hi-tier table. Cubes without n_mc_hi take the base result as-is.
+        n_hi = FID.get("n_mc_hi")
+        if n_hi and FID.get("p_hi_lo", P_HI_LO) <= p < 1.0:
+            p, mu = limits.extremeness_and_mu(
+                state["table_hi"], EVENTS, QS, detected, T_TOTAL,
+                n_mc=n_hi, mu_cap=FID["mu_cap"])
+    except OracleTimeout:
+        print(f"    ORACLE TIMEOUT ({ORACLE_TIMEOUT_S} s) at "
+              f"alpha={alpha:.6e} m={m:.6e} kind={kind}: p=NaN (not excluded)",
+              flush=True)
+        p, mu = float("nan"), float("nan")
+    finally:
+        signal.alarm(0)
     if history is not None:
         history.append((float(m), float(alpha), float(p), float(mu),
                         time.time() - t0, kind))
