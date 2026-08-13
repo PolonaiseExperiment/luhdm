@@ -483,9 +483,14 @@ def main():
     doc = text[m.end():e.start() if e else len(text)] if m else text
 
     # ---- Letter / Supplemental Material boundary
+    # End Matter (PRL, after the references) is outside the 3750-word count,
+    # so it ends the Letter just as \appendix does -- whichever comes first.
     bpos, how = len(doc), "none found -- treating whole document as Letter"
     m_app = re.search(r"\\appendix(?![a-zA-Z])", doc)
-    if m_app:
+    m_em = re.search(r"\\mysection\{End Matter", doc)
+    if m_em and (not m_app or m_em.start() < m_app.start()):
+        bpos, how = m_em.start(), "End Matter heading"
+    elif m_app:
         bpos, how = m_app.start(), r"\appendix"
     else:
         bib = re.search(r"\\bibliography(?![a-zA-Z])", doc)
