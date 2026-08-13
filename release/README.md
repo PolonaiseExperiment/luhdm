@@ -107,6 +107,9 @@ The files are plain HDF5 with dimension scales and per-dataset `units` and
 |---|---|---|
 | `luhdm_datarelease_v8_A_f1_atm.h5` | 0.55 MB | **Dataset A.** `f_DM = 1`, atmospheric propagation **on**. The plane the paper's `alpha_n` limits are quoted on. |
 | `luhdm_datarelease_v8_B_f0p1_noatm.h5` | 0.59 MB | **Dataset B.** `f_DM = 0.1`, atmospheric propagation **off**. The plane the composite cross-section benchmark is quoted on. |
+| `luhdm_contours_v8_A_f1_atm.json` | 197 kB | **Refined contours for dataset A.** The 95% boundary of each of A's four mode-1 exclusion surfaces, root-found rather than read off the grid. This is the boundary the paper draws. See [§5.5](#55-the-sidecar-files). |
+| `luhdm_contours_v8_B_f0p1_noatm.json` | 24 kB | The same, for dataset B's one surface. |
+| `luhdm_lambda_scan_v8.npz` | 86 kB | **Mediator-range sidecar to dataset A.** Per sensor mode, the (coupling × range) planes on a 54-point range axis from 0.1 µm to 2 m, at that mode's best dark-matter mass — the range resolution the cube's four finite slices cannot give. See [§5.5](#55-the-sidecar-files). |
 | `luhdm_release.py` | 52 kB | **Optional** single-file reader. `numpy` and `h5py` only, `pandas` optional. Copy it next to the HDF5 files and import it. Described in [§7](#7-the-standalone-reader). |
 | `README.md` | 86 kB | This document. |
 | `SHA256SUMS` | 1.2 kB | SHA-256 digest of every file in the release. See [§10](#10-integrity-provenance-and-environment). |
@@ -118,7 +121,12 @@ The files are plain HDF5 with dimension scales and per-dataset `units` and
 
 **The files you need are the one HDF5 that carries your hypothesis and this
 README.** Add `luhdm_release.py` if you want value-based selection instead of
-integer indices. Everything else is provenance and convenience.
+integer indices. Everything else is provenance and convenience — the three
+sidecars included, since everything in them is derived from the cubes. One
+caveat worth having early: the exclusion boundary the paper draws is the
+root-found one in `luhdm_contours_v8_A_f1_atm.json`, not the grid crossing you
+get by contouring the cube. The two agree to within one coupling grid cell, and
+[§5.5](#55-the-sidecar-files) says exactly where they part company.
 
 The two HDF5 files have the **same schema, the same axes and the same detector
 inputs**; they differ only in which single `(f_dm, atmosphere)` hypothesis they
@@ -649,6 +657,13 @@ the grid. Such an edge is a property of the scan range, not a measurement.
 
 [§6](#6-worked-example-the-published-limit) is the complete implementation.
 
+That interpolation is what the released files support, and it is what the cubes
+are meant to be read with. The release additionally ships the same crossing
+*root-found* instead of interpolated, as a sidecar per hypothesis file, and it is
+the root-found boundary the paper draws:
+[§5.5](#55-the-sidecar-files) says what is in those files and how far the two
+boundaries sit apart.
+
 ### 5.4 The mass cut `m_cut`, and how to apply it
 
 **This is the one thing in this release that the stored surfaces do not do for
@@ -743,6 +758,197 @@ versions of this analysis closed at. The two schemes agree on where the region
 ends to within a factor of about two in mass; the difference between them is a
 choice of standard, and this release makes that choice visible instead of
 burying it in an integration limit.
+
+### 5.5 The sidecar files
+
+Three files ship beside the two cubes: two refined-contour files, one per
+hypothesis, and one mediator-range scan. None of them is a new measurement —
+everything in them is the cubes' own calculation, run at finer resolution or on
+a finer axis. All three are listed in `SHA256SUMS`, and each carries in its own
+provenance record the SHA-256 of the cube it was computed against, so a sidecar
+can always be matched to the file it belongs to:
+
+```console
+$ grep -E 'contours|lambda_scan' SHA256SUMS | sha256sum -c -
+```
+
+```
+luhdm_contours_v8_A_f1_atm.json: OK
+luhdm_contours_v8_B_f0p1_noatm.json: OK
+luhdm_lambda_scan_v8.npz: OK
+```
+
+**The refined contours.**
+`luhdm_contours_v8_A_f1_atm.json` and `luhdm_contours_v8_B_f0p1_noatm.json` carry
+the 95% boundary itself. Where [§5.3](#53-the-exclusion-convention) interpolates
+the level crossing between the two grid cells that bracket it, these files
+root-find it, on the same statistic and against the same level:
+
+* at each mass column, the coarse cells bracketing an edge — the floor, and the
+  ceiling where the column has one — start a bisection in `log10(alpha_n)` that
+  stops at 0.005 dex, a fiftieth of a coupling cell;
+* wherever neighbouring columns' edges jump by more than 0.05 dex, a new mass
+  column is inserted at the geometric midpoint and refined the same way,
+  recursively, down to 0.01 dex in mass;
+* each island end is localized by bisection along the mass axis, on whether
+  *anything* is excluded at that mass, since at an end there is no coupling
+  crossing left to bracket.
+
+There is one refined surface per exclusion surface the paper draws, all at sensor
+mode 1: file A's four (massless, 2 mm, 200 µm and 20 µm at `f_DM` = 1 with
+atmosphere), file B's one (20 µm at `f_DM` = 0.1, no atmosphere).
+
+The format is `luhdm-refined-contours`, `schema_version` 1. Top level:
+`confidence` (0.95), `provenance`, and `surfaces`. Each surface is a set of
+parallel arrays, one entry per vertex, ordered in mass:
+
+| key | what it is |
+|---|---|
+| `mass_gev` | the vertex masses, ascending |
+| `floor_alpha_n`, `ceiling_alpha_n` | the two coupling edges. `ceiling_alpha_n` is JSON `null` where the excluded band leaves the top of the coupling axis and there is no ceiling to find (`open_top` flags the same columns) |
+| `origin` | `grid` for one of the cube's own mass columns, `inserted` for a column the refinement added, `tip` for an island end |
+| `coarse_im` | index into the cube's `axes/mass_gev` for a `grid` vertex, −1 otherwise |
+| `floor_bracket_alpha`, `ceiling_bracket_alpha` | the two coarse couplings each edge was found between, so every refined vertex traces back to the grid cells it came from |
+| `tips` | the mass bracket at each end: the last mass still excluded and the first that is not. An island still excluded at the end of the cube's mass axis says `open_at_mass_axis_edge` instead |
+| `cell_dex`, `n_grid_columns`, `n_inserted`, `n_open_top_columns`, `n_oracle_calls`, `wall_s` | the cube's coupling cell (0.2326 dex) and the run's counts |
+| `widened_columns`, `flags` | the few columns where the starting bracket had to be widened, or where an edge search fell back or needed a rescue scan. Read them before quoting a single vertex: five mass columns carry a flag in the 200 µm surface, none in the massless one |
+
+`provenance` holds the cube's path, SHA-256, version tag and git commit; the
+fidelity, seed and seed policy read back out of that cube; the tolerances above;
+the refiner's git SHA, command line and timings; and the spot-check result.
+
+```python
+import json
+
+doc = json.load(open("luhdm_contours_v8_A_f1_atm.json"))
+prov = doc["provenance"]
+print(doc["format"], "schema", doc["schema_version"], "at C =", doc["confidence"])
+print("refined from", prov["cube_path"], prov["cube_version_tag"])
+for name, s in doc["surfaces"].items():
+    n_open = sum(c is None for c in s["ceiling_alpha_n"])
+    print(f"  {name:>11}: {len(s['mass_gev']):3d} vertices, "
+          f"{s['n_grid_columns']} on the cube's mass columns, "
+          f"{s['n_inserted']} inserted, {n_open} with no ceiling")
+
+s = doc["surfaces"]["massless_f1"]
+i = min(range(len(s["mass_gev"])), key=lambda j: s["floor_alpha_n"][j])
+print(f"massless left end: {s['mass_gev'][0]:.4g} GeV (origin {s['origin'][0]}), "
+      f"floor {s['floor_alpha_n'][0]:.4g}")
+print(f"massless deepest floor: {s['floor_alpha_n'][i]:.4g} "
+      f"at {s['mass_gev'][i]:.4g} GeV (origin {s['origin'][i]})")
+print("spot check against the cube:", prov["spot_n_cells"], "cells per surface, "
+      "max |dp| =", max(prov["spot_max_dp"].values()))
+```
+
+```
+luhdm-refined-contours schema 1 at C = 0.95
+refined from release/luhdm_datarelease_v8_A_f1_atm.h5 v8.0-night-m0p356mg-q1TeV-nocap-wmarg
+  massless_f1: 230 vertices, 112 on the cube's mass columns, 116 inserted, 106 with no ceiling
+      20um_f1: 116 vertices, 25 on the cube's mass columns, 85 inserted, 0 with no ceiling
+     200um_f1: 215 vertices, 43 on the cube's mass columns, 169 inserted, 0 with no ceiling
+       2mm_f1: 247 vertices, 59 on the cube's mass columns, 182 inserted, 0 with no ceiling
+massless left end: 5.868e+05 GeV (origin tip), floor 2.45e-08
+massless deepest floor: 2.57e-09 at 7.085e+06 GeV (origin inserted)
+spot check against the cube: 6 cells per surface, max |dp| = 0.0
+```
+
+**Which boundary is which.** The paper quotes the **refined** boundary; the
+**grid** is what the released cubes store, and contouring it per
+[§5.3](#53-the-exclusion-convention) remains the right way to read a cube. The
+two are the same claim at different resolution, and the gap between them is
+bounded by the cell size: for the massless mode-1 surface the interpolated floor
+sits at most 0.176 dex above the refined one and the interpolated ceiling at most
+0.219 dex below it, against a coupling cell of 0.233 dex. Where they part
+company visibly is at the ends, because a grid contour cannot begin before the
+first mass column that is excluded at all: that column is 6.85 × 10⁵ GeV for the
+massless surface, while the island really ends at 5.87 × 10⁵ GeV. The ends are
+bisected in mass, so the sidecar puts them where they are rather than on the
+nearest column — the 200 µm island's right end is 7.32 × 10¹⁰ GeV, bracketed
+against 7.44 × 10¹⁰ GeV where nothing is excluded any more. Compare curve to
+curve with the published figure using the sidecar; re-derive from the cube and
+you have the grid boundary, which is what you should say you have.
+
+**Rebuilding them.** `scripts/refine_contours.py` in the code repository, once
+per hypothesis file — each surface must be run against the file that carries its
+`(f_DM, atmosphere)` plane. The shipped files record their own command lines in
+`provenance.argv`:
+
+```
+scripts/refine_contours.py --release release/luhdm_datarelease_v8_A_f1_atm.h5 \
+    --surfaces massless_f1,20um_f1,200um_f1,2mm_f1 --spot 6 --workers 20 \
+    --max-insert 800 --out release/luhdm_contours_v8_A_f1_atm.json
+scripts/refine_contours.py --release release/luhdm_datarelease_v8_B_f0p1_noatm.h5 \
+    --surfaces 20um_f0p1_noatm --spot 6 --workers 4 \
+    --max-insert 800 --out release/luhdm_contours_v8_B_f0p1_noatm.json
+```
+
+**Re-checking them.** The same script does it: `--spot N` re-evaluates N of the
+cube's own grid cells with the refining calculation and compares against the
+stored values. Both shipped files were made with `--spot 6` and record the
+outcome in `provenance.spot_max_dp`, which is `0.0` for every surface — at the
+cube's own grid points the refinement reproduces the released numbers bit for bit
+in `float32` storage, which is what ties the refined boundary to the release.
+`--columns i,j,k --no-insert --no-tips --workers 1` is the cheap partial run for
+checking a handful of columns without paying for a whole surface.
+
+**What it costs.** Hours per surface at the release fidelity, not minutes. One
+call of the refining calculation is one attenuation ODE plus one freshly seeded
+optimum-interval table — a median of about 14 s for the atmosphere surfaces —
+and a surface takes thousands of them, most of them in the column-insertion
+phase. File A's four surfaces took 13 192 such calls and 5.8 hours of wall time
+on 20 workers; file B's single no-atmosphere surface, which solves no ODE at all,
+took 1 369 calls and 14 minutes on four. The sidecar is rewritten after each
+surface, so a long run can be watched, and interrupted, without losing what is
+already done.
+
+**The mediator-range scan.**
+`luhdm_lambda_scan_v8.npz` answers the question the cube's `lambda_m` axis cannot:
+four finite ranges are too few to draw a band in the (coupling, range) plane, or
+to say where it closes. The sidecar is that plane scanned properly, for dataset A
+only. For each sensor mode it holds `extremeness_mode{n}`, `mu_mode{n}` and
+`n_transit_mode{n}` on a 44 × 54 (coupling × range) grid running from 0.1 µm to
+2 m, at that mode's best dark-matter mass `best_mass_gev_mode{n}` — the mass whose
+exclusion is widest in the (coupling, range) plane, ties broken towards reach to
+the shortest range, by `luhdm.release.best_mass_index` evaluated on the cube's
+four finite slices. The
+axes travel with the planes: `alpha_n_mode{n}` is bitwise the cube's
+`axes/alpha_n`, and `lambda_m_mode{n}` contains the 20 µm, 200 µm and 2 mm tags
+exactly, so those columns are directly comparable to the cube. `provenance` is a
+JSON string carrying the cube's name and digest, the best-mass criterion, the
+range and coupling axis definitions, the physics and statistics settings, the
+input digests and the three scan command lines.
+
+```python
+import json, numpy as np
+
+d = np.load("luhdm_lambda_scan_v8.npz", allow_pickle=True)
+prov = json.loads(str(d["provenance"]))
+level = float(np.float32(0.95))              # the storage-precision convention
+print("scanned against", prov["cube"]["file"], "f_dm =", prov["cube"]["f_dm"],
+      "atmosphere =", prov["cube"]["atmosphere"])
+for m in d["modes"]:
+    lam, p = d[f"lambda_m_mode{m}"], d[f"extremeness_mode{m}"]
+    band = (p >= level).any(axis=0)
+    print(f"  mode {m}: best mass {float(d[f'best_mass_gev_mode{m}']):.4g} GeV, "
+          f"plane {p.shape} (alpha_n x lambda), 95% band "
+          f"{lam[band][0] * 1e6:.3g} um .. {lam[band][-1]:g} m")
+```
+
+```
+scanned against luhdm_datarelease_v8_A_f1_atm.h5 f_dm = 1.0 atmosphere = True
+  mode 1: best mass 1.672e+08 GeV, plane (44, 54) (alpha_n x lambda), 95% band 10 um .. 2 m
+  mode 2: best mass 7.329e+07 GeV, plane (44, 54) (alpha_n x lambda), 95% band 5.02 um .. 2 m
+  mode 3: best mass 2.201e+08 GeV, plane (44, 54) (alpha_n x lambda), 95% band 10 um .. 2 m
+```
+
+**Rebuilding and re-checking it.** `scripts/scan_lambda.py` runs the scan, one
+run per mode at that mode's best mass, and `scripts/assemble_lambda_sidecar.py`
+gathers the three outputs into the npz with the provenance record.
+`scripts/lambda_sidecar_gate.py` is the gate: it compares the scan against the
+released cube everywhere the two overlap — the 20 µm, 200 µm and 2 mm columns
+must reproduce the cube's excluded coupling bands, and the long end of the range
+axis, 2 m, must reproduce the cube's massless slice for all three modes. The same
+comparison is written into the file's own provenance.
 
 ---
 
