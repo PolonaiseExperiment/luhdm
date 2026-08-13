@@ -53,7 +53,8 @@ def tabulation_n_points(xi):
 
 
 def make_xsec(lamb, R_eff=R_EFF, N_points=None, force_ln=False,
-              b_constrained_max=None):
+              b_constrained_max=None,
+              projection_kernel=cross_section.KERNEL_DEFAULT):
     """Build the cross-section handle for one mediator range.
 
     lamb : mediator range in meters, or None for massless (analytic).
@@ -68,25 +69,35 @@ def make_xsec(lamb, R_eff=R_EFF, N_points=None, force_ln=False,
     section dsigma/dq and the geometric transit reach (impact_parameter_max_any),
     so n_transit / halo bmax stay consistent. None = uncapped, a byte-for-byte
     no-op relative to the pre-cap pipeline for finite and massless mediators.
+    projection_kernel : "planar-signed" (the historical kernel, byte-identical
+    to the pre-flag pipeline) or "isotropic-folded" (the absolute one-axis
+    projection under isotropic arrivals — Dorian's Eq. A18 sphere kernel,
+    dsigma/dq = 2 pi int b/q_perp(b) db: 8 pi/3 coefficient / x^3 shell
+    fraction for the massless slice, pi * int beta dbeta / K1(beta) for finite
+    lambda). A recorded convention on the handle, so dR/dq and the interpolant
+    tabulations always agree; the geometric reach (impact_parameter_max_any)
+    is kernel-free.
     Returns a dict consumed by dsigma_dq_any / differential_rate_trapz /
     expected_transits / transit_count_halo.
     """
+    common = dict(R_eff=R_eff, b_constrained_max=b_constrained_max,
+                  projection_kernel=str(projection_kernel))
     if lamb is None:
-        return dict(lamb=None, use_ln=False, interp=None, R_eff=R_eff,
-                    b_constrained_max=b_constrained_max)
+        cross_section._check_kernel(projection_kernel)
+        return dict(lamb=None, use_ln=False, interp=None, **common)
     xi = R_eff / lamb
     if N_points is None:
         N_points = tabulation_n_points(xi)
     use_ln = force_ln or xi > 30
     if use_ln:
         interp = cross_section.make_ln_dsigma_dq_interpolant(
-            R_eff, lamb, b_constrained_max=b_constrained_max)
+            R_eff, lamb, b_constrained_max=b_constrained_max,
+            kernel=projection_kernel)
     else:
         interp = cross_section.make_dsigma_dq_interpolant(
             1e-25, R_eff, lamb, N_points=N_points,
-            b_constrained_max=b_constrained_max)
-    return dict(lamb=lamb, use_ln=use_ln, interp=interp, R_eff=R_eff,
-                b_constrained_max=b_constrained_max)
+            b_constrained_max=b_constrained_max, kernel=projection_kernel)
+    return dict(lamb=lamb, use_ln=use_ln, interp=interp, **common)
 
 
 def dsigma_dq_any(q, alpha, vs, xs, R_eff=R_EFF):
@@ -100,8 +111,9 @@ def dsigma_dq_any(q, alpha, vs, xs, R_eff=R_EFF):
     """
     if xs["lamb"] is None:
         return cross_section.cross_section_rutherford_projection_capped(
-            q, alpha, vs, xs.get("b_constrained_max"), R_eff=R_eff)
-    # For finite lamb the cap is already baked into xs["interp"].
+            q, alpha, vs, xs.get("b_constrained_max"), R_eff=R_eff,
+            kernel=xs.get("projection_kernel", cross_section.KERNEL_DEFAULT))
+    # For finite lamb the cap (and kernel) are already baked into xs["interp"].
     fn = cross_section.dsigma_dq_ln if xs["use_ln"] else cross_section.dsigma_dq
     return fn(q, alpha, xs["lamb"], R_eff, vs, xs["interp"])
 

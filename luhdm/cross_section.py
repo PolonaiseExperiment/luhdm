@@ -276,6 +276,27 @@ def coulomb_q_max(alpha, v, R_eff=R_EFF):
     return 2 * alpha / (v * units.conv_m2pGeV(R_eff))
 
 
+# ── projection-kernel convention ──
+# "planar-signed" is the shipped kernel: the signed-projection density under a
+# planar-arrival geometry (coefficient 2 pi, arcsine shell fraction).
+# "isotropic-folded" is the absolute one-axis projection under the pipeline's
+# isotropic-arrival model (coefficient 8 pi / 3, shell fraction x^3; for finite
+# lambda the dimensionless integrand becomes pi * int beta dbeta / K1(beta)).
+# The default reproduces the shipped pipeline byte-for-byte; the choice is a
+# recorded convention (see the projection-kernel verdict memo), not a fit.
+KERNEL_PLANAR_SIGNED = "planar-signed"
+KERNEL_ISOTROPIC_FOLDED = "isotropic-folded"
+KERNEL_DEFAULT = KERNEL_PLANAR_SIGNED
+_KERNELS = (KERNEL_PLANAR_SIGNED, KERNEL_ISOTROPIC_FOLDED)
+
+
+def _check_kernel(kernel):
+    if kernel not in _KERNELS:
+        raise ValueError(f"unknown projection kernel {kernel!r}; "
+                         f"expected one of {_KERNELS}")
+    return kernel
+
+
 def rutherford_shell_fraction(r):
     """Fraction of the uncapped Coulomb projection contributed by b <= b_outer.
 
@@ -306,8 +327,26 @@ def rutherford_shell_fraction(r):
     return np.where(small, series, direct)
 
 
+def rutherford_shell_fraction_iso(r):
+    """Isotropic-folded analogue of :func:`rutherford_shell_fraction`.
+
+    Under the absolute one-axis projection with isotropic arrivals the b <= b_outer
+    disc contributes the fraction F(x) = x^3 of the uncapped result
+    (x = b_outer/b_max clipped to 1): dsigma/d|q| = (pi v/(3 alpha))
+    (b_out^3 - b_in^3) in natural units — closed form, no special functions.
+    Same edge conventions as the planar-signed version: r may be 0
+    (b_outer -> infinity, F = 1) or inf (b_outer = 0, F = 0).
+    """
+    r = np.asarray(r, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        x = np.where(r > 1.0, 1.0 / r, 1.0)      # x = b_outer/b_max, clipped
+    x = np.where(np.isfinite(x), x, 0.0)         # r = inf (b_outer = 0) -> 0
+    return x ** 3
+
+
 def cross_section_rutherford_projection_capped(q, alpha, v, b_constrained_max,
-                                               R_eff=R_EFF):
+                                               R_eff=R_EFF,
+                                               kernel=KERNEL_DEFAULT):
     """Massless-mediator (Coulomb) projected dsigma/dq in GeV^-3.
 
     The impact-parameter integral runs over the ANNULUS
@@ -336,12 +375,17 @@ def cross_section_rutherford_projection_capped(q, alpha, v, b_constrained_max,
         raise ValueError(
             f"b_constrained_max ({b_constrained_max} m) below sensor "
             f"radius R_eff ({R_eff} m)")
-    uncapped = 2 * np.pi * alpha**2 / (v**2 * q**3)
+    if _check_kernel(kernel) == KERNEL_ISOTROPIC_FOLDED:
+        uncapped = (8.0 * np.pi / 3.0) * alpha**2 / (v**2 * q**3)
+        frac = rutherford_shell_fraction_iso
+    else:
+        uncapped = 2 * np.pi * alpha**2 / (v**2 * q**3)
+        frac = rutherford_shell_fraction
     b_max = coulomb_reach(q, alpha, v)
     outer = (1.0 if b_constrained_max is None
-             else rutherford_shell_fraction(b_max / b_constrained_max))
+             else frac(b_max / b_constrained_max))
     inner = (0.0 if R_eff == 0.0
-             else rutherford_shell_fraction(b_max / R_eff))
+             else frac(b_max / R_eff))
     return np.maximum(uncapped * (outer - inner), 0.0)
 
 
@@ -383,7 +427,7 @@ def impact_parameter_max(q, alpha, lamb, R_eff, v):
     return b
 
 
-def dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=None):
+def dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=None, kernel=KERNEL_DEFAULT):
     """Dimensionless projected differential cross section.
 
     ``xi_cap`` (= b_constrained_max/lamb) optionally caps the impact parameter:
@@ -392,10 +436,34 @@ def dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=None):
     b=R_eff, so the cap raises the LOWER limit to t_min and only bites when
     b_constrained_max < b_max(q), i.e. q_tilde < K1(xi_cap). ``xi_cap=None``
     (default) leaves the integral from t=0 unchanged.
+
+    ``kernel``: "planar-signed" (default, the shipped arccosh machinery) or
+    "isotropic-folded": dsigma/dq_tilde = pi * int beta dbeta / K1(beta) over
+    beta in [xi, min(K1^-1(q_tilde), xi_cap)] — the absolute one-axis
+    projection under isotropic arrivals, same prefactor chain in dsigma_dq.
     """
+    if xi_cap is not None and xi_cap < xi:
+        raise ValueError(
+            f"xi_cap ({xi_cap}) < xi ({xi}): cap below the inner cutoff")
     K1_xi = kn(1, xi)
     if q_tilde >= K1_xi:
         return 0.0
+
+    if _check_kernel(kernel) == KERNEL_ISOTROPIC_FOLDED:
+        beta_hi = float(np.atleast_1d(K1_inv(q_tilde))[0])
+        if xi_cap is not None:
+            beta_hi = min(beta_hi, xi_cap)
+        if beta_hi <= xi:
+            return 0.0
+        # integrand beta/K1(beta) grows ~ e^beta: carry it in logs on a dense
+        # grid (kve = K1 e^beta) and trapz; deterministic and float-safe out to
+        # the K1-underflow range the interpolants cover.
+        bs = np.linspace(xi, beta_hi, 20001)
+        ln_integrand = np.log(bs) + bs - np.log(kve(1, bs))
+        peak = ln_integrand.max()
+        return float(np.pi * np.exp(peak)
+                     * np.trapezoid(np.exp(ln_integrand - peak), bs))
+
     t_max = np.arccosh(K1_xi / q_tilde)
 
     t_min = 0.0
@@ -403,9 +471,6 @@ def dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=None):
         K1_cap = kn(1, xi_cap)
         if q_tilde < K1_cap:            # cap inside the reach: b_c < b_max(q)
             t_min = np.arccosh(K1_cap / q_tilde)
-    if xi_cap is not None and xi_cap < xi:
-        raise ValueError(
-            f"xi_cap ({xi_cap}) < xi ({xi}): cap below the inner cutoff")
 
     def integrand(t):
         kappa = q_tilde * np.cosh(t)
@@ -421,16 +486,26 @@ def make_dsigma_dq_interpolant(q_tilde_min,
                                R_eff,
                                lamb,
                                N_points=1000,
-                               b_constrained_max=None):
+                               b_constrained_max=None,
+                               kernel=KERNEL_DEFAULT):
     """Tabulate dsigma/dq_tilde once; returns a linear interpolant.
 
     ``b_constrained_max`` (metres, or None) optionally caps the outer edge of
     the impact-parameter integral at min(b_constrained_max, b_max(q)); None is a
-    byte-for-byte no-op.
+    byte-for-byte no-op. ``kernel`` selects the projection convention (see
+    :func:`dsigma_dq_tilde`); the default reproduces the shipped tabulation.
     """
     xi = R_eff / lamb
     q_tilde_max = kn(1, xi)
     q_tilde_values = np.geomspace(q_tilde_min, q_tilde_max, N_points)
+    if _check_kernel(kernel) == KERNEL_ISOTROPIC_FOLDED:
+        # The iso kernel vanishes LINEARLY in q_tilde at the endpoint, where
+        # the log-spaced grid is coarsest (~10% steps at N=600 spanning 25
+        # decades) — linear interpolation there is ~1% off where the planar
+        # kernel's arccosh shape stays ~0.2%. A linear tail over the top
+        # octave restores endpoint parity; the planar grid is untouched.
+        tail = np.linspace(0.5 * q_tilde_max, q_tilde_max, N_points // 2)
+        q_tilde_values = np.unique(np.concatenate([q_tilde_values, tail]))
     K1_inv = interpolant_k1_inverse
     if b_constrained_max is None:
         xi_cap = None
@@ -441,7 +516,7 @@ def make_dsigma_dq_interpolant(q_tilde_min,
                 f"radius R_eff ({R_eff} m)")
         xi_cap = b_constrained_max / lamb
     dsigma_values = np.array(
-        [dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=xi_cap)
+        [dsigma_dq_tilde(q_tilde, xi, K1_inv, xi_cap=xi_cap, kernel=kernel)
          for q_tilde in tqdm(q_tilde_values)])
     return interp1d(q_tilde_values, dsigma_values, kind='linear')
 
@@ -507,23 +582,45 @@ def interpolant_ln_k1_inverse(ln_k1_values):
     return out
 
 
-def ln_dsigma_dq_tilde(delta, ln_q_tilde_max, ln_k1_cap=None):
+def ln_dsigma_dq_tilde(delta, ln_q_tilde_max, ln_k1_cap=None,
+                       kernel=KERNEL_DEFAULT):
     """ln of the dimensionless dsigma/dq_tilde at Delta = ln(qt_max/qt).
 
     ``ln_k1_cap`` (= ln K1(b_constrained_max/lamb), or None) optionally caps the
     impact parameter: the cap raises the lower integration limit to t_min and
     bites only when b_constrained_max < b_max(q), i.e. when
     c = ln(K1(xi_cap)/q_tilde) > 0. ``ln_k1_cap=None`` is a byte-for-byte no-op.
+
+    ``kernel``: "planar-signed" (default, shipped) or "isotropic-folded"
+    (pi * int beta dbeta / K1(beta), beta in [xi, min(K1^-1(qt), xi_cap)]),
+    carried in logs via kve exactly like the shipped branch.
     """
+    # xi_cap < xi <=> ln K1(xi_cap) > ln K1(xi) = ln_q_tilde_max (K1 decreasing)
+    if ln_k1_cap is not None and ln_k1_cap > ln_q_tilde_max:
+        raise ValueError("cap below the inner cutoff")
+
+    if _check_kernel(kernel) == KERNEL_ISOTROPIC_FOLDED:
+        xi = float(interpolant_ln_k1_inverse(np.array([ln_q_tilde_max]))[0])
+        ln_qt = ln_q_tilde_max - delta
+        beta_hi = float(interpolant_ln_k1_inverse(np.array([ln_qt]))[0])
+        if ln_k1_cap is not None:
+            beta_cap = float(
+                interpolant_ln_k1_inverse(np.array([ln_k1_cap]))[0])
+            beta_hi = min(beta_hi, beta_cap)
+        if beta_hi <= xi:
+            return -np.inf
+        bs = np.linspace(xi, beta_hi, 20001)
+        ln_integrand = np.log(bs) + bs - np.log(kve(1, bs))
+        peak = ln_integrand.max()
+        return float(np.log(np.pi) + peak
+                     + np.log(np.trapezoid(np.exp(ln_integrand - peak), bs)))
+
     t_max = np.arccosh(np.exp(delta)) if delta < 30 else delta + np.log(2.0)
     t_min = 0.0
     if ln_k1_cap is not None:
         c = ln_k1_cap - ln_q_tilde_max + delta   # = ln(K1(xi_cap)/q_tilde)
         if c > 0.0:
             t_min = np.arccosh(np.exp(c))
-    # xi_cap < xi <=> ln K1(xi_cap) > ln K1(xi) = ln_q_tilde_max (K1 decreasing)
-    if ln_k1_cap is not None and ln_k1_cap > ln_q_tilde_max:
-        raise ValueError("cap below the inner cutoff")
     ts = np.linspace(t_min, t_max, 800)
     ln_kappa = (ln_q_tilde_max - delta) + np.log(np.cosh(ts))
     beta = interpolant_ln_k1_inverse(ln_kappa)
@@ -535,12 +632,14 @@ def ln_dsigma_dq_tilde(delta, ln_q_tilde_max, ln_k1_cap=None):
 
 
 def make_ln_dsigma_dq_interpolant(R_eff, lamb, delta_max=32.0, N_points=400,
-                                  b_constrained_max=None):
+                                  b_constrained_max=None,
+                                  kernel=KERNEL_DEFAULT):
     """Tabulate ln(dsigma/dq_tilde) vs Delta = ln(qt_max/qt) once.
 
     ``b_constrained_max`` (metres, or None) optionally caps the outer edge of
     the impact-parameter integral at min(b_constrained_max, b_max(q)); None is a
-    byte-for-byte no-op.
+    byte-for-byte no-op. ``kernel`` selects the projection convention (see
+    :func:`ln_dsigma_dq_tilde`); the default reproduces the shipped tabulation.
     """
     xi = R_eff / lamb
     ln_q_tilde_max = float(ln_k1(xi))
@@ -553,7 +652,8 @@ def make_ln_dsigma_dq_interpolant(R_eff, lamb, delta_max=32.0, N_points=400,
                 f"radius R_eff ({R_eff} m)")
         ln_k1_cap = float(ln_k1(b_constrained_max / lamb))
     deltas = np.linspace(1e-4, delta_max, N_points)
-    ln_values = [ln_dsigma_dq_tilde(d, ln_q_tilde_max, ln_k1_cap=ln_k1_cap)
+    ln_values = [ln_dsigma_dq_tilde(d, ln_q_tilde_max, ln_k1_cap=ln_k1_cap,
+                                    kernel=kernel)
                  for d in deltas]
     return interp1d(deltas, ln_values, bounds_error=False, fill_value=-np.inf)
 
