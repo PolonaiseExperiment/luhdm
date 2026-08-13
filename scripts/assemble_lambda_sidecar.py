@@ -2,8 +2,8 @@
 """Assemble the per-mode (lambda, alpha_n) scans into one release sidecar npz.
 
 Reads the three scan_lambda.py outputs (one per sensor mode, each at that
-mode's best DM mass from the v8 File A cube) and writes
-release/luhdm_lambda_scan_v8.npz with a provenance JSON string.
+mode's best DM mass from the v9 File A cube) and writes
+release/luhdm_lambda_scan_v9.npz with a provenance JSON string.
 """
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ _ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
 _ap.add_argument("--scan-dir", type=Path, default=Path("."),
                  help="directory holding scan_lambda_mode{1,2,3}.npz")
 SCRATCH = _ap.parse_args().scan_dir
-CUBE = "luhdm_datarelease_v8_A_f1_atm.h5"
-OUT = REPO / "release" / "luhdm_lambda_scan_v8.npz"
+CUBE = "luhdm_datarelease_v9_A_f1_atm.h5"
+OUT = REPO / "release" / "luhdm_lambda_scan_v9.npz"
 MODES = (1, 2, 3)
 
 
@@ -105,7 +105,7 @@ def main():
             "200 um and 2 mm physics tags are exact members, so sidecar slices "
             "at those ranges are directly comparable to the cube.",
         "alpha_axis":
-            "np.logspace(-10, 0, 44): bitwise the cube's axes/alpha_n.",
+            "np.logspace(-10, 0, 22): bitwise the cube's axes/alpha_n.",
         "physics": {
             "q_thresh_gev": float(ref["q_thresh"]),
             "q_hi_ref_gev": 8400.0,
@@ -113,7 +113,7 @@ def main():
             "b_constrained_max_m": None,
             "b_constrained_max_note":
                 "uncapped cross section (rate.make_xsec b_constrained_max=None), "
-                "matching the v8 release whose b_constrained_max_m attribute is NaN",
+                "matching the v9 release whose b_constrained_max_m attribute is NaN",
             "projection_kernel":
                 (str(ref["projection_kernel"])
                  if "projection_kernel" in ref else "planar-signed"),
@@ -164,8 +164,8 @@ def main():
         "argv": {str(m): [tilde(a) for a in argv[str(m)]] for m in MODES},
         "arrays":
             "per mode n in {1,2,3}: lambda_m_mode{n} [m] (54), "
-            "alpha_n_mode{n} (44), extremeness_mode{n} and mu_mode{n} both "
-            "(alpha, lambda) = (44, 54), n_transit_mode{n} (44, 54), "
+            "alpha_n_mode{n} (22), extremeness_mode{n} and mu_mode{n} both "
+            "(alpha, lambda) = (22, 54), n_transit_mode{n} (22, 54), "
             "best_mass_gev_mode{n} scalar. Exclusion at 95%: extremeness >= 0.95.",
         "created": datetime.now(timezone.utc).isoformat(),
     }
