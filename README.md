@@ -22,8 +22,8 @@ self-describing HDF5 cubes (0.55 and 0.59 MB) holding the whole limit-setting
 calculation for the paper: extremeness, expected signal and transit counts over
 the (mode, alpha_n, m_DM, lambda) grid, plus the measured efficiency curves,
 candidate lists and live time. The two files are the two hypotheses the paper
-uses — `luhdm_datarelease_v8_A_f1_atm.h5` is f_DM = 1 with atmospheric
-propagation, `luhdm_datarelease_v8_B_f0p1_noatm.h5` is f_DM = 0.1 without — and
+uses — `luhdm_datarelease_v9_A_f1_atm.h5` is f_DM = 1 with atmospheric
+propagation, `luhdm_datarelease_v9_B_f0p1_noatm.h5` is f_DM = 0.1 without — and
 share every axis and every detector input. Five lines of `h5py` get you the
 excluded region, and [`release/README.md`](release/README.md) is the front door:
 quickstart, data dictionary, worked reproduction of the published limit, known

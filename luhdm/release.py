@@ -6,21 +6,28 @@ over (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range
 ``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
 
-The **public** release is the v7 pair, one hypothesis per file:
-``release/luhdm_datarelease_v7_A_f1_atm.h5`` (f_DM = 1, attenuated) and
-``release/luhdm_datarelease_v7_B_f0p1_noatm.h5`` (f_DM = 0.1, bare halo). Pass
+The **public** release is the v9 pair, one hypothesis per file:
+``release/luhdm_datarelease_v9_A_f1_atm.h5`` (f_DM = 1, attenuated) and
+``release/luhdm_datarelease_v9_B_f0p1_noatm.h5`` (f_DM = 0.1, bare halo). Pass
 the one you want to :func:`open_release`; note that a single-hypothesis file may
 not carry ``attrs['f_dm_default']``, so pass ``f_dm=`` explicitly rather than
-relying on the fallback. :data:`DEFAULT_PATH` is *not* one of them: it is the
-internal full-lambda parent cube (54 finite ranges, 0.1 um to 2 m, both f_DM
-planes, both atmosphere states, and the pre-v7 10 cm impact-parameter cap),
-which is kept out of git and is what the continuous-lambda figures need.
+relying on the fallback. :data:`DEFAULT_PATH` is file A of that pair, so a bare
+``open_release()`` (and the ``--release`` default of the paper-figure scripts)
+lands on the published attenuated cube.
 
 Neither the release files nor this reader apply the release's mass cut
-``m_cut``: the v7 cross section is uncapped, so the surfaces report exclusion
+``m_cut``: the v9 cross section is uncapped, so the surfaces report exclusion
 above the mass where the halo stops delivering transits through the apparatus,
 and the cut that closes the region is a root attribute (``m_cut_*``) the caller
 applies. See section 5.4 of ``release/README.md``.
+
+A cube also records the *projection kernel* its cross sections were built with
+(root attribute ``projection_kernel``; v9 is ``isotropic-folded``, pre-flag
+files carry no attribute and were built ``planar-signed``). Recomputing a cell
+under the other kernel is a silent physics error, so use :meth:`Release.make_xsec`
+rather than calling :func:`luhdm.rate.make_xsec` directly: it threads the file's
+own kernel and impact-parameter cap into the handle. See section 5.5 of
+``release/README.md``.
 
 The file is intentionally plain HDF5 with dimension scales and rich per-dataset
 ``units``/``description`` attributes, so it can be opened by any HDF5 tool
@@ -76,9 +83,14 @@ import numpy as np
 
 from luhdm import limits
 
-# the internal full-lambda parent cube, not the public release: see the module
-# docstring. Kept out of git (release/*.h5 is gitignored bar the v7 pair).
-DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v5.h5"
+# File A of the public pair (f_DM = 1, attenuated): see the module docstring.
+# Also the ``--release`` default of every scripts/paper_fig_*.py.
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v9_A_f1_atm.h5"
+
+# Projection kernel of cubes that predate the ``projection_kernel`` attribute:
+# they name no kernel and were in fact built with exactly this convention. Same
+# fallback, same spelling, as scripts/refine_contours.py.
+KERNEL_PRE_FLAG = "planar-signed"
 
 FORMAT_VERSION = 1            # v3 group layout (/atm, /noatm)
 FORMAT_VERSION_AXES = 2       # axis layout (/results over f_dm x atmosphere)
@@ -327,6 +339,42 @@ class Release:
         """
         v = self.attrs.get("b_constrained_max_m")
         return None if v is None or not np.isfinite(v) else float(v)
+
+    @property
+    def projection_kernel(self):
+        """Projected-dsigma/dq convention this cube's surfaces were built with.
+
+        ``'isotropic-folded'`` (v9 onward: the absolute one-axis projection under
+        isotropic arrivals, coefficient 8 pi/3 and x^3 shell fraction) or
+        ``'planar-signed'`` (the historical signed-projection kernel, coefficient
+        2 pi and arcsine shell fraction). Files that predate the attribute name no
+        kernel and were built planar-signed, so that is the fallback --
+        :data:`KERNEL_PRE_FLAG`, the same convention ``scripts/refine_contours.py``
+        applies when it dispatches a cube's kernel into its own recomputation.
+        """
+        return str(self.attrs.get("projection_kernel", KERNEL_PRE_FLAG))
+
+    def make_xsec(self, lamb, **kw):
+        """A :func:`luhdm.rate.make_xsec` handle under *this cube's* conventions.
+
+        The one supported way to recompute a cell of the release: it fills in the
+        file's :attr:`projection_kernel` and :attr:`b_constrained_max` so a
+        recomputed dsigma/dq, dR/dq or mu is comparable with the stored surface
+        instead of silently mixing two projection conventions (the module-level
+        defaults in :mod:`luhdm.rate` are the *historical* ones, which pre-v9
+        cubes use and v9 does not).
+
+        ``lamb`` is the mediator range in metres, or ``None`` for the massless
+        slice. Any other :func:`luhdm.rate.make_xsec` keyword passes through;
+        naming ``projection_kernel`` or ``b_constrained_max`` explicitly
+        overrides the file's value, which is a deliberate act, not an accident.
+        """
+        # imported lazily: reading a cube should not pull in scipy/tqdm.
+        from luhdm import rate
+
+        kw.setdefault("projection_kernel", self.projection_kernel)
+        kw.setdefault("b_constrained_max", self.b_constrained_max)
+        return rate.make_xsec(lamb, **kw)
 
     @property
     def f_dm_values(self):

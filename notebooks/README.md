@@ -7,11 +7,11 @@ reads the raw instrument file.
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
 [`release/`](../release). Notebooks 01, 02, 03 and 04 open
-`luhdm_datarelease_v8_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
-notebook 05 opens `luhdm_datarelease_v8_B_f0p1_noatm.h5` (f_DM = 0.1,
+`luhdm_datarelease_v9_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
+notebook 05 opens `luhdm_datarelease_v9_B_f0p1_noatm.h5` (f_DM = 0.1,
 attenuation off), which is its whole subject; notebook 06 opens both, since it
 is the guided tour. One more released file sits beside them,
-`luhdm_lambda_scan_v8.npz`: a mediator-range sidecar to file A, holding each
+`luhdm_lambda_scan_v9.npz`: a mediator-range sidecar to file A, holding each
 mode's (coupling, range) planes on a 54-point range axis from 0.1 µm to 2 m at
 that mode's best dark matter mass. Notebook 04 opens it for its two
 mediator-range figures — the cube's four finite ranges are too few to draw a
