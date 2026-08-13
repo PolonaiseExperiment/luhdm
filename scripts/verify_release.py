@@ -646,6 +646,12 @@ def main():
                     help="optional assembled H5 for f4 spot checks")
     ap.add_argument("--n-spot", type=int, default=20)
     ap.add_argument("--skip-v2", action="store_true")
+    ap.add_argument("--skip-v1", action="store_true",
+                    help="skip the scan7-cache parity gate: V1 only means "
+                         "anything when the committed caches share the "
+                         "shards' conventions (kernel, efficiency, axes); a "
+                         "convention-changing build verifies on V2 until the "
+                         "caches are regenerated")
     args = ap.parse_args()
 
     atm_shards = read_shards(args.shard_dir_atm)
@@ -655,7 +661,11 @@ def main():
           f"{len(halo_shards)} halo shards")
 
     hard = {}
-    hard["V1"] = v1_tag_parity(atm_shards, noatm_shards)
+    if args.skip_v1:
+        print("\nV1 skipped (--skip-v1: committed scan7 caches do not share "
+              "these shards' conventions)")
+    else:
+        hard["V1"] = v1_tag_parity(atm_shards, noatm_shards)
     if args.skip_v2:
         print("\nV2 skipped (--skip-v2)")
     else:
