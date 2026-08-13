@@ -1,13 +1,13 @@
 """Measured detection efficiency epsilon(q) per sensor mode.
 
 The table is built by ``scripts/export_efficiency.py`` from the detector
-group's efficiency product -- since 2026-08-12 the curves with the impulse
-arrival phase w marginalised
-(``reference_data/efficiency_curves_marginalise_w.npz``; a night-selection
-variant differing at the few-permille level is committed alongside for the
-next rebuild); before that, a product that fixed w = 1 -- and committed as
-``reference_data/efficiency_curves.npz`` so it is available on every host (no
-data/ dir needed). ``make_efficiency`` returns a vectorised callable
+group's efficiency product -- since the v9 campaign the NIGHT-selection curves
+with the impulse arrival phase w marginalised
+(``reference_data/efficiency_curves_marginalise_w_night.npz``, matching the
+selection the candidate list uses; the full-run variant used for v8 is
+committed alongside); before that, a product that fixed w = 1 -- and committed
+as ``reference_data/efficiency_curves.npz`` so it is available on every host
+(no data/ dir needed). ``make_efficiency`` returns a vectorised callable
 epsilon(q_GeV) in [0, 1] for use as the ``eff`` argument of
 ``rate.differential_rate_trapz``.
 """
