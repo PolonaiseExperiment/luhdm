@@ -135,6 +135,13 @@ def main():
     ap.add_argument("--data", default=str(DEFAULT_DATA),
                     help="event list file, one impulse per line in eV "
                          "(default: notebooks/data.txt)")
+    ap.add_argument("--projection-kernel",
+                    choices=("planar-signed", "isotropic-folded"),
+                    default="planar-signed",
+                    help="projected-dsigma/dq kernel convention, applied to "
+                         "every range on the axis (default: the shipped "
+                         "planar-signed kernel, byte-identical); must match "
+                         "the cube this scan ships beside")
     args = ap.parse_args()
     M_DM = args.mass
     print(f"fixed m_DM = {M_DM:.3e} GeV")
@@ -183,7 +190,9 @@ def main():
 
     print(f"tabulating {LAMBS.size} cross sections (log-space) ...")
     t0 = time.time()
-    XS_BY_IL = [rate.make_xsec(lamb, force_ln=True) for lamb in LAMBS]
+    XS_BY_IL = [rate.make_xsec(lamb, force_ln=True,
+                               projection_kernel=args.projection_kernel)
+                for lamb in LAMBS]
     print(f"  done in {time.time() - t0:.0f}s")
 
     # high coupling first: the stiff attenuation ODE dominates the runtime
@@ -213,7 +222,8 @@ def main():
              t_total=T_TOTAL, seed=SEED, fidelity=str(FID),
              f_dm=float(args.f_dm), mu_cap=float(FID["mu_cap"]),
              lambda_axis=args.lambda_axis, q_thresh=Q_THRESH,
-             b_constrained_max=np.nan)   # uncapped cross section, as in v8
+             b_constrained_max=np.nan,   # uncapped cross section, as in v8
+             projection_kernel=args.projection_kernel)
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
 

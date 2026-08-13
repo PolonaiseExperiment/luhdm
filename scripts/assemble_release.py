@@ -90,10 +90,12 @@ def scrub_home(x):
 
 import h5py
 
-from luhdm import atmosphere, config, efficiency, halo, rate, units
+from luhdm import atmosphere, config, cross_section, efficiency, halo, rate, units
 
 # ── pinned constants (shared contract) ────────────────────────────────────────
 SEED = 20260702
+# projected-dsigma/dq kernel convention of shards that predate the flag
+KERNEL_DEFAULT = cross_section.KERNEL_DEFAULT
 Q_HI_REF = 8.4e3
 CONFIDENCE = 0.95
 M_PLANCK = 1.22e19
@@ -305,6 +307,7 @@ def load_pass(pass_dir, pass_name):
 
     lambda_ode = float(_scalar(massless.get("lamb_ode", np.nan)))
     b_cap, cap_unflagged = _cap_provenance(pass_name, all_recs)
+    kernel = _projection_kernel(pass_name, all_recs)
     return dict(
         pass_name=pass_name, ms=ms, alphas_n=alphas_n,
         lambda_finite=lambda_finite, n_finite=n_finite,
@@ -316,8 +319,32 @@ def load_pass(pass_dir, pass_name):
         fidelity_str=fid_str, fidelity=_parse_fidelity(fid_str),
         events=events, lambda_ode=lambda_ode,
         b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
+        projection_kernel=kernel,
         shard_files=[r["_file"] for r in all_recs],
     )
+
+
+def _projection_kernel(pass_name, recs):
+    """The pass's projected-dsigma/dq kernel convention (absent -> the default).
+
+    The kernel is a *convention* baked into every cross-section evaluation, so
+    two shards computed under different kernels are not the same quantity.
+    Shards predating the flag carry no key and are read as the shipped
+    "planar-signed" kernel — which is what they in fact used — so an old shard
+    next to an explicitly planar-signed one agrees, while an old shard next to
+    an isotropic-folded one is correctly refused.
+    """
+    kernels = {}
+    for rec in recs:
+        v = (str(_scalar(rec["projection_kernel"]))
+             if "projection_kernel" in rec else KERNEL_DEFAULT)
+        kernels.setdefault(v, []).append(rec["_file"])
+    if len(kernels) > 1:
+        detail = "; ".join(f"{k}: {v[:4]}{' ...' if len(v) > 4 else ''}"
+                           for k, v in sorted(kernels.items()))
+        sys.exit(f"FATAL: {pass_name} MIXED projection_kernel across shards "
+                 f"({detail})")
+    return next(iter(kernels))
 
 
 def _cap_provenance(pass_name, recs):
@@ -468,9 +495,11 @@ def load_halo(halo_dir):
         nt[:, :, li] = np.asarray(rec["nt"], dtype=np.float64)
         bmax[:, :, li] = np.asarray(rec["bmax_m"], dtype=np.float64)
     b_cap, cap_unflagged = _cap_provenance("halo", fin_recs + [massless])
+    kernel = _projection_kernel("halo", fin_recs + [massless])
     return dict(ms=ms, alphas_n=alphas_n, lambda_finite=lambda_finite,
                 n_finite=n_finite, n_transit=nt, bmax=bmax,
                 b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
+                projection_kernel=kernel,
                 inputs=_shard_inputs(fin_recs + [massless]),
                 shard_files=[r["_file"] for r in (fin_recs + [massless])])
 
@@ -512,6 +541,18 @@ def cross_check_cap(atm, noatm, halo_d):
     return cap
 
 
+def cross_check_projection_kernel(atm, noatm, halo_d):
+    """All three passes must share one projected-dsigma/dq kernel (hard gate)."""
+    ks = {"atm": atm["projection_kernel"], "noatm": noatm["projection_kernel"],
+          "halo": halo_d["projection_kernel"]}
+    if len(set(ks.values())) > 1:
+        sys.exit(f"FATAL: passes disagree on projection_kernel: {ks}")
+    kernel = ks["atm"]
+    print(f"projection kernel: {kernel}"
+          f"{' (shipped default)' if kernel == KERNEL_DEFAULT else ''}")
+    return kernel
+
+
 # ── status census ─────────────────────────────────────────────────────────────
 STATUS_NAMES = {0: "ok(MC)", 1: "exception", 2: "mu<0.2", 3: "mu>mu_cap",
                 4: "mu==0"}
@@ -537,17 +578,21 @@ def print_status_report(pass_name, pd):
 
 
 # ── /reference_curves (production fidelity, notebook 02 showcase) ─────────────
-def compute_reference_curves(quick=False):
+def compute_reference_curves(quick=False, projection_kernel=KERNEL_DEFAULT):
     """Notebook-02 showcase arrival-speed distributions + raw spectra.
 
     m = 1e8 GeV, alpha_n = 1e-3. Speed grid v = linspace(Q_THRESH/1e8/10, VESC,
     500). fv_shm = SHM; fv_<tag> via the attenuation ODE per tag. Raw dR/dq on
     q = geomspace(1e2, 1e5, 160) with the arrival f(v) FIXED at the 200 um
     attenuated distribution for every curve (mirrors notebook 02 exactly).
+
+    ``projection_kernel`` is the shards' kernel convention: the showcase spectra
+    ship in the same file as the cells and must be the same quantity.
     """
     n_grid = 80 if quick else 400
     n_shm = int(1e5) if quick else int(3e5)
-    print(f"\ncomputing /reference_curves (n_grid={n_grid}, n_shm={n_shm}) ...")
+    print(f"\ncomputing /reference_curves (n_grid={n_grid}, n_shm={n_shm}, "
+          f"kernel={projection_kernel}) ...")
     t0 = time.time()
 
     v_min = config.Q_THRESH / REF_M / 10.0
@@ -579,11 +624,14 @@ def compute_reference_curves(quick=False):
 
     # raw dR/dq for each tag + massless, arrival f(v) fixed at 200 um
     out["drdq"]["massless"] = np.asarray(
-        rate.differential_rate_trapz(q_gev, REF_ALPHA_N, REF_M, f_v_f_ref,
-                                     rate.make_xsec(None), eff=None),
+        rate.differential_rate_trapz(
+            q_gev, REF_ALPHA_N, REF_M, f_v_f_ref,
+            rate.make_xsec(None, projection_kernel=projection_kernel),
+            eff=None),
         dtype=np.float32)
     for tag in TAGS:
-        xs = rate.make_xsec(TAG_LAMBDA[tag])   # auto dispatch (not force_ln)
+        # auto dispatch (not force_ln)
+        xs = rate.make_xsec(TAG_LAMBDA[tag], projection_kernel=projection_kernel)
         out["drdq"][tag] = np.asarray(
             rate.differential_rate_trapz(q_gev, REF_ALPHA_N, REF_M, f_v_f_ref,
                                          xs, eff=None),
@@ -1160,6 +1208,10 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # reach. NaN = uncapped (the b-integral runs to the full b_max(q)).
         cap = atm["b_constrained_max"]
         a["b_constrained_max_m"] = float("nan") if cap is None else float(cap)
+        # projected-dsigma/dq kernel convention every cell (and the reference
+        # curves) was computed under; recomputes must pass it into
+        # rate.make_xsec(projection_kernel=...)
+        a["projection_kernel"] = str(atm["projection_kernel"])
         # Post-facto mass cut. With the cross section uncapped, the right edge
         # of the excluded region is set by the halo flux through a b_cap
         # aperture rather than by an in-integral cap; see mass_cut_flux. One
@@ -1240,6 +1292,9 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             # process resolved (LUHDM_T_EXPOSURE-aware) and must agree.
             "t_exposure_s": float(atm["t_total"]),
             "f_dm_values": atm["f_dm_values"],
+            # the cross-section convention the cells and the reference curves
+            # were computed under (shards predating the flag: planar-signed)
+            "projection_kernel": atm["projection_kernel"],
             "inputs": inputs,
         },
         "shard_dirs": {
@@ -1368,11 +1423,14 @@ def main():
     print(f"\nfinite-lambda axis agrees across passes: {lambda_finite.size} values"
           f"  [{lambda_finite.min():.3e} .. {lambda_finite.max():.3e}] m")
     cross_check_cap(atm, noatm, halo_d)
+    kernel = cross_check_projection_kernel(atm, noatm, halo_d)
 
     print_status_report("atm", atm)
     print_status_report("noatm", noatm)
 
-    ref = compute_reference_curves(quick=args.quick_reference)
+    # the showcase spectra must use the same kernel convention as the cells
+    ref = compute_reference_curves(quick=args.quick_reference,
+                                   projection_kernel=kernel)
 
     print("\nloading detector products ...")
     ev_dir = events_dir(args.data_dir)

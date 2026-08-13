@@ -489,6 +489,15 @@ def main():
                     help="impact-parameter cap [m] applied to the cross section "
                          "dsigma/dq only (finite and massless); None (default) "
                          "= uncapped, reproduces the current build exactly")
+    ap.add_argument("--projection-kernel",
+                    choices=("planar-signed", "isotropic-folded"),
+                    default="planar-signed",
+                    help="projected-dsigma/dq kernel convention for ALL slices: "
+                         "'planar-signed' (default) = the shipped kernel, "
+                         "byte-identical; 'isotropic-folded' = absolute "
+                         "one-axis projection under isotropic arrivals "
+                         "(8pi/3 + x^3 shell fraction massless; "
+                         "pi*int beta dbeta/K1 finite). Recorded per shard.")
     ap.add_argument("--data-dir", default=None,
                     help="dir holding data_mode{1,2,3}.txt (default <repo>/notebooks)")
     ap.add_argument("--print-order", action="store_true",
@@ -653,7 +662,8 @@ def main():
         # Tabulation density is resolved from xi inside rate.make_xsec, so the
         # builder and any later single-cell recompute cannot disagree about it.
         XS = rate.make_xsec(None if massless else lamb,       # auto dispatch
-                            b_constrained_max=args.b_constrained_max)
+                            b_constrained_max=args.b_constrained_max,
+                            projection_kernel=args.projection_kernel)
 
         print(f"[il={label}] lamb={lamb}  building shard "
               f"({total_cells} cells, {n_chunks} chunks) ...", flush=True)
@@ -710,6 +720,7 @@ def main():
                 lamb=(np.nan if massless else lamb), massless=massless,
                 il=il_stored, pass_name=pass_name, t_total=T_TOTAL, seed=SEED,
                 b_constrained_max=args.b_constrained_max,
+                projection_kernel=args.projection_kernel,
                 schema_version=SCHEMA_VERSION, created=created, argv=argv_str,
                 hostname=hostname, wall_s=wall_s, inputs_json=inputs_json)
         else:
@@ -721,6 +732,7 @@ def main():
                 massless=massless, lamb_ode=LAMB_ODE, il=il_stored,
                 pass_name=pass_name, q_min=Q_MIN, t_total=T_TOTAL, seed=SEED,
                 b_constrained_max=args.b_constrained_max,
+                projection_kernel=args.projection_kernel,
                 df=DF, fidelity=str(FID),
                 events_mode1=EVENTS_BY_MODE[0], events_mode2=EVENTS_BY_MODE[1],
                 events_mode3=EVENTS_BY_MODE[2], schema_version=SCHEMA_VERSION,
@@ -733,6 +745,7 @@ def main():
     append_run_config(shard_dir, dict(
         argv=[_scrub_home(a) for a in sys.argv], pass_name=pass_name,
         b_constrained_max=args.b_constrained_max,
+        projection_kernel=args.projection_kernel,
         axes=dict(n_m=n_m, n_a=n_a, n_l=n_finite + 1, m_tier=(
             None if pass_name == "halo" else (
                 args.m_tier if args.m_tier is not None else

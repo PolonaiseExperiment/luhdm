@@ -34,7 +34,11 @@ import numpy as np
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from luhdm import config, efficiency, rate  # noqa: E402
+from luhdm import config, cross_section, efficiency, rate  # noqa: E402
+
+# the shipped projected-dsigma/dq kernel; pre-kernel shards carry no key and
+# were built with exactly this convention
+KERNEL_DEFAULT = cross_section.KERNEL_DEFAULT
 
 SEED = 20260702
 Q_HI_REF = 8.4e3
@@ -71,6 +75,13 @@ def _opt_float(rec, key):
     return None if np.isnan(val) else val
 
 
+def _opt_str(rec, key):
+    if key not in rec:
+        return None
+    val = _scalar(rec[key])
+    return None if val is None else str(val)
+
+
 def read_shards(shard_dir):
     """Read every atm/noatm shard in a dir into a list of dicts (partial OK)."""
     shard_dir = Path(shard_dir)
@@ -99,6 +110,9 @@ def read_shards(shard_dir):
             # the impact-parameter cap this shard was built with; V2 must
             # recompute with the SAME cap or nothing on a capped cube can match
             "b_constrained_max": _opt_float(rec, "b_constrained_max"),
+            # projected-dsigma/dq kernel convention, same on every shard of a
+            # campaign; absent on pre-kernel shards -> the shipped default
+            "projection_kernel": _opt_str(rec, "projection_kernel"),
             "fidelity": str(_scalar(rec["fidelity"])),
             "events": {n: np.asarray(rec[f"events_mode{n}"], np.float64)
                        for n in MODES},
@@ -350,11 +364,16 @@ def _recompute_cell(scan_grid, shard, pass_name, mode, ia, im, caches):
     # default, which is exactly what those shards were built with.
     fid.setdefault("mu_cap", scan_grid.MU_CAP_DEFAULT)
     b_cap = shard.get("b_constrained_max")
-    # the cap is part of the cross-section identity, so it belongs in the key
-    key_xs = ("massless" if massless else round(shard["lamb"], 18), b_cap)
+    # the impact-parameter cap and the projection-kernel convention are both
+    # part of the cross-section identity (the kernel is baked into the
+    # finite-lambda interpolant), so both belong in the cache key
+    kernel = shard.get("projection_kernel") or KERNEL_DEFAULT
+    key_xs = ("massless" if massless else round(shard["lamb"], 18), b_cap,
+              kernel)
     if key_xs not in caches["xs"]:
         caches["xs"][key_xs] = rate.make_xsec(
-            None if massless else shard["lamb"], b_constrained_max=b_cap)
+            None if massless else shard["lamb"], b_constrained_max=b_cap,
+            projection_kernel=kernel)
     # V_I_SAMPLES built once per n_shm (same seed as the campaign)
     vkey = fid["n_shm"]
     if vkey not in caches["visamp"]:
@@ -397,6 +416,9 @@ def v2_spot_recompute(atm_shards, noatm_shards, n_spot):
     caps = sorted({s.get("b_constrained_max") for s in atm_shards + noatm_shards},
                   key=lambda c: (c is not None, c))
     print(f"  recomputing with the shards' own impact-parameter caps: {caps}")
+    kernels = sorted({s.get("projection_kernel") or KERNEL_DEFAULT
+                      for s in atm_shards + noatm_shards})
+    print(f"  recomputing with the shards' own projection kernels: {kernels}")
     mu_caps = sorted({_parse_fid(s["fidelity"]).get("mu_cap", scan_grid.MU_CAP_DEFAULT)
                       for s in atm_shards + noatm_shards})
     print(f"  recomputing with the shards' own optimum-interval mu caps: {mu_caps}")
@@ -562,6 +584,16 @@ def release_spot_check(release_path, atm_shards, noatm_shards, n_spot):
     rng = np.random.default_rng(SEED + 1)
     ok = True
     with h5py.File(release_path, "r") as h5:
+        # The f4 value check below cannot see a wrong kernel ATTRIBUTE: the
+        # numbers still match the shards they came from. Gate the attribute
+        # itself, or a v9 cube could ship claiming the historical kernel.
+        h5_kernel = str(h5.attrs.get("projection_kernel", KERNEL_DEFAULT))
+        shard_kernels = sorted({s.get("projection_kernel") or KERNEL_DEFAULT
+                                for s in atm_shards + noatm_shards})
+        if shard_kernels and shard_kernels != [h5_kernel]:
+            print(f"  projection_kernel mismatch: h5={h5_kernel!r} "
+                  f"shards={shard_kernels}")
+            ok = False
         lam_axis = h5["axes/lambda_m"][:]
         # Layout-agnostic read of the f_DM = 0.1 extremeness surface, which is
         # what the shards' "p" array holds. Axis layout: one /results cube

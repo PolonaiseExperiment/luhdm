@@ -68,6 +68,8 @@ ts() { date '+%F %T'; }
 #   BCAP=0.1     impact-parameter cap [m]; BCAP=none runs UNCAPPED (v7-quick)
 #   LSET=v7quick reduced lambda axis (20 um / 200 um / 2 mm + 200 m validation)
 #   QMIN=1000    analysis window [GeV]; unset => build_release's config.Q_THRESH
+#   KNL=isotropic-folded  projection kernel; unset => the planar-signed default
+#   NA=44        coupling grid points; unset => build_release's own default
 #   MTIER / DATA_DIR / PASSES  as before
 run_shard() {
     local pass="$1" il="$2"
@@ -79,6 +81,8 @@ run_shard() {
         *) extra+=(--b-constrained-max "${BCAP-0.1}") ;;
     esac
     [ -n "${QMIN:-}" ] && extra+=(--q-min "$QMIN")
+    [ -n "${KNL:-}" ] && extra+=(--projection-kernel "$KNL")
+    [ -n "${NA:-}" ] && extra+=(--n-a "$NA")
     t0=$(date +%s)
     echo "[$(ts)] SHARD_START pass=$pass il=$il workers=$WORKERS"
     if "$PY" scripts/build_release.py \

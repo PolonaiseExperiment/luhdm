@@ -134,7 +134,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import luhdm  # noqa: E402
 from luhdm import (  # noqa: E402
-    atmosphere, config, efficiency, halo, limits, rate, release,
+    atmosphere, config, cross_section, efficiency, halo, limits, rate, release,
 )
 
 # The determinism-critical pieces are imported from the builder, not copied:
@@ -155,12 +155,13 @@ from build_release import (  # noqa: E402
 #: of ``build_release._process_chunk``.
 P_HI_LO = 0.90
 
-#: The projection kernel this build of ``luhdm.cross_section`` implements. The
-#: shipped module carries no kernel toggle (the 2pi -> 8pi/3 change is
-#: deferred), so the name is spelled here exactly as the shelved
-#: ``cross_section.KERNEL_PLANAR_SIGNED`` spells it, and a cube attribute
-#: naming anything else is a hard stop rather than a silent mismatch.
-KERNEL_SHIPPED = "planar-signed"
+#: The projected-dsigma/dq kernel of cubes that predate the flag: they carry no
+#: ``projection_kernel`` attribute and were in fact built with exactly this
+#: convention. A cube that names a kernel has it dispatched into every
+#: ``rate.make_xsec`` the refiner builds; a cube naming a kernel this build of
+#: ``luhdm.cross_section`` does not implement is a hard stop rather than a
+#: silent mismatch.
+KERNEL_DEFAULT = cross_section.KERNEL_DEFAULT
 
 #: Provenance ships with the release and must carry no absolute home paths or
 #: usernames (and no host identifiers at all); every path string is stored
@@ -245,7 +246,7 @@ EFF = None         # efficiency eps_mode(QS) for the selected mode
 EVENTS = None      # observed impulses [GeV] for the selected mode
 V_I = None         # SHM initial-speed samples (seeded)
 XS = None          # rate.make_xsec handle (per surface; carries the b cap and
-                   # the massless kinematic-endpoint convention)
+                   # the cube's projection-kernel convention)
 LAMB_ODE = None    # atmospheric-ODE regulator range [m] (per surface)
 ATMOSPHERE = True  # per surface: False skips the ODE entirely (bare SHM)
 FID = None         # fidelity dict incl. mu_cap, optional two-tier n_mc_hi
@@ -961,22 +962,21 @@ def main():
             f"efficiency table {eff_path} sha mismatch vs the cube"
         SE_P = float(np.sqrt(LEVEL * (1 - LEVEL) / FID["n_mc"]))
 
-        # Two conventions travel with the cube as optional attributes, written
-        # only by the shelved fine-grid builder: the massless slice's kinematic
-        # endpoint factor (that slice only) and the projection kernel (every
-        # slice). The SHIPPED luhdm.rate/cross_section have no switch for
-        # either -- they implement exactly the historical 1.0 endpoint and the
-        # planar-signed kernel -- so a cube that asks for anything else cannot
-        # be reproduced by this build and must not be silently refined against
-        # the wrong physics.
+        # Two conventions travel with the cube as optional attributes: the
+        # massless slice's kinematic endpoint factor (that slice only) and the
+        # projection kernel (every slice). luhdm.cross_section implements both
+        # kernels, so the cube's kernel is DISPATCHED into every make_xsec
+        # below; luhdm.rate has no endpoint-factor switch, so a cube asking for
+        # anything but the historical 1.0 cannot be reproduced by this build
+        # and must not be silently refined against the wrong physics.
         q_epf = float(attrs.get("massless_q_endpoint_factor", 1.0))
-        kernel = str(attrs.get("projection_kernel", KERNEL_SHIPPED))
+        kernel = str(attrs.get("projection_kernel", KERNEL_DEFAULT))
         assert q_epf == 1.0, (
             f"cube asks for massless_q_endpoint_factor={q_epf}; this build of "
             f"luhdm.rate implements only the historical 1.0 convention")
-        assert kernel == KERNEL_SHIPPED, (
+        assert kernel in cross_section._KERNELS, (
             f"cube asks for projection_kernel={kernel!r}; this build of "
-            f"luhdm.cross_section implements only {KERNEL_SHIPPED!r}")
+            f"luhdm.cross_section implements {cross_section._KERNELS}")
 
         EVENTS = rel.events(args.mode).astype(float)
         if want_all:
@@ -1103,7 +1103,8 @@ def main():
         ATMOSPHERE = atm
         # Tabulation density is resolved from xi inside rate.make_xsec, so the
         # handle matches the builder's byte for byte (build_release, same call).
-        XS = rate.make_xsec(lamb, b_constrained_max=b_cap)
+        XS = rate.make_xsec(lamb, b_constrained_max=b_cap,
+                            projection_kernel=kernel)
         F_SCALE = f_dm / float(config.F_X)
         print(f"[surface {n}] lambda={tag} ({lam_m[n]} m), f_dm={f_dm}, "
               f"atmosphere={atm}, F_SCALE={F_SCALE:g}"

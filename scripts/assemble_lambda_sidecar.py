@@ -73,6 +73,11 @@ def main():
         assert np.isnan(float(d["b_constrained_max"])), "cross section must be uncapped"
         assert np.array_equal(d["lambs"], ref["lambs"]), "lambda axes differ"
         assert np.array_equal(d["alphas_n"], ref["alphas_n"]), "alpha axes differ"
+        # scans predating the kernel flag carry no key and were planar-signed
+        k = str(d["projection_kernel"]) if "projection_kernel" in d else "planar-signed"
+        k_ref = (str(ref["projection_kernel"])
+                 if "projection_kernel" in ref else "planar-signed")
+        assert k == k_ref, f"projection_kernel differs across scans: {k} vs {k_ref}"
 
     fid = str(ref["fidelity"])
     prov = {
@@ -109,6 +114,9 @@ def main():
             "b_constrained_max_note":
                 "uncapped cross section (rate.make_xsec b_constrained_max=None), "
                 "matching the v8 release whose b_constrained_max_m attribute is NaN",
+            "projection_kernel":
+                (str(ref["projection_kernel"])
+                 if "projection_kernel" in ref else "planar-signed"),
             "f_dm": 1.0,
             "f_x_baseline": 0.1,
             "f_dm_note":

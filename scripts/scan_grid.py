@@ -137,6 +137,11 @@ def main():
     ap.add_argument("--massless", action="store_true",
                     help="analytic Rutherford dsigma/dq at the sensor; --lamb "
                          "then only regulates the atmospheric Coulomb log")
+    ap.add_argument("--projection-kernel",
+                    choices=("planar-signed", "isotropic-folded"),
+                    default="planar-signed",
+                    help="projected-dsigma/dq kernel convention (default: the "
+                         "shipped planar-signed kernel, byte-identical)")
     args = ap.parse_args()
     LAMB = args.lamb
     Q_MIN = args.q_min
@@ -181,7 +186,8 @@ def main():
                                         rng=np.random.default_rng(SEED))
 
     print("building cross-section handle ...")
-    XS = rate.make_xsec(None if args.massless else LAMB)
+    XS = rate.make_xsec(None if args.massless else LAMB,
+                        projection_kernel=args.projection_kernel)
 
     tasks = [(ia, im, float(a), float(m))
              for im, m in enumerate(ms) for ia, a in enumerate(alphas_n)]
@@ -211,7 +217,8 @@ def main():
              q_min=Q_MIN, a_min=args.a_min, no_atmosphere=NO_ATM,
              mode=(args.mode if args.mode is not None else 0),
              df=args.df, flat_efficiency=args.flat_efficiency,
-             t_total=T_TOTAL, seed=SEED, fidelity=str(FID))
+             t_total=T_TOTAL, seed=SEED, fidelity=str(FID),
+             projection_kernel=args.projection_kernel)
     print(f"wrote {args.out} in {time.time() - t0:.0f}s")
 
 
