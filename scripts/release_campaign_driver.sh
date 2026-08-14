@@ -70,6 +70,11 @@ ts() { date '+%F %T'; }
 #   QMIN=1000    analysis window [GeV]; unset => build_release's config.Q_THRESH
 #   KNL=isotropic-folded  projection kernel; unset => the planar-signed default
 #   NA=44        coupling grid points; unset => build_release's own default
+#   NMC_HI=100000  two-tier MC: cells whose base extremeness lands in
+#                [0.90, 1.0) are re-evaluated on a second table with this many
+#                trials (seed+1), so the exclusion boundary stops jittering
+#                while bulk cells stay at the base n_mc. Unset => single tier,
+#                shards byte-identical to the historical campaign.
 #   MTIER / DATA_DIR / PASSES  as before
 run_shard() {
     local pass="$1" il="$2"
@@ -83,6 +88,7 @@ run_shard() {
     [ -n "${QMIN:-}" ] && extra+=(--q-min "$QMIN")
     [ -n "${KNL:-}" ] && extra+=(--projection-kernel "$KNL")
     [ -n "${NA:-}" ] && extra+=(--n-a "$NA")
+    [ -n "${NMC_HI:-}" ] && extra+=(--n-mc-hi "$NMC_HI")
     t0=$(date +%s)
     echo "[$(ts)] SHARD_START pass=$pass il=$il workers=$WORKERS"
     if "$PY" scripts/build_release.py \

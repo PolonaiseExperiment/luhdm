@@ -48,7 +48,9 @@ f=0.1 meaning, so every existing consumer is untouched.
   fidelity       str     ()            str(FID); includes mu_cap, so a
                                         single-cell recompute (verify_release V2
                                         -> scan_grid.scan_point) reuses the same
-                                        optimum-interval shortcut as the build
+                                        optimum-interval shortcut as the build,
+                                        and (only on a --n-mc-hi build) the
+                                        two-tier keys n_mc_hi / p_hi_lo
   events_mode1/2/3 f8    (n_ev,)       observed impulses [GeV]
   schema_version i8      ()            2
   created,argv,hostname str; wall_s f8  provenance
@@ -160,6 +162,13 @@ V_I_SAMPLES = None   # SHM initial-speed samples (seeded)
 FID = None
 NO_ATM = False       # True on the noatm pass (bare halo, no attenuation ODE)
 Q_MIN = None
+# Two-tier MC: default lower edge of the upgrade band. A base extremeness in
+# [P_HI_LO, 1.0) sits near or above the confidence contour, where the 1/sqrt(n_mc)
+# MC noise of the base tier is what makes a refined contour jitter; those cells
+# (and only those) are re-evaluated on the hi tier. Inert unless --n-mc-hi is
+# given. The same constant, same value, is the fallback in
+# refine_contours.P_HI_LO and in scan_grid.scan_point.
+P_HI_LO = 0.90
 # Per-shard globals (reset before each shard's pool is spawned):
 LAMB = None          # sensor mediator range [m]; None for massless
 XS = None            # rate.make_xsec handle for this shard
@@ -207,10 +216,42 @@ class PerMuTable:
 
 
 def _worker_init_lazy():
-    """Per-process state, built on first use in each child (one PerMuTable)."""
+    """Per-process state, built on first use in each child.
+
+    Two-tier MC: the base tier (FID["n_mc"]) and the optional hi tier
+    (FID["n_mc_hi"], used when the base extremeness lands in [p_hi_lo, 1.0))
+    live on SEPARATE PerMuTables with distinct seeds. generate() on one
+    OptimumIntervalTable regenerates from the advanced RNG state when asked for
+    more trials, so upgrading a shared table in place would make results depend
+    on evaluation order; two tables keyed (seed, n) keep every cell a pure
+    function of its own inputs — order-independent and recomputable.
+    """
     if "table" not in _worker_state:
         _worker_state["table"] = PerMuTable(seed=SEED)
+        if FID.get("n_mc_hi"):
+            _worker_state["table_hi"] = PerMuTable(seed=SEED + 1)
     return _worker_state
+
+
+def eval_extremeness(state, events, detected):
+    """(p, mu) with the optional two-tier MC upgrade near the boundary.
+
+    Base evaluation at FID["n_mc"]; when FID carries "n_mc_hi" and the base p
+    lands in [FID["p_hi_lo"], 1.0) — i.e. near or above the confidence contour
+    but not shortcut-saturated — the cell is re-evaluated on the hi-tier table.
+    mu is MC-free and identical between tiers. This function IS the cell
+    contract: any single-cell recompute (verify_release V2 -> scan_grid.scan_point,
+    refine_contours.oracle) must apply the same rule.
+    """
+    p, mu = limits.extremeness_and_mu(
+        state["table"], events, QS, detected, T_TOTAL,
+        n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+    n_hi = FID.get("n_mc_hi")
+    if n_hi and FID.get("p_hi_lo", P_HI_LO) <= p < 1.0:
+        p, mu = limits.extremeness_and_mu(
+            state["table_hi"], events, QS, detected, T_TOTAL,
+            n_mc=n_hi, mu_cap=FID["mu_cap"])
+    return p, mu
 
 
 def _derive_status(p, mu):
@@ -232,7 +273,6 @@ def _derive_status(p, mu):
 def _process_chunk(chunk):
     """atm/noatm: a contiguous block of (im, ia) cells -> per-cell results."""
     state = _worker_init_lazy()
-    table = state["table"]
     out = []
     for im, ia in chunk:
         m = float(MS[im])
@@ -256,15 +296,12 @@ def _process_chunk(chunk):
             st3_f1 = np.empty(3, np.uint8)
             for k in range(3):
                 detected = raw * EFF_QS[k]       # dR/dq at f_DM = F_DM_BASE
-                p, mu = limits.extremeness_and_mu(
-                    table, EVENTS_BY_MODE[k], QS, detected, T_TOTAL,
-                    n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+                p, mu = eval_extremeness(state, EVENTS_BY_MODE[k], detected)
                 p3[k], mu3[k], st3[k] = p, mu, _derive_status(p, mu)
-                # f_DM = 1: same spectrum shape, same events, same MC table —
+                # f_DM = 1: same spectrum shape, same events, same MC tables —
                 # only the normalisation scales (mu -> F_SCALE_F1 * mu).
-                p_f1, mu_f1 = limits.extremeness_and_mu(
-                    table, EVENTS_BY_MODE[k], QS, detected * F_SCALE_F1, T_TOTAL,
-                    n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+                p_f1, mu_f1 = eval_extremeness(
+                    state, EVENTS_BY_MODE[k], detected * F_SCALE_F1)
                 p3_f1[k], mu3_f1[k] = p_f1, mu_f1
                 st3_f1[k] = _derive_status(p_f1, mu_f1)
         except Exception as err:  # a raised ODE/rate corner: NaNs + status 1
@@ -476,6 +513,14 @@ def main():
     ap.add_argument("--m-min", type=float, default=1e5, help="lowest DM mass [GeV]")
     ap.add_argument("--a-min", type=float, default=1e-10, help="lowest coupling")
     ap.add_argument("--n-mc", type=int, default=None)
+    ap.add_argument("--n-mc-hi", type=int, default=None,
+                    help="two-tier MC: re-evaluate cells whose extremeness "
+                         "lands in [--p-hi-lo, 1.0) on a separate table with "
+                         "this many trials (seed SEED+1). Default off: the "
+                         "shards are then byte-identical to a single-tier build")
+    ap.add_argument("--p-hi-lo", type=float, default=P_HI_LO,
+                    help="lower edge of the two-tier upgrade band "
+                         "(default %(default)g; ignored without --n-mc-hi)")
     ap.add_argument("--n-ode", type=int, default=None)
     ap.add_argument("--n-shm", type=int, default=None)
     ap.add_argument("--n-q", type=int, default=None)
@@ -562,6 +607,16 @@ def main():
                      ("q_span", args.q_span)):
         if val is not None:
             FID[key] = val
+    if args.n_mc_hi:
+        # Recorded IN the fidelity dict, so the shard's fidelity string carries
+        # the whole two-tier contract: the assembler's cross-shard identity gate
+        # sees it (a mixed tiered/untiered assembly is a hard error), the
+        # release's fid_json hands it to refine_contours.oracle, and
+        # verify_release V2 -> scan_grid.scan_point recomputes cells on the same
+        # tier. Absent when the flag is not given, so untiered shards keep their
+        # exact historical fidelity string.
+        FID["n_mc_hi"] = args.n_mc_hi
+        FID["p_hi_lo"] = args.p_hi_lo
 
     # --- axes for this pass ---
     n_a = 6 if quick else args.n_a

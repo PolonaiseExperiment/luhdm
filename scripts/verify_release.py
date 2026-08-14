@@ -363,6 +363,12 @@ def _recompute_cell(scan_grid, shard, pass_name, mode, ia, im, caches):
     # built before the cap was recorded carry no "mu_cap" key -> the historical
     # default, which is exactly what those shards were built with.
     fid.setdefault("mu_cap", scan_grid.MU_CAP_DEFAULT)
+    # The two-tier MC contract (n_mc_hi / p_hi_lo, written by build_release
+    # --n-mc-hi) rides in the SAME dict and is handed through untouched:
+    # scan_grid.scan_point then rebuilds the hi tier on seed SEED+1 and applies
+    # the identical [p_hi_lo, 1.0) upgrade, so a near-boundary cell of a
+    # two-tier cube recomputes bit-exact. Untiered shards carry neither key and
+    # take the single-tier path.
     b_cap = shard.get("b_constrained_max")
     # the impact-parameter cap and the projection-kernel convention are both
     # part of the cross-section identity (the kernel is baked into the
@@ -422,6 +428,12 @@ def v2_spot_recompute(atm_shards, noatm_shards, n_spot):
     mu_caps = sorted({_parse_fid(s["fidelity"]).get("mu_cap", scan_grid.MU_CAP_DEFAULT)
                       for s in atm_shards + noatm_shards})
     print(f"  recomputing with the shards' own optimum-interval mu caps: {mu_caps}")
+    # the two-tier MC contract must survive the fidelity round-trip, or every
+    # near-boundary cell would recompute on the wrong table
+    tiers = sorted({(str(_parse_fid(s["fidelity"]).get("n_mc_hi")),
+                     str(_parse_fid(s["fidelity"]).get("p_hi_lo")))
+                    for s in atm_shards + noatm_shards})
+    print(f"  two-tier MC (n_mc_hi, p_hi_lo) read back from fidelity: {tiers}")
 
     caches = {"xs": {}, "visamp": {}}
     hard_fail = False

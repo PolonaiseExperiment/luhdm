@@ -236,6 +236,7 @@ def load_pass(pass_dir, pass_name):
     t_total = float(_scalar(ref["t_total"]))
     df = int(_scalar(ref["df"])) if "df" in ref else 3
     fid_str = str(_scalar(ref["fidelity"]))
+    ref_fid = _parse_fidelity(fid_str)
     events = {n: np.asarray(ref[f"events_mode{n}"], dtype=np.float64)
               for n in MODES}
 
@@ -255,6 +256,19 @@ def load_pass(pass_dir, pass_name):
             sys.exit(f"FATAL: {pass_name}:{tag} seed differs")
         if float(_scalar(rec["t_total"])) != t_total:
             sys.exit(f"FATAL: {pass_name}:{tag} t_total differs")
+        # Two-tier MC (build_release --n-mc-hi) rides inside the fidelity dict,
+        # so the generic string gate below would catch a mixed assembly anyway —
+        # but it is checked first, and named, because it is the one fidelity
+        # difference whose consequence is silent: a cube mixing tiered and
+        # untiered shards has near-boundary cells that no single recompute rule
+        # (verify_release V2, refine_contours' oracle) reproduces. 'absent' is a
+        # value here: the single-tier build must not mix with a tiered one.
+        rec_fid = _parse_fidelity(_scalar(rec["fidelity"]))
+        for key in ("n_mc_hi", "p_hi_lo"):
+            if rec_fid.get(key) != ref_fid.get(key):
+                sys.exit(f"FATAL: {pass_name}:{tag} MIXED TWO-TIER MC: "
+                         f"{key}={rec_fid.get(key)!r} vs "
+                         f"{ref_fid.get(key)!r} in {ref['_file']}")
         if str(_scalar(rec["fidelity"])) != fid_str:
             sys.exit(f"FATAL: {pass_name}:{tag} MIXED FIDELITY "
                      f"({str(_scalar(rec['fidelity']))!r} != {fid_str!r})")
@@ -1232,6 +1246,15 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         a["fid_n_q"] = int(fid.get("n_q", -1))
         a["fid_q_span"] = float(fid.get("q_span", float("nan")))
         a["fid_n_mc"] = int(fid.get("n_mc", -1))
+        # two-tier MC: cells whose base extremeness landed in
+        # [fid_p_hi_lo, 1.0) were re-evaluated on a separate table of
+        # fid_n_mc_hi trials (seed = seed + 1). -1 / NaN mean "single tier",
+        # which is what every cube built without build_release --n-mc-hi
+        # carries. The authoritative copy for recomputes is fid_json (that is
+        # what refine_contours reads); these two are the human-readable view,
+        # spelled like fid_n_mc.
+        a["fid_n_mc_hi"] = int(fid.get("n_mc_hi", -1))
+        a["fid_p_hi_lo"] = float(fid.get("p_hi_lo", float("nan")))
         # optimum-interval expected-count cap: cells above it are asserted
         # excluded without Monte Carlo. Shards built before the cap was
         # recorded carry no "mu_cap" key -> NaN, meaning "not recorded".
