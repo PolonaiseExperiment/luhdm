@@ -246,6 +246,11 @@ SURFACES = {
     "20um_f1": ("20um", 1.0, True),
     "20um_f0p1": ("20um", 0.1, True),
     "20um_f0p1_noatm": ("20um", 0.1, False),
+    # the rest of the f_DM = 0.1 bare-halo plane (File B), so the released
+    # f = 0.1 exclusion has refined boundaries in the (alpha, mass) plane too
+    "massless_f0p1_noatm": ("massless", 0.1, False),
+    "2mm_f0p1_noatm": ("2mm", 0.1, False),
+    "200um_f0p1_noatm": ("200um", 0.1, False),
 }
 
 #: What ``--surfaces all`` means: the five atmosphere figure surfaces,
