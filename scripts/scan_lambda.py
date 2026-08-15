@@ -67,6 +67,8 @@ def _worker_init_lazy():
     # cube's reproducibility contract.
     if "table" not in _worker_state:
         _worker_state["table"] = _rel.PerMuTable(seed=SEED)
+        if FID.get("n_mc_hi"):
+            _worker_state["table_hi"] = _rel.PerMuTable(seed=SEED + 1)
     return _worker_state
 
 
@@ -87,6 +89,14 @@ def scan_point(task):
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"],
             mu_cap=FID["mu_cap"])
+        # two-tier MC, the build_release.eval_extremeness rule: boundary-band
+        # cells re-evaluated on the higher-statistics table so the sidecar's
+        # band edges stay bit-consistent with a two-tier cube
+        n_hi = FID.get("n_mc_hi")
+        if n_hi and FID.get("p_hi_lo", 0.90) <= p < 1.0:
+            p, mu = limits.extremeness_and_mu(
+                state["table_hi"], EVENTS, qs, diff_rate, T_TOTAL,
+                n_mc=n_hi, mu_cap=FID["mu_cap"])
         n_t = F_SCALE * rate.expected_transits(alpha_n, M_DM, f_v_f, xs, T_TOTAL)
     except Exception as err:  # over-stopped/stiff corners: report, exclude nothing
         print(f"point (lamb={lamb:.1e}, a={alpha_n:.1e}) failed: {err}",
@@ -143,6 +153,11 @@ def main():
                          "every range on the axis (default: the shipped "
                          "planar-signed kernel, byte-identical); must match "
                          "the cube this scan ships beside")
+    ap.add_argument("--n-mc-hi", type=int, default=None,
+                    help="two-tier MC: re-evaluate cells with base p in "
+                         "[p-hi-lo, 1) on a fresh higher-statistics table "
+                         "(seed SEED+1); default off, byte-identical")
+    ap.add_argument("--p-hi-lo", type=float, default=0.90)
     args = ap.parse_args()
     M_DM = args.mass
     print(f"fixed m_DM = {M_DM:.3e} GeV")
@@ -156,6 +171,9 @@ def main():
     for key, val in (("n_l", args.n_l), ("n_a", args.n_a)):
         if val is not None:
             FID[key] = val
+    if args.n_mc_hi:
+        FID["n_mc_hi"] = int(args.n_mc_hi)
+        FID["p_hi_lo"] = float(args.p_hi_lo)
 
     F_SCALE = float(args.f_dm) / float(config.F_X)
     print(f"f_DM = {args.f_dm:g} (rate scale {F_SCALE:g} x the F_X={config.F_X:g} "
