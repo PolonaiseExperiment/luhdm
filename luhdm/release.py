@@ -6,9 +6,9 @@ over (sensor mode, coupling ``alpha_n``, dark-matter mass, mediator range
 ``scripts/build_release.py`` (the per-lambda shard builder) and
 ``scripts/assemble_release.py`` (shards -> HDF5); this module only *reads* it.
 
-The **public** release is the v9 pair, one hypothesis per file:
-``release/luhdm_datarelease_v9_A_f1_atm.h5`` (f_DM = 1, attenuated) and
-``release/luhdm_datarelease_v9_B_f0p1_noatm.h5`` (f_DM = 0.1, bare halo). Pass
+The **public** release is the v9.1 pair, one hypothesis per file:
+``release/luhdm_datarelease_v9p1_A_f1_atm.h5`` (f_DM = 1, attenuated) and
+``release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5`` (f_DM = 0.1, bare halo). Pass
 the one you want to :func:`open_release`; note that a single-hypothesis file may
 not carry ``attrs['f_dm_default']``, so pass ``f_dm=`` explicitly rather than
 relying on the fallback. :data:`DEFAULT_PATH` is file A of that pair, so a bare
@@ -85,7 +85,7 @@ from luhdm import limits
 
 # File A of the public pair (f_DM = 1, attenuated): see the module docstring.
 # Also the ``--release`` default of every scripts/paper_fig_*.py.
-DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v9_A_f1_atm.h5"
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "release" / "luhdm_datarelease_v9p1_A_f1_atm.h5"
 
 # Projection kernel of cubes that predate the ``projection_kernel`` attribute:
 # they name no kernel and were in fact built with exactly this convention. Same

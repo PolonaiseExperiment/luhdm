@@ -23,16 +23,20 @@ against the released numbers in the same cell.
 
 **Which cube.** The release is two files, one hypothesis each, both tracked in
 [`release/`](../release). Notebooks 00, 01, 02 and 03 open
-`luhdm_datarelease_v9_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
-notebook 04 opens `luhdm_datarelease_v9_B_f0p1_noatm.h5` (f_DM = 0.1,
+`luhdm_datarelease_v9p1_A_f1_atm.h5` (f_DM = 1, atmospheric attenuation on);
+notebook 04 opens `luhdm_datarelease_v9p1_B_f0p1_noatm.h5` (f_DM = 0.1,
 attenuation off), which is its whole subject; notebooks 02, 03, 04 and 05 open
 both — 02 and 03 because their replication checks need the bare-halo pass, 04
-for its side-by-side figure, 05 because it is the guided tour. Two more released files sit beside the cubes:
-`luhdm_contours_v9_A_f1_atm.json`, the root-found 95% boundary notebook 01
-publishes, and `luhdm_lambda_scan_v9.npz`, a mediator-range sidecar holding each
+for its side-by-side figure, 05 because it is the guided tour. Five more
+released files sit beside the cubes: `luhdm_contours_v9p1_A_f1_atm.json`, the
+root-found 95% boundary notebook 01 publishes;
+`luhdm_contours_v9p1_B_f0p1_noatm{,_mode2,_mode3}.json`, the same boundary for
+the bare-halo plane at all three sensor modes; and
+`luhdm_lambda_scan_v9p1.npz`, a mediator-range sidecar holding each
 mode's (coupling, range) planes on a 54-point range axis from 0.1 µm to 2 m at
-that mode's best dark matter mass. Notebook 01 opens both and checks their
-provenance records against the cube before drawing. All four files are
+that mode's best dark matter mass. Notebook 01 opens the file-A contours and the
+lambda scan and checks their provenance records against the cube before drawing,
+and reproduces a piece of the file-B contours live. All nine files are
 checksummed together in `release/SHA256SUMS`.
 
 **Two conventions of the release** show up in every notebook that draws a
@@ -53,7 +57,7 @@ is still the historical `planar-signed` one (2π, arcsine). Every file records
 its own choice in the `projection_kernel` root attribute, and
 `Release.make_xsec` threads it into a recomputation handle. Recomputing a
 released cell through the module default instead is a silent physics error worth
-13% in μ at the exclusion boundary. Notebook 02 has the argument, the two
+12% in μ at the exclusion boundary. Notebook 02 has the argument, the two
 kernels side by side, and the demonstration.
 
 ## What each notebook is for
@@ -75,8 +79,8 @@ Figures: `00_efficiency_curves`, `00_efficiency_products`,
 
 The paper's result. Per-mode excluded regions at the reference range and for a
 massless mediator; the whole released range family on one plane; the **refined
-boundary** from `luhdm_contours_v9_A_f1_atm.json` against the contour of the
-stored grid — at 0.476 dex per coupling cell the grid contour is a drawing
+boundary** from `luhdm_contours_v9p1_A_f1_atm.json` against the contour of the
+stored grid — at 0.233 dex per coupling cell the grid contour is a drawing
 convention and the Letter quotes the root-found boundary; the three sensor modes
 compared on the mass plane; and the excluded band swept over the mediator range
 from the lambda-scan sidecar, down to each mode's pinch-off. Backs the left
