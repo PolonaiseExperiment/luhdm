@@ -1018,7 +1018,13 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
 
     commit, dirty, dirty_files = git_provenance()
     pkgs = package_versions()
-    fid = atm["fidelity"]
+    # Fidelity attrs describe the surfaces the file WRITES: a single-plane
+    # selection takes them from that plane's pass, so File B (bare halo) can
+    # carry a different MC tier than the atmosphere pass without the recorded
+    # fidelity lying about the stored cells. 'both' keeps the historical
+    # atm-pass convention (mixed tiers with select=both would be ambiguous
+    # and passes today never mix outside a single-plane rebuild).
+    fid = (noatm if select == "f-base-noatm" else atm)["fidelity"]
     f_dm_values = atm["f_dm_values"] or [float(config.F_X)]
     f_sel, plane_sel = resolve_selection(select, f_dm_values)
     if axis_layout:
