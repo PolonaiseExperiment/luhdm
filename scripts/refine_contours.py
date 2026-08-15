@@ -116,9 +116,9 @@ a long run can be watched, and interrupted, without losing what is done.
   # surfaces; the f_DM = 0.1 atmosphere surface is in no v8 file):
   python scripts/refine_contours.py \\
       --surfaces massless_f1,2mm_f1,200um_f1,20um_f1 \\
-      --release release/luhdm_datarelease_v9_A_f1_atm.h5 --out /tmp/a.json
+      --release release/luhdm_datarelease_v9p1_A_f1_atm.h5 --out /tmp/a.json
   python scripts/refine_contours.py --surfaces 20um_f0p1_noatm \\
-      --release release/luhdm_datarelease_v9_B_f0p1_noatm.h5 --out /tmp/b.json
+      --release release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5 --out /tmp/b.json
 """
 from __future__ import annotations
 
@@ -300,6 +300,12 @@ def _worker_tables():
 # the median oracle call, far beyond any healthy cell. On timeout the cell is
 # treated exactly like a build_release status-1 cell: p = NaN reads as "not
 # excluded" everywhere downstream, which can only shrink the island.
+#: Baseline guard, calibrated to the single-tier n_mc = 1e4 oracle (60x its
+#: median call). Building a fresh per-mu table scales linearly with the MC
+#: tier, so main() rescales this by n_mc_hi/1e5 when the cube is two-tier —
+#: a 1e6-tier mu-bin build alone can exceed the baseline, and a timeout that
+#: fires on healthy calls silently biases the floor (p = NaN reads as not
+#: excluded). --oracle-timeout overrides the auto value.
 ORACLE_TIMEOUT_S = 600
 
 
@@ -1035,10 +1041,10 @@ def _require_plane(rel, path, name, f_dm, atm):
     if not miss:
         return
     want = ("the f_DM = 1 / atmosphere file (v8: File A, "
-            "release/luhdm_datarelease_v9_A_f1_atm.h5)"
+            "release/luhdm_datarelease_v9p1_A_f1_atm.h5)"
             if (float(f_dm) == 1.0 and atm) else
             "the f_DM = 0.1 / no-atmosphere file (v8: File B, "
-            "release/luhdm_datarelease_v9_B_f0p1_noatm.h5)"
+            "release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5)"
             if (float(f_dm) == 0.1 and not atm) else
             "the release file that carries this plane")
     raise SystemExit(
@@ -1090,6 +1096,10 @@ def main():
     ap.add_argument("--spot", type=int, default=0,
                     help="recompute this many coarse bracket cells per surface "
                          "and compare to the cube bit-for-bit")
+    ap.add_argument("--oracle-timeout", type=int, default=None,
+                    help="per-oracle-call SIGALRM guard in seconds (default: "
+                         "auto — 600 for single-tier cubes, scaled by "
+                         "n_mc_hi/1e5 for two-tier ones)")
     ap.add_argument("--massless-lamb", type=float, default=2.0,
                     help="ODE regulator range for the massless slice [m] "
                          "(must equal the cube build's value)")
@@ -1106,6 +1116,12 @@ def main():
     with release.open_release(args.release) as rel:
         attrs = dict(rel.attrs)
         FID = json.loads(attrs["fid_json"])
+        global ORACLE_TIMEOUT_S
+        if args.oracle_timeout is not None:
+            ORACLE_TIMEOUT_S = int(args.oracle_timeout)
+        elif FID.get("n_mc_hi"):
+            ORACLE_TIMEOUT_S = max(600, int(600 * FID["n_mc_hi"] / 1e5))
+        print(f"oracle timeout: {ORACLE_TIMEOUT_S} s")
         Q_MIN = float(attrs["q_thresh_gev"])
         T_TOTAL = float(attrs["t_exposure_s"])
         LEVEL = float(attrs.get("confidence_recommended", 0.95))
