@@ -21,8 +21,8 @@ notebooks/computation_cache_noatm/
 # so history does not carry a copy of each campaign; shards and assembly
 # staging dirs are build intermediates and never versioned.
 release/*.h5
-!release/luhdm_datarelease_v9_A_f1_atm.h5
-!release/luhdm_datarelease_v9_B_f0p1_noatm.h5
+!release/luhdm_datarelease_v9p1_A_f1_atm.h5
+!release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5
 # the v5 parent's build record; stays local alongside that cube.
 release/provenance.json
 release_shards*/

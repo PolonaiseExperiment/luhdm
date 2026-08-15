@@ -12,8 +12,8 @@ _ap.add_argument("--scan-dir", type=Path, default=Path("."),
                  help="directory holding scan_lambda_mode{1,2,3}.npz")
 SCRATCH = _ap.parse_args().scan_dir
 CUBE = str(Path(__file__).resolve().parent.parent
-           / "release" / "luhdm_datarelease_v9_A_f1_atm.h5")
-BEST_IM = {1: 14, 2: 13, 3: 18}   # v9 60-mass axis indices of the best masses
+           / "release" / "luhdm_datarelease_v9p1_A_f1_atm.h5")
+BEST_IM = {1: 28, 2: 24, 3: 35}   # v9.1 119-mass axis indices of the best masses
 
 
 def band(alpha, p, level=0.95):
