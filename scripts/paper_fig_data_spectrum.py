@@ -34,11 +34,19 @@ Usage
 -----
     python scripts/paper_fig_data_spectrum.py                # default release
     python scripts/paper_fig_data_spectrum.py --release <h5> # e.g. the night cube
+    python scripts/paper_fig_data_spectrum.py --stem efficiency   # Letter Fig. 2
+    python scripts/paper_fig_data_spectrum.py --talk        # slide-scale SVG/PNG
+
+``--talk`` draws the SAME panel -- same histogram, efficiency curve, guides and
+legend -- at presentation scale (see :func:`set_scale`) and writes it to the
+talk asset tree as ``talk_<stem>.svg``/``.png``. It never touches the paper's
+``figs/``.
 """
 from __future__ import annotations
 
 import argparse
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +71,66 @@ EV_PER_GEV = 1.0e9
 
 X_LO, X_HI = 3.0e1, 3.0e5    # plotted momentum window (GeV)
 HEADROOM = 1.30              # top of both y axes / the data maximum
+
+# --------------------------------------------------------------------------- #
+# Talk variant (--talk): the same panel at slide scale
+# --------------------------------------------------------------------------- #
+#: Talk scale factors for the pt-valued literals in this file, matching the
+#: jump ``paper_style.apply_talk_style`` makes in the rcParams (8 -> 15 pt type,
+#: 0.9 -> 2.2 pt lines). Every hardcoded fontsize/linewidth/markersize below is
+#: written as ``literal * S_FONT`` or ``literal * S_LINE``: a 7 pt guide label
+#: left behind would be unreadable from the back of a room even though the
+#: axis labels around it had grown.
+FONT_SCALE = 1.9
+LINE_SCALE = 2.2
+
+#: 200 dpi over 7 in is 1400 px: sharp on a projector, small enough to ship.
+TALK_PNG_DPI = 200
+
+#: Where each variant is written. The talk tree is the Slidev asset directory;
+#: --talk writes there and only there, never into the paper's figs/.
+PAPER_OUTDIR = Path(__file__).resolve().parents[1] / "ignore" / "overleaf" / "figs"
+TALK_OUTDIR = (Path(__file__).resolve().parents[1] / "ignore" / "talks"
+               / "talks-main" / "2026 COSMO" / "public" / "assets" / "luhdm")
+
+#: Live scale factors; 1.0 outside --talk, so every literal below evaluates to
+#: exactly the number it was written as and the paper figure is unchanged.
+S_FONT = 1.0
+S_LINE = 1.0
+
+
+def set_scale(talk):
+    """Point the pt-valued literals at print scale (``talk=False``) or slide."""
+    global S_FONT, S_LINE
+    S_FONT = FONT_SCALE if talk else 1.0
+    S_LINE = LINE_SCALE if talk else 1.0
+
+
+def scaled_dash(dash):
+    """A ``(offset, (on, off, ...))`` dash pattern scaled with the line weight.
+
+    Dash runs are in points, so leaving them alone under --talk would put the
+    print figure's 1.8 pt gaps on a 2.2 pt line and read as solid.
+    """
+    offset, seq = dash
+    if not seq:                      # (0, ()) -- solid, and stays solid
+        return dash
+    return (offset * S_LINE, tuple(v * S_LINE for v in seq))
+
+
+def save_talk(fig, outdir, stem, dpi=TALK_PNG_DPI):
+    """Write ``stem``.svg and ``stem``.png at the exact figure size.
+
+    Slidev consumes the SVG and the PNG is the raster fallback; the talk asset
+    tree carries no PDFs, so the PDF ``savefig_exact`` always writes is sent to
+    a scratch directory and discarded. Returns ``(svg, png)``.
+    """
+    outdir.mkdir(parents=True, exist_ok=True)
+    svg, png = outdir / f"{stem}.svg", outdir / f"{stem}.png"
+    with tempfile.TemporaryDirectory() as tmp:
+        ps.savefig_exact(fig, Path(tmp) / f"{stem}.pdf", png, png_dpi=dpi,
+                         svg_path=svg)
+    return svg, png
 
 
 # --------------------------------------------------------------------------- #
@@ -104,7 +172,7 @@ def count_tick_step(y_max, n_ticks=3):
 # --------------------------------------------------------------------------- #
 # Figure
 # --------------------------------------------------------------------------- #
-def build(rel):
+def build(rel, talk=False):
     q_thresh = float(rel.attrs.get("q_thresh_gev", 100.0))
     events = np.asarray(rel.events(MODE), dtype=float)          # GeV
     blips = np.asarray(rel.all_blips(MODE), dtype=float) / EV_PER_GEV
@@ -153,8 +221,10 @@ def build(rel):
     y_top = HEADROOM * y_max
     print(f"  {len(edges) - 1} bins of {DEX} dex, tallest bin {int(y_max)}")
 
-    ps.apply_prl_style()
-    fig, ax = plt.subplots(figsize=ps.FIGSIZE)
+    set_scale(talk)
+    (ps.apply_talk_style if talk else ps.apply_prl_style)()
+    # Same single panel with its twinned efficiency axis, at slide size.
+    fig, ax = plt.subplots(figsize=ps.TALK_FIGSIZE if talk else ps.FIGSIZE)
     axr = ax.twinx()
     ax.tick_params(which="both", top=True, right=False)
     axr.tick_params(which="both", top=False, right=True, direction="in")
@@ -165,7 +235,8 @@ def build(rel):
 
     # -- vertical guides (below the data: zorder < the histogram) -----------
     for xq in (q_thresh, q50):
-        ax.axvline(xq, color=ps.GREY_GUIDE, ls=(0, (3, 2)), lw=0.55, zorder=1.5)
+        ax.axvline(xq, color=ps.GREY_GUIDE, ls=scaled_dash((0, (3, 2))),
+                   lw=0.55 * S_LINE, zorder=1.5)
 
     # -- histograms ----------------------------------------------------------
     lbl_sel = rf"Candidates, mode {MODE}"
@@ -177,17 +248,18 @@ def build(rel):
     # histograms stay distinct in grayscale as well as in colour (F9).
     if has_sub:
         ax.stairs(counts_sub, edges, fill=True, facecolor="#BFBFBF", alpha=0.55,
-                  edgecolor=ps.GREY_DARK, ls=(0, (2.6, 1.4)), lw=0.7,
-                  zorder=2, label=lbl_sub)
+                  edgecolor=ps.GREY_DARK, ls=scaled_dash((0, (2.6, 1.4))),
+                  lw=0.7 * S_LINE, zorder=2, label=lbl_sub)
     ax.stairs(counts_sel, edges, fill=True, facecolor=ps.OI_BLUE, alpha=0.38,
-              edgecolor=ps.OI_BLUE, lw=0.8, zorder=3, label=lbl_sel)
+              edgecolor=ps.OI_BLUE, lw=0.8 * S_LINE, zorder=3, label=lbl_sel)
 
     # -- efficiency on the right axis ---------------------------------------
     q_curve = np.geomspace(X_LO, X_HI, 900)
     (eff_line,) = axr.plot(q_curve, eps(q_curve), color=ps.OI_VERMILLION,
-                           ls=(0, (4.5, 1.8)), lw=1.0, zorder=4, label=lbl_eff)
-    axr.plot([q50], [0.5], marker="o", ms=2.6, mfc="white",
-             mec=ps.OI_VERMILLION, mew=0.7, ls="none", zorder=5)
+                           ls=scaled_dash((0, (4.5, 1.8))), lw=1.0 * S_LINE,
+                           zorder=4, label=lbl_eff)
+    axr.plot([q50], [0.5], marker="o", ms=2.6 * S_FONT, mfc="white",
+             mec=ps.OI_VERMILLION, mew=0.7 * S_LINE, ls="none", zorder=5)
 
     # -- axes ----------------------------------------------------------------
     ax.set_xscale("log")
@@ -204,17 +276,22 @@ def build(rel):
     axr.set_ylim(0.0, HEADROOM)
     axr.set_yticks([0.0, 0.5, 1.0])
     axr.set_ylabel(r"Detection efficiency $\varepsilon(q)$")
-    axr.spines["right"].set_linewidth(0.5)
+    # Match the frame the style sheet draws (0.5 pt in print, 1.0 pt in --talk)
+    # rather than a literal, so the twin's spine cannot end up a different
+    # weight from the three it joins.
+    axr.spines["right"].set_linewidth(plt.rcParams["axes.linewidth"])
 
     # -- guide labels, in the headroom band reserved above the data ---------
     # No halo: HEADROOM keeps this band empty, and ps.halo() cannot be combined
     # with text.usetex in matplotlib 3.11 (see paper_style.halo).
     t_sel = ax.text(q_thresh, 0.985, "%s TeV\nselection" % tev(q_thresh),
                     transform=ax.get_xaxis_transform(), ha="center", va="top",
-                    fontsize=7.0, color="black", linespacing=1.15, zorder=5)
+                    fontsize=7.0 * S_FONT, color="black", linespacing=1.15,
+                    zorder=5)
     t_50 = ax.text(q50, 0.985, "%s TeV\n$\\varepsilon = 0.5$" % tev(q50),
                    transform=ax.get_xaxis_transform(), ha="center", va="top",
-                   fontsize=7.0, color="black", linespacing=1.15, zorder=5)
+                   fontsize=7.0 * S_FONT, color="black", linespacing=1.15,
+                   zorder=5)
 
     # -- legend --------------------------------------------------------------
     handles, labels = ax.get_legend_handles_labels()
@@ -233,6 +310,9 @@ def build(rel):
     leg.set_zorder(6)
 
     tag = ps.add_preliminary_tag(ax, ps.preliminary_tag_text(rel.version_tag))
+    if tag is not None:
+        # add_preliminary_tag fixes the tag at 6 pt, which is print scale.
+        tag.set_fontsize(6.0 * S_FONT)
 
     # -- self-gating ---------------------------------------------------------
     ps.assert_text_clearance(fig, {
@@ -262,23 +342,33 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--release", type=Path, default=release.DEFAULT_PATH,
                    help="data-release HDF5 (default: %(default)s)")
-    p.add_argument("--outdir", type=Path,
-                   default=Path(__file__).resolve().parents[1]
-                   / "ignore" / "overleaf" / "figs",
-                   help="output directory (default: %(default)s)")
+    p.add_argument("--outdir", type=Path, default=None,
+                   help="output directory (default: ignore/overleaf/figs, or "
+                        "the talk asset tree under --talk)")
     p.add_argument("--stem", default="data_spectrum",
-                   help="output basename without extension")
+                   help="output basename without extension "
+                        "(--talk writes talk_<stem>)")
+    p.add_argument("--talk", action="store_true",
+                   help="slide variant of the same panel: ~15 pt type, heavier "
+                        f"lines, {ps.TALK_FIGSIZE[0]:.1f}x{ps.TALK_FIGSIZE[1]:.1f}"
+                        " in, written as SVG+PNG to the talk asset tree. Never "
+                        "writes to the paper's figs/.")
     args = p.parse_args(argv)
 
     with release.open_release(args.release) as rel:
         print(f"release: {args.release}  ({rel.version_tag})")
-        fig, info = build(rel)
+        fig, info = build(rel, talk=args.talk)
 
-    pdf = args.outdir / f"{args.stem}.pdf"
-    png = args.outdir / f"{args.stem}.png"
-    ps.savefig_exact(fig, pdf, png)
+    if args.talk:
+        outdir = args.outdir or TALK_OUTDIR
+        main_out, png = save_talk(fig, outdir, f"talk_{args.stem}")
+    else:
+        outdir = args.outdir or PAPER_OUTDIR
+        main_out = outdir / f"{args.stem}.pdf"
+        png = outdir / f"{args.stem}.png"
+        ps.savefig_exact(fig, main_out, png)
     plt.close(fig)
-    print(ps.report_size(fig, pdf))
+    print(ps.report_size(fig, main_out))
     print(f"preview: {png}")
     return info
 

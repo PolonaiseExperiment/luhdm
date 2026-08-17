@@ -33,7 +33,8 @@ endpoint convention are read back too, but this build of ``luhdm`` carries no
 switch for either, so they are *asserted* to be the shipped ones rather than
 applied -- a cube that asks for anything else stops the run. MC calibration
 goes through the same :class:`PerMuTable` (fresh seed-20260702 table per
-0.02-dex-rounded mu), so p is a pure, bit-reproducible function of
+mu rounded onto the cube's own ``mu_dex`` grid, 0.02 dex unless the cube says
+otherwise), so p is a pure, bit-reproducible function of
 (alpha, m, surface) -- independent of worker count, evaluation order, and of
 *which* alphas the refinement visits. At the cube's own grid points the oracle
 reproduces the released values bit-for-bit in the cube's float32 storage
@@ -78,12 +79,21 @@ every oracle evaluation for audit/debug.
 
 Determinism guarantees inherited from the cube's scheme
 -------------------------------------------------------
-``limits.extremeness_and_mu`` rounds mu onto a 0.02-dex log grid and
-:class:`build_release.PerMuTable` gives every rounded mu its own freshly
-seeded table, so the MC extremeness is a pure function of (rounded mu, seed,
-n_mc). Bisection queries therefore see a deterministic (slightly rough)
-p(alpha); no stochastic root-finding machinery is needed, and a re-run of
-this script reproduces every refined vertex exactly.
+``limits.extremeness_and_mu`` rounds mu onto a log grid of step ``mu_dex``
+(0.02 dex by default; the cube's own value is read from ``fid_json`` and echoed
+in the startup banner) and :class:`build_release.PerMuTable` gives every rounded
+mu its own freshly seeded table, so the MC extremeness is a pure function of
+(rounded mu, seed, n_mc). Bisection queries therefore see a deterministic
+(slightly rough) p(alpha); no stochastic root-finding machinery is needed, and a
+re-run of this script reproduces every refined vertex exactly.
+
+That same rounding is a resolution limit, not only a guarantee: p is a STEP
+function of the mu bin, so one bin spans dlog(alpha) = mu_dex / (dlog mu /
+dlog alpha) and the refined edge cannot be localized finer than that. Where the
+sensitivity is weak (the bare-halo plane at high DM mass, dlog mu / dlog alpha
+~ 0.05) a 0.02-dex cube is quantization-limited at ~0.4 dex in alpha and more MC
+trials do not help -- that cube must be rebuilt with a finer
+``build_release --mu-dex`` for the refinement to see anything smaller.
 
 Usage
 -----
@@ -173,6 +183,21 @@ from build_release import (  # noqa: E402
 #: them and the oracle is a single base-tier evaluation -- exactly the cell body
 #: of ``build_release._process_chunk``.
 P_HI_LO = 0.90
+
+#: Optimum-interval MC calibration granularity [dex of mu], the fallback when a
+#: cube's fidelity dict names no ``mu_dex``. Same value as
+#: ``build_release.MU_DEX`` and ``limits.extremeness_and_mu``'s own default, so
+#: every cube built before mu_dex was recorded refines exactly as before. A cube
+#: built with ``build_release --mu-dex`` carries its value in ``fid_json`` and the
+#: oracle MUST use it: p is a step function of the mu bin, so a finer or coarser
+#: granularity here would trace a different p(alpha) than the cube's cells.
+MU_DEX = 0.02
+
+#: LRU cap on per-mu MC tables kept resident per worker, per tier (None =
+#: unbounded, the historical behaviour). A finer ``mu_dex`` realizes
+#: proportionally more bins; eviction only costs regeneration time because each
+#: bin's table is a pure function of (seed, mu, n). Set by ``--table-max-bins``.
+TABLE_MAX_BINS = None
 
 #: The projected-dsigma/dq kernel of cubes that predate the flag: they carry no
 #: ``projection_kernel`` attribute and were in fact built with exactly this
@@ -289,9 +314,10 @@ def _worker_tables():
     ``generate`` regenerates from the advanced RNG state, so a shared table
     would make p evaluation-order dependent)."""
     if "table" not in _worker_state:
-        _worker_state["table"] = PerMuTable(seed=SEED)
+        _worker_state["table"] = PerMuTable(seed=SEED, max_bins=TABLE_MAX_BINS)
         if FID.get("n_mc_hi"):
-            _worker_state["table_hi"] = PerMuTable(seed=SEED + 1)
+            _worker_state["table_hi"] = PerMuTable(seed=SEED + 1,
+                                                   max_bins=TABLE_MAX_BINS)
     return _worker_state
 
 
@@ -335,9 +361,14 @@ def oracle(alpha, m, history=None, kind=""):
             f_v_f = halo.standard_halo_model
         raw = rate.differential_rate_trapz(QS, alpha, m, f_v_f, XS, eff=None)
         detected = raw * EFF * F_SCALE
+        # the cube's own MC calibration granularity (absent -> MU_DEX, the
+        # historical 0.02): it selects the mu bin each seeded table is keyed on,
+        # so bisecting with a different value would trace a p(alpha) that the
+        # cube's cells do not reproduce
+        mu_dex = FID.get("mu_dex", MU_DEX)
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, QS, detected, T_TOTAL,
-            n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+            n_mc=FID["n_mc"], mu_cap=FID["mu_cap"], mu_dex=mu_dex)
         # Two-tier MC (v7 fidelity contract), verbatim build_release.eval_extremeness:
         # a base p at or above p_hi_lo (but not shortcut-saturated) is re-evaluated
         # on the hi-tier table. Cubes without n_mc_hi take the base result as-is.
@@ -345,7 +376,7 @@ def oracle(alpha, m, history=None, kind=""):
         if n_hi and FID.get("p_hi_lo", P_HI_LO) <= p < 1.0:
             p, mu = limits.extremeness_and_mu(
                 state["table_hi"], EVENTS, QS, detected, T_TOTAL,
-                n_mc=n_hi, mu_cap=FID["mu_cap"])
+                n_mc=n_hi, mu_cap=FID["mu_cap"], mu_dex=mu_dex)
     except OracleTimeout:
         print(f"    ORACLE TIMEOUT ({ORACLE_TIMEOUT_S} s) at "
               f"alpha={alpha:.6e} m={m:.6e} kind={kind}: p=NaN (not excluded)",
@@ -1100,6 +1131,12 @@ def main():
                     help="per-oracle-call SIGALRM guard in seconds (default: "
                          "auto — 600 for single-tier cubes, scaled by "
                          "n_mc_hi/1e5 for two-tier ones)")
+    ap.add_argument("--table-max-bins", type=int, default=None,
+                    help="LRU cap on per-mu MC tables kept resident per worker, "
+                         "per tier (default: unbounded). Memory knob only -- an "
+                         "evicted bin is regenerated from its own seed, so no "
+                         "refined vertex changes. Relevant on a fine-mu_dex cube, "
+                         "which realizes proportionally more bins")
     ap.add_argument("--massless-lamb", type=float, default=2.0,
                     help="ODE regulator range for the massless slice [m] "
                          "(must equal the cube build's value)")
@@ -1116,12 +1153,20 @@ def main():
     with release.open_release(args.release) as rel:
         attrs = dict(rel.attrs)
         FID = json.loads(attrs["fid_json"])
-        global ORACLE_TIMEOUT_S
+        global ORACLE_TIMEOUT_S, TABLE_MAX_BINS
         if args.oracle_timeout is not None:
             ORACLE_TIMEOUT_S = int(args.oracle_timeout)
         elif FID.get("n_mc_hi"):
             ORACLE_TIMEOUT_S = max(600, int(600 * FID["n_mc_hi"] / 1e5))
-        print(f"oracle timeout: {ORACLE_TIMEOUT_S} s")
+        TABLE_MAX_BINS = args.table_max_bins
+        # mu_dex is read from the cube, never chosen here: it is the granularity
+        # the cube's cells were calibrated on and it bounds the boundary's own
+        # resolution in alpha, so it belongs in the banner beside the guard.
+        print(f"oracle timeout: {ORACLE_TIMEOUT_S} s;  "
+              f"mu_dex: {FID.get('mu_dex', MU_DEX):g} dex"
+              + ("" if "mu_dex" in FID else " (cube records none; default)")
+              + (f";  table LRU cap: {TABLE_MAX_BINS} bins/worker/tier"
+                 if TABLE_MAX_BINS is not None else ""))
         Q_MIN = float(attrs["q_thresh_gev"])
         T_TOTAL = float(attrs["t_exposure_s"])
         LEVEL = float(attrs.get("confidence_recommended", 0.95))

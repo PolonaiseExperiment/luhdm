@@ -86,17 +86,21 @@ def scan_point(task):
         qs = np.geomspace(Q_THRESH, FID["q_span"] * Q_HI_REF, FID["n_q"])
         diff_rate = F_SCALE * rate.differential_rate_trapz(
             qs, alpha_n, M_DM, f_v_f, xs, eff=EFF)
+        # MC calibration granularity, the build_release contract: mu is rounded
+        # onto a mu_dex-step log grid and each bin has its own seeded table
+        # (absent -> _rel.MU_DEX, the historical 0.02)
+        mu_dex = FID.get("mu_dex", _rel.MU_DEX)
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"],
-            mu_cap=FID["mu_cap"])
+            mu_cap=FID["mu_cap"], mu_dex=mu_dex)
         # two-tier MC, the build_release.eval_extremeness rule: boundary-band
         # cells re-evaluated on the higher-statistics table so the sidecar's
         # band edges stay bit-consistent with a two-tier cube
         n_hi = FID.get("n_mc_hi")
-        if n_hi and FID.get("p_hi_lo", 0.90) <= p < 1.0:
+        if n_hi and FID.get("p_hi_lo", _rel.P_HI_LO) <= p < 1.0:
             p, mu = limits.extremeness_and_mu(
                 state["table_hi"], EVENTS, qs, diff_rate, T_TOTAL,
-                n_mc=n_hi, mu_cap=FID["mu_cap"])
+                n_mc=n_hi, mu_cap=FID["mu_cap"], mu_dex=mu_dex)
         n_t = F_SCALE * rate.expected_transits(alpha_n, M_DM, f_v_f, xs, T_TOTAL)
     except Exception as err:  # over-stopped/stiff corners: report, exclude nothing
         print(f"point (lamb={lamb:.1e}, a={alpha_n:.1e}) failed: {err}",
@@ -157,7 +161,12 @@ def main():
                     help="two-tier MC: re-evaluate cells with base p in "
                          "[p-hi-lo, 1) on a fresh higher-statistics table "
                          "(seed SEED+1); default off, byte-identical")
-    ap.add_argument("--p-hi-lo", type=float, default=0.90)
+    ap.add_argument("--p-hi-lo", type=float, default=_rel.P_HI_LO)
+    ap.add_argument("--mu-dex", type=float, default=_rel.MU_DEX,
+                    help="optimum-interval MC calibration granularity [dex of "
+                         "mu] (default %(default)g, the release convention); "
+                         "recorded in the npz fidelity string only when it "
+                         "differs, so a default scan stays byte-identical")
     args = ap.parse_args()
     M_DM = args.mass
     print(f"fixed m_DM = {M_DM:.3e} GeV")
@@ -174,10 +183,15 @@ def main():
     if args.n_mc_hi:
         FID["n_mc_hi"] = int(args.n_mc_hi)
         FID["p_hi_lo"] = float(args.p_hi_lo)
+    if args.mu_dex != _rel.MU_DEX:
+        # only when overridden, matching build_release's discipline, so the
+        # npz "fidelity" string of a default scan is unchanged
+        FID["mu_dex"] = float(args.mu_dex)
 
     F_SCALE = float(args.f_dm) / float(config.F_X)
     print(f"f_DM = {args.f_dm:g} (rate scale {F_SCALE:g} x the F_X={config.F_X:g} "
-          f"baseline);  mu_cap = {FID['mu_cap']:g}")
+          f"baseline);  mu_cap = {FID['mu_cap']:g}"
+          + (f";  mu_dex = {FID['mu_dex']:g}" if "mu_dex" in FID else ""))
 
     if args.mode is not None:
         EFF = efficiency.make_efficiency(args.mode, args.df)

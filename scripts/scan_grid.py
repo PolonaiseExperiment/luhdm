@@ -46,6 +46,14 @@ MU_CAP_DEFAULT = 40.0
 # dict names an "n_mc_hi" but no explicit "p_hi_lo". Same value as
 # build_release.P_HI_LO and refine_contours.P_HI_LO.
 P_HI_LO_DEFAULT = 0.90
+# Optimum-interval MC calibration granularity [dex of mu] used when the caller's
+# fidelity dict names no explicit "mu_dex". Kept at limits.extremeness_and_mu's
+# own default so every shard/cache built before mu_dex was recorded recomputes
+# bit-for-bit; a build_release --mu-dex build pins its value in the fidelity
+# string, and this path (verify_release V2) must honour it or every near-boundary
+# cell of a fine-mu cube lands in the wrong mu bin. Same value as
+# build_release.MU_DEX and refine_contours.MU_DEX.
+MU_DEX_DEFAULT = 0.02
 # default observed-event list; --data overrides it (e.g. per-mode data_mode{n}.txt)
 DEFAULT_DATA = Path(__file__).resolve().parent.parent / "notebooks" / "data_mode1.txt"
 
@@ -58,7 +66,9 @@ FID = None       # fidelity dict; optional "mu_cap" key selects the
                  # optimum-interval p==1 shortcut (absent -> MU_CAP_DEFAULT, the
                  # historical value every pre-mu_cap shard was built with).
                  # Optional "n_mc_hi"/"p_hi_lo" keys select the two-tier MC
-                 # upgrade (absent -> single tier, the historical behaviour)
+                 # upgrade (absent -> single tier, the historical behaviour).
+                 # Optional "mu_dex" key sets the MC calibration granularity
+                 # (absent -> MU_DEX_DEFAULT, the historical 0.02 dex)
 EVENTS = None
 Q_MIN = None     # lower edge of the momentum grid / analysis threshold [GeV]
 EFF = None       # detection-efficiency callable eps(q_GeV), or None for raw rate
@@ -99,17 +109,22 @@ def scan_point(task):
             f_v_f = atmosphere.compute_f_vf(v_f_samples, v_min)[0]
         qs = np.geomspace(Q_MIN, FID["q_span"] * Q_HI_REF, FID["n_q"])
         diff_rate = rate.differential_rate_trapz(qs, alpha_n, m, f_v_f, XS, eff=EFF)
+        # the MC calibration granularity is part of the cell contract (it picks
+        # the mu bin the seeded table is keyed on), so it comes from the caller's
+        # fidelity dict — a fine-mu cube's cells only recompute bit-exact here
+        mu_dex = FID.get("mu_dex", MU_DEX_DEFAULT)
         p, mu = limits.extremeness_and_mu(
             state["table"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=FID["n_mc"],
-            mu_cap=FID.get("mu_cap", MU_CAP_DEFAULT))
+            mu_cap=FID.get("mu_cap", MU_CAP_DEFAULT), mu_dex=mu_dex)
         # two-tier MC: near-boundary cells are re-evaluated on the hi-tier
         # table — same rule as build_release.eval_extremeness. Inert for
         # fidelity dicts without "n_mc_hi" (every single-tier cache/shard).
+        # Both tiers share mu_dex: it is a property of the mu axis, not of n_mc.
         n_hi = FID.get("n_mc_hi")
         if n_hi and FID.get("p_hi_lo", P_HI_LO_DEFAULT) <= p < 1.0:
             p, mu = limits.extremeness_and_mu(
                 state["table_hi"], EVENTS, qs, diff_rate, T_TOTAL, n_mc=n_hi,
-                mu_cap=FID.get("mu_cap", MU_CAP_DEFAULT))
+                mu_cap=FID.get("mu_cap", MU_CAP_DEFAULT), mu_dex=mu_dex)
         n_t = rate.expected_transits(alpha_n, m, f_v_f, XS, T_TOTAL)
     except Exception as err:  # absurd-coupling corners: report, exclude nothing
         print(f"point (a={alpha_n:.1e}, m={m:.1e}) failed: {err}", flush=True)
@@ -156,6 +171,10 @@ def main():
     ap.add_argument("--p-hi-lo", type=float, default=P_HI_LO_DEFAULT,
                     help="lower edge of the two-tier upgrade band "
                          "(default %(default)g; ignored without --n-mc-hi)")
+    ap.add_argument("--mu-dex", type=float, default=MU_DEX_DEFAULT,
+                    help="optimum-interval MC calibration granularity [dex of "
+                         "mu] (default %(default)g); recorded in the cache's "
+                         "fidelity string only when it differs from the default")
     ap.add_argument("--n-ode", type=int, default=None,
                     help="override attenuation-ODE grid points")
     ap.add_argument("--no-atmosphere", action="store_true",
@@ -205,9 +224,13 @@ def main():
         # in the fidelity dict, so the cache file records the whole contract
         FID["n_mc_hi"] = args.n_mc_hi
         FID["p_hi_lo"] = args.p_hi_lo
+    if args.mu_dex != MU_DEX_DEFAULT:
+        # only when overridden, so a default cache's fidelity string is unchanged
+        FID["mu_dex"] = float(args.mu_dex)
     print(f"grid {FID['n_m']}x{FID['n_a']}  n_mc={FID['n_mc']}  n_ode={FID['n_ode']}"
           + (f"  n_mc_hi={FID['n_mc_hi']} (p >= {FID['p_hi_lo']:g})"
-             if args.n_mc_hi else ""))
+             if args.n_mc_hi else "")
+          + (f"  mu_dex={FID['mu_dex']:g}" if "mu_dex" in FID else ""))
 
     # masses to the Planck scale, couplings capped at alpha_n = 1
     ms = np.logspace(np.log10(args.m_min), np.log10(1.22e19), FID["n_m"])

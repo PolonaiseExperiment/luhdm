@@ -368,7 +368,11 @@ def _recompute_cell(scan_grid, shard, pass_name, mode, ia, im, caches):
     # scan_grid.scan_point then rebuilds the hi tier on seed SEED+1 and applies
     # the identical [p_hi_lo, 1.0) upgrade, so a near-boundary cell of a
     # two-tier cube recomputes bit-exact. Untiered shards carry neither key and
-    # take the single-tier path.
+    # take the single-tier path. The MC calibration granularity "mu_dex" rides in
+    # the same dict on the same terms (absent -> scan_grid.MU_DEX_DEFAULT, the
+    # 0.02 dex every earlier shard was built at); it picks the mu bin the seeded
+    # table is keyed on, so a shard built with build_release --mu-dex only
+    # recomputes bit-exact because its own value travels with it.
     b_cap = shard.get("b_constrained_max")
     # the impact-parameter cap and the projection-kernel convention are both
     # part of the cross-section identity (the kernel is baked into the
@@ -434,6 +438,14 @@ def v2_spot_recompute(atm_shards, noatm_shards, n_spot):
                      str(_parse_fid(s["fidelity"]).get("p_hi_lo")))
                     for s in atm_shards + noatm_shards})
     print(f"  two-tier MC (n_mc_hi, p_hi_lo) read back from fidelity: {tiers}")
+    # the MC calibration granularity must survive the same round-trip: p is a step
+    # function of the rounded mu, so recomputing a fine-mu shard at the default
+    # 0.02 dex would land in a different bin and mismatch every MC cell
+    mu_dexes = sorted({_parse_fid(s["fidelity"]).get("mu_dex",
+                                                     scan_grid.MU_DEX_DEFAULT)
+                       for s in atm_shards + noatm_shards})
+    print(f"  recomputing with the shards' own MC granularities mu_dex: "
+          f"{mu_dexes}")
 
     caches = {"xs": {}, "visamp": {}}
     hard_fail = False

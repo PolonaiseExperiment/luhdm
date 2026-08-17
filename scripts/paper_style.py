@@ -79,6 +79,17 @@ GREY_BAND = "#D9D9D9"     # excluded / out-of-selection shading
 
 TAG_RED = "#C00000"     # PRELIMINARY corner tag
 
+#: One hue per sensor mode, used identically in every figure a mode appears in.
+#: Green is excluded from the set so no figure can put red and green adjacent,
+#: and the three values stay distinct under deuteranopia and in grayscale.
+MODE_COLORS = {1: OI_BLUE, 2: OI_ORANGE, 3: OI_PURPLE}
+
+#: Observed candidate impulses drawn as guide lines over a coloured curve
+#: family (e.g. the viridis mediator-range ramp): dark grey, labelled in place,
+#: never red -- red guide lines over a green-containing ramp is the red/green
+#: adjacency the colour charter bans.
+CANDIDATE_COLOR = GREY_DARK
+
 
 def apply_prl_style():
     """Install the charter's rcParams.  Call once, before creating a figure."""
@@ -134,6 +145,49 @@ def apply_prl_style():
     })
     # A legend edge drawn by rcParams still needs its width set explicitly.
     plt.rcParams["patch.linewidth"] = 0.5
+
+
+#: Default talk figure size: half a 16:9 slide's content area at ~96 px/in.
+TALK_FIGSIZE = (7.0, 4.2)
+
+
+def apply_talk_style():
+    """Slide variant of the charter: same conventions at presentation scale.
+
+    A paper figure dropped onto a slide carries 8 pt type into a room where the
+    body text is ~15 pt; the plotting-guidance rule of thumb (and the reason
+    this exists) is that no font on a plot should be smaller than the text
+    around it.  Talk figures are therefore drawn at :data:`TALK_FIGSIZE` with
+    ~15 pt type and heavier lines, and are exported as SVG for Slidev.  All
+    other conventions (Okabe-Ito palette, :data:`MODE_COLORS`, tick style,
+    no titles, no stamps) are inherited from :func:`apply_prl_style`.
+    """
+    apply_prl_style()
+    plt.rcParams.update({
+        "font.size": 15.0,
+        "axes.labelsize": 15.0,
+        "axes.titlesize": 15.0,
+        "xtick.labelsize": 13.0,
+        "ytick.labelsize": 13.0,
+        "legend.fontsize": 13.0,
+        "lines.linewidth": 2.2,
+        "lines.markeredgewidth": 1.0,
+        "axes.linewidth": 1.0,
+        "grid.linewidth": 0.8,
+        "xtick.major.width": 1.0,
+        "ytick.major.width": 1.0,
+        "xtick.minor.width": 0.7,
+        "ytick.minor.width": 0.7,
+        "xtick.major.size": 5.2,
+        "ytick.major.size": 5.2,
+        "xtick.minor.size": 3.0,
+        "ytick.minor.size": 3.0,
+        "xtick.major.pad": 4.0,
+        "ytick.major.pad": 4.0,
+        "axes.labelpad": 4.0,
+        "savefig.dpi": 200,
+    })
+    plt.rcParams["patch.linewidth"] = 1.0
 
 
 # --------------------------------------------------------------------------- #
@@ -316,16 +370,19 @@ def assert_legend_clear_of(fig, legend, curves, pad_pt=1.0):
 # --------------------------------------------------------------------------- #
 # Output
 # --------------------------------------------------------------------------- #
-def savefig_exact(fig, pdf_path, png_path=None, png_dpi=600):
-    """Save at the exact figure size (no tight bbox) plus a PNG preview.
+def savefig_exact(fig, pdf_path, png_path=None, png_dpi=600, svg_path=None):
+    """Save at the exact figure size (no tight bbox) plus optional PNG/SVG.
 
     ``bbox_inches='tight'`` is deliberately *not* used: it re-measures the
     canvas around the drawn artists and would push the width off 8.6 cm.
+    ``svg_path`` exists for the talk variants, which Slidev consumes as SVG.
     """
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(pdf_path, format="pdf")
     if png_path is not None:
         fig.savefig(png_path, format="png", dpi=png_dpi)
+    if svg_path is not None:
+        fig.savefig(svg_path, format="svg")
     return pdf_path
 
 

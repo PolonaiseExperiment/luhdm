@@ -50,7 +50,9 @@ f=0.1 meaning, so every existing consumer is untouched.
                                         -> scan_grid.scan_point) reuses the same
                                         optimum-interval shortcut as the build,
                                         and (only on a --n-mc-hi build) the
-                                        two-tier keys n_mc_hi / p_hi_lo
+                                        two-tier keys n_mc_hi / p_hi_lo, and
+                                        (only on a --mu-dex build) the MC
+                                        calibration granularity mu_dex
   events_mode1/2/3 f8    (n_ev,)       observed impulses [GeV]
   schema_version i8      ()            2
   created,argv,hostname str; wall_s f8  provenance
@@ -86,6 +88,7 @@ import json
 import os
 import sys
 import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -169,6 +172,27 @@ Q_MIN = None
 # given. The same constant, same value, is the fallback in
 # refine_contours.P_HI_LO and in scan_grid.scan_point.
 P_HI_LO = 0.90
+# Optimum-interval MC calibration granularity. limits.extremeness_and_mu rounds
+# the expected count mu onto a log grid of this step (dex) and PerMuTable shards
+# the seeded MC by the rounded mu, so the extremeness p is a pure STEP function
+# of rounded mu -- that is the determinism guarantee, and also a quantization
+# floor on any refined contour: one mu bin spans dlog(alpha) = mu_dex /
+# (dlog mu / dlog alpha). On the bare-halo plane at high DM mass the sensitivity
+# dlog mu / dlog alpha falls to ~0.05, so a 0.02-dex mu bin is up to 0.4 dex wide
+# in alpha and the boundary is quantization-limited there -- no number of MC
+# trials helps (identical roughness measured at n_mc_hi = 1e5 and 1e6).
+# --mu-dex 0.002 narrows those plateaus ~10x at ~10x the resident-table count
+# (see --table-max-bins). This is the DEFAULT and matches
+# limits.extremeness_and_mu's own default, so it is recorded in the fidelity
+# string only when overridden; the same value is the fallback in
+# scan_grid.MU_DEX_DEFAULT and refine_contours.MU_DEX.
+MU_DEX = 0.02
+# LRU cap on the number of per-mu MC tables a worker keeps resident (per tier).
+# None = unbounded = the historical behaviour. Finer mu_dex means proportionally
+# more realized tables (measured ~0.5 MB each at n_mc = 1e4, so ~0.6 GB per
+# worker at 1300 bins); evicting a bin only costs regeneration time, never
+# determinism, because each bin's table is a pure function of (seed, mu, n).
+TABLE_MAX_BINS = None
 # Per-shard globals (reset before each shard's pool is spawned):
 LAMB = None          # sensor mediator range [m]; None for massless
 XS = None            # rate.make_xsec handle for this shard
@@ -191,17 +215,29 @@ class PerMuTable:
     makes the MC calibration a pure function of (mu, seed, n) -- independent of
     evaluation order, worker count and resume boundaries -- so a fresh
     single-cell recompute reproduces the cube bit-for-bit.
+
+    ``max_bins`` (None = unbounded, the historical behaviour) caps how many
+    realized tables stay resident, evicting least-recently-used. It is a MEMORY
+    knob only: an evicted bin is rebuilt from ``limits.new_table(seed)``, which
+    reseeds per bin, so eviction costs regeneration time and cannot change a
+    single value. It exists because a finer ``mu_dex`` realizes proportionally
+    more bins per worker.
     """
 
-    def __init__(self, seed=SEED):
+    def __init__(self, seed=SEED, max_bins=None):
         self._seed = seed
-        self._tables: dict = {}
+        self._max_bins = max_bins
+        self._tables: OrderedDict = OrderedDict()
 
     def _table_for(self, mu):
         t = self._tables.get(mu)
         if t is None:
             t = limits.new_table(seed=self._seed)
             self._tables[mu] = t
+            if self._max_bins is not None and len(self._tables) > self._max_bins:
+                self._tables.popitem(last=False)   # evict LRU
+        else:
+            self._tables.move_to_end(mu)
         return t
 
     def generate(self, mu, n):
@@ -227,9 +263,10 @@ def _worker_init_lazy():
     function of its own inputs — order-independent and recomputable.
     """
     if "table" not in _worker_state:
-        _worker_state["table"] = PerMuTable(seed=SEED)
+        _worker_state["table"] = PerMuTable(seed=SEED, max_bins=TABLE_MAX_BINS)
         if FID.get("n_mc_hi"):
-            _worker_state["table_hi"] = PerMuTable(seed=SEED + 1)
+            _worker_state["table_hi"] = PerMuTable(seed=SEED + 1,
+                                                   max_bins=TABLE_MAX_BINS)
     return _worker_state
 
 
@@ -242,15 +279,22 @@ def eval_extremeness(state, events, detected):
     mu is MC-free and identical between tiers. This function IS the cell
     contract: any single-cell recompute (verify_release V2 -> scan_grid.scan_point,
     refine_contours.oracle) must apply the same rule.
+
+    The MC calibration granularity FID["mu_dex"] (absent -> MU_DEX, the historical
+    0.02) is part of that contract too: it sets the mu bin the seeded table is
+    keyed on, so a recompute at a different granularity lands in a different bin
+    and gets a different p. Both tiers use the same granularity -- mu_dex is a
+    property of the mu axis, not of the trial count.
     """
+    mu_dex = FID.get("mu_dex", MU_DEX)
     p, mu = limits.extremeness_and_mu(
         state["table"], events, QS, detected, T_TOTAL,
-        n_mc=FID["n_mc"], mu_cap=FID["mu_cap"])
+        n_mc=FID["n_mc"], mu_cap=FID["mu_cap"], mu_dex=mu_dex)
     n_hi = FID.get("n_mc_hi")
     if n_hi and FID.get("p_hi_lo", P_HI_LO) <= p < 1.0:
         p, mu = limits.extremeness_and_mu(
             state["table_hi"], events, QS, detected, T_TOTAL,
-            n_mc=n_hi, mu_cap=FID["mu_cap"])
+            n_mc=n_hi, mu_cap=FID["mu_cap"], mu_dex=mu_dex)
     return p, mu
 
 
@@ -486,7 +530,7 @@ def append_run_config(shard_dir, record):
 # --------------------------------------------------------------------------- #
 def main():
     global MS, ALPHAS, QS, EFF_QS, EVENTS_BY_MODE, V_I_SAMPLES, FID, NO_ATM, Q_MIN
-    global LAMB, XS, MASSLESS, LAMB_ODE
+    global LAMB, XS, MASSLESS, LAMB_ODE, TABLE_MAX_BINS
 
     ap = argparse.ArgumentParser(
         description="Build one pass of the UHDM data-release cube (npz shards).")
@@ -521,6 +565,20 @@ def main():
     ap.add_argument("--p-hi-lo", type=float, default=P_HI_LO,
                     help="lower edge of the two-tier upgrade band "
                          "(default %(default)g; ignored without --n-mc-hi)")
+    ap.add_argument("--mu-dex", type=float, default=MU_DEX,
+                    help="optimum-interval MC calibration granularity [dex of "
+                         "mu] (default %(default)g). p is a step function of the "
+                         "mu bin, so this is the quantization floor on a refined "
+                         "contour: use e.g. 0.002 where dlog mu / dlog alpha is "
+                         "small (the bare-halo plane at high mass). Recorded in "
+                         "the fidelity string only when it differs from the "
+                         "default, so a default build stays byte-identical")
+    ap.add_argument("--table-max-bins", type=int, default=None,
+                    help="LRU cap on per-mu MC tables kept resident per worker, "
+                         "per tier (default: unbounded). Memory knob only -- an "
+                         "evicted bin is regenerated from its own seed, so "
+                         "results are unchanged. Relevant with a fine --mu-dex, "
+                         "which realizes proportionally more bins")
     ap.add_argument("--n-ode", type=int, default=None)
     ap.add_argument("--n-shm", type=int, default=None)
     ap.add_argument("--n-q", type=int, default=None)
@@ -617,6 +675,17 @@ def main():
         # exact historical fidelity string.
         FID["n_mc_hi"] = args.n_mc_hi
         FID["p_hi_lo"] = args.p_hi_lo
+    if args.mu_dex != MU_DEX:
+        # Same discipline as n_mc_hi: recorded IN the fidelity dict, and ONLY
+        # when it differs from the default, so a default build's fidelity string
+        # stays byte-identical to every historical shard. Absent therefore means
+        # exactly MU_DEX, which is what every consumer falls back to
+        # (assemble_release's per-pass gate, fid_json -> refine_contours' oracle,
+        # verify_release V2 -> scan_grid.scan_point).
+        FID["mu_dex"] = float(args.mu_dex)
+    # memory-only knob: NOT in FID (it changes no value, so it is not part of
+    # the cell contract and must not perturb the fidelity string)
+    TABLE_MAX_BINS = args.table_max_bins
 
     # --- axes for this pass ---
     n_a = 6 if quick else args.n_a

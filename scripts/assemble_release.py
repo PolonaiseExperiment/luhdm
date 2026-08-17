@@ -96,6 +96,10 @@ from luhdm import atmosphere, config, cross_section, efficiency, halo, rate, uni
 SEED = 20260702
 # projected-dsigma/dq kernel convention of shards that predate the flag
 KERNEL_DEFAULT = cross_section.KERNEL_DEFAULT
+# optimum-interval MC calibration granularity [dex of mu] of shards that record
+# none (build_release writes "mu_dex" only when --mu-dex differs from it). Same
+# value as build_release.MU_DEX / scan_grid.MU_DEX_DEFAULT / refine_contours.MU_DEX.
+MU_DEX_DEFAULT = 0.02
 Q_HI_REF = 8.4e3
 CONFIDENCE = 0.95
 M_PLANCK = 1.22e19
@@ -269,6 +273,17 @@ def load_pass(pass_dir, pass_name):
                 sys.exit(f"FATAL: {pass_name}:{tag} MIXED TWO-TIER MC: "
                          f"{key}={rec_fid.get(key)!r} vs "
                          f"{ref_fid.get(key)!r} in {ref['_file']}")
+        # The MC calibration granularity (build_release --mu-dex) is named for
+        # the same reason: p is a step function of the mu bin, so shards built at
+        # different mu_dex have cells that no single recompute rule reproduces,
+        # and the mismatch is invisible in the values themselves. Absent == the
+        # historical 0.02, so a default shard must not mix with a fine one.
+        if rec_fid.get("mu_dex", MU_DEX_DEFAULT) != ref_fid.get("mu_dex",
+                                                               MU_DEX_DEFAULT):
+            sys.exit(f"FATAL: {pass_name}:{tag} MIXED MC GRANULARITY: "
+                     f"mu_dex={rec_fid.get('mu_dex', MU_DEX_DEFAULT)!r} vs "
+                     f"{ref_fid.get('mu_dex', MU_DEX_DEFAULT)!r} in "
+                     f"{ref['_file']}")
         if str(_scalar(rec["fidelity"])) != fid_str:
             sys.exit(f"FATAL: {pass_name}:{tag} MIXED FIDELITY "
                      f"({str(_scalar(rec['fidelity']))!r} != {fid_str!r})")
@@ -1261,6 +1276,14 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # spelled like fid_n_mc.
         a["fid_n_mc_hi"] = int(fid.get("n_mc_hi", -1))
         a["fid_p_hi_lo"] = float(fid.get("p_hi_lo", float("nan")))
+        # MC calibration granularity: mu is rounded onto a log grid of this step
+        # (dex) and each bin gets its own seeded table, so p is a step function of
+        # the bin and this number bounds how finely the exclusion boundary can be
+        # localized in alpha. Unlike the two-tier keys this one has a real default
+        # rather than "absent": shards recording nothing were built at
+        # MU_DEX_DEFAULT, so that is what is written here. fid_json carries the
+        # authoritative copy (present only on an overridden build).
+        a["fid_mu_dex"] = float(fid.get("mu_dex", MU_DEX_DEFAULT))
         # optimum-interval expected-count cap: cells above it are asserted
         # excluded without Monte Carlo. Shards built before the cap was
         # recorded carry no "mu_cap" key -> NaN, meaning "not recorded".
@@ -1300,7 +1323,7 @@ def _read_run_config(shard_dir):
 
 def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
                      halo_d, commit, dirty, dirty_files, pkgs, out_path,
-                     version_tag, inputs, name=None):
+                     version_tag, inputs, name=None, select="both"):
     # No hostname: provenance ships with the release and carries no host
     # identifiers (platform/package versions cover reproducibility).
     prov = {
@@ -1314,7 +1337,10 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             "packages": pkgs,
             "version_tag": version_tag,
             "output": str(out_path),
-            "fidelity": atm["fidelity"],
+            # the fidelity of the pass this file actually WRITES: a bare-halo
+            # selection must not report the atmosphere pass's, which can differ
+            # (e.g. a single-plane rebuild at a finer MC granularity).
+            "fidelity": (noatm if select == "f-base-noatm" else atm)["fidelity"],
             "n_finite_lambda": int(atm["n_finite"]),
             "seed": SEED,
             # t_exposure_s comes off the shards; config.T_EXPOSURE is what THIS
@@ -1512,7 +1538,8 @@ def main():
                  else f"provenance_{out_path.stem}.json")
     write_provenance(release_dir, args.atm_dir, args.noatm_dir, args.halo_dir,
                      atm, noatm, halo_d, commit, dirty, dirty_files, pkgs,
-                     out_path, args.version_tag, inputs, name=prov_name)
+                     out_path, args.version_tag, inputs, name=prov_name,
+                     select=args.select)
     write_sha256(release_dir, out_path)
 
     print("\n" + "=" * 72)

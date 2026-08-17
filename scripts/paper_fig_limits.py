@@ -84,17 +84,23 @@ figure still builds.
 Usage
 -----
     python scripts/paper_fig_limits.py
-    python scripts/paper_fig_limits.py --release .../luhdm_datarelease_v5.h5
+    python scripts/paper_fig_limits.py --release release/luhdm_datarelease_v9_A_f1_atm.h5
+    python scripts/paper_fig_limits.py --talk      # slide-scale SVG/PNG
 
 Re-running against a newer release regenerates the figure with no edit, and the
 red PRELIMINARY corner tag stays absent from v3 on (see
 ``paper_style.preliminary_tag_text``).
+
+``--talk`` draws the SAME figure -- same panels, colours, curves and labels --
+at presentation scale (see :data:`FIGSIZE_TALK` and :func:`set_scale`) and
+writes it to the talk asset tree. It never touches the paper's ``figs/``.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -165,6 +171,71 @@ REFERENCES = [
 #: 499 x 192 pt: the natural size of the draft this replaces, and the size
 #: main.tex places it at. Two column-width panels side by side.
 FIGSIZE = (499.0 / 72.0, 192.0 / 72.0)
+
+# --------------------------------------------------------------------------- #
+# Talk variant (--talk): the same figure at slide scale
+# --------------------------------------------------------------------------- #
+#: Slide size: the printed figure's own aspect ratio and panel arrangement,
+#: widened to fill the content width of a 16:9 slide. Only the scale changes;
+#: nothing about *what* is drawn depends on --talk.
+#:
+#: The width sets the height through the fixed aspect, and the height is what
+#: the choice is really about: the right panel's y label
+#: ("DM--neutron cross section ...") is 3.3 in of set type at 15 pt, so a panel
+#: shorter than that cannot hold its own axis label -- at 9.5 in wide the label
+#: runs off the top of the canvas. 11 in leaves ~0.3 in of slack.
+TALK_WIDTH_IN = 11.0
+FIGSIZE_TALK = (TALK_WIDTH_IN, TALK_WIDTH_IN * FIGSIZE[1] / FIGSIZE[0])
+
+#: Talk scale factors for the pt-valued literals in this file, matching the
+#: jump ``paper_style.apply_talk_style`` makes in the rcParams (8 -> 15 pt type,
+#: 0.9 -> 2.2 pt lines). Every hardcoded fontsize/linewidth below is written as
+#: ``literal * S_FONT`` or ``literal * S_LINE``: an annotation left at 6.5 pt
+#: would be unreadable from the back of a room even though everything the style
+#: sheet controls had grown around it.
+FONT_SCALE = 1.9
+LINE_SCALE = 2.2
+
+#: Label-placement clearances (:data:`LABEL_REF_CLEAR_DEX` and friends) are in
+#: *data* units and were tuned against the printed type size, so what they must
+#: track is how large the type is **relative to the panel** -- the type grows by
+#: ``FONT_SCALE`` while the panel grows only by the figure widening.
+REL_SCALE = FONT_SCALE * FIGSIZE[0] / FIGSIZE_TALK[0]
+
+#: 200 dpi over 9.5 in is ~1900 px: sharp on a projector, small enough to ship.
+TALK_PNG_DPI = 200
+
+#: Where each variant is written. The talk tree is the Slidev asset directory;
+#: --talk writes there and only there, never into the paper's figs/.
+PAPER_OUTDIR = Path(__file__).resolve().parents[1] / "ignore" / "overleaf" / "figs"
+TALK_OUTDIR = (Path(__file__).resolve().parents[1] / "ignore" / "talks"
+               / "talks-main" / "2026 COSMO" / "public" / "assets" / "luhdm")
+
+#: Live scale factors; 1.0 outside --talk, so every literal below evaluates to
+#: exactly the number it was written as and the paper figure is unchanged.
+S_FONT = 1.0
+S_LINE = 1.0
+S_REL = 1.0
+
+
+def set_scale(talk):
+    """Point the pt-valued literals at print scale (``talk=False``) or slide."""
+    global S_FONT, S_LINE, S_REL
+    S_FONT = FONT_SCALE if talk else 1.0
+    S_LINE = LINE_SCALE if talk else 1.0
+    S_REL = REL_SCALE if talk else 1.0
+
+
+def scaled_dash(dash):
+    """A ``(offset, (on, off, ...))`` dash pattern scaled with the line weight.
+
+    Dash runs are in points, so leaving them alone under --talk would put the
+    print figure's 1.3 pt gaps on a 1.65 pt line and read as solid.
+    """
+    offset, seq = dash
+    if not seq:                      # (0, ()) -- solid, and stays solid
+        return dash
+    return (offset * S_LINE, tuple(v * S_LINE for v in seq))
 
 # Z-order ladder. The Planck marker and the fifth-force band stay under the data.
 Z_MARKER, Z_FILL, Z_EDGE, Z_REF, Z_TEXT = 1.0, 2.0, 3.0, 4.0, 6.0
@@ -385,19 +456,28 @@ LABEL_MIN_HEIGHT_FRAC = 0.6
 
 #: Vertical clearance, in decades of alpha_n, that an island's name must keep
 #: from a prior-limit overlay running through the same annulus. 0.7 dex is
-#: about 9 pt at this figure's scale, against a 6.5 pt label.
+#: about 9 pt at this figure's scale, against a 6.5 pt label. Scaled by
+#: :data:`S_REL` under --talk, where the label is larger relative to the panel.
 LABEL_REF_CLEAR_DEX = 0.7
 
 #: Half the width of a rendered island name, in decades of mass at this panel's
 #: scale. Clearance from a prior-limit curve is tested right across that span,
 #: not just under the anchor: the overlays climb steeply and a curve that clears
-#: the centre of a name can still run through its right-hand end.
+#: the centre of a name can still run through its right-hand end. Scaled by
+#: :data:`S_REL` under --talk, where the name is wider relative to the panel.
 LABEL_HALF_WIDTH_DEX = 0.45
 
 #: Clearance, as a fraction of the panel diagonal, that an island's name must
 #: keep from ANY island outline, its own included. The nested islands converge
 #: on the same low-mass edge, so without this a name lands on a boundary even
 #: when it is nowhere near that island's interior.
+#:
+#: NOT scaled under --talk, unlike the two clearances above. This one is capped
+#: by the geometry rather than by the type size: the widest point of the 0.1
+#: meV, 1 meV and 10 meV annuli is only 0.062 of the diagonal from an outline,
+#: so a --talk threshold of 0.045 x S_REL = 0.062 leaves three of the four
+#: islands with nowhere to put their name at all. At 0.045 the guard is still
+#: 16 pt on a 12 pt slide label, i.e. more than a label height of white space.
 LABEL_EDGE_CLEAR_FRAC = 0.045
 
 
@@ -444,8 +524,8 @@ def label_candidates(pieces, outer_mass_hi, refs=(), avoid=None,
         keep = core[height >= LABEL_MIN_HEIGHT_FRAC * height.max()]
         for j in keep:
             m = float(m_run[j])
-            probe = np.logspace(np.log10(m) - LABEL_HALF_WIDTH_DEX,
-                                np.log10(m) + LABEL_HALF_WIDTH_DEX, 7)
+            half_w = LABEL_HALF_WIDTH_DEX * S_REL
+            probe = np.logspace(np.log10(m) - half_w, np.log10(m) + half_w, 7)
             near = []
             for mr, ar in refs:
                 inside = (probe >= mr.min()) & (probe <= mr.max())
@@ -455,7 +535,8 @@ def label_candidates(pieces, outer_mass_hi, refs=(), avoid=None,
             for frac in LABEL_HEIGHT_FRACS:
                 y = 10.0 ** (np.log10(floor[j])
                              + frac * np.log10(ceiling[j] / floor[j]))
-                if any(abs(np.log10(y / a)) < LABEL_REF_CLEAR_DEX for a in near):
+                if any(abs(np.log10(y / a)) < LABEL_REF_CLEAR_DEX * S_REL
+                       for a in near):
                     continue
                 if av is not None:
                     d = np.hypot(av[:, 0] - np.log10(m) / sx,
@@ -511,7 +592,8 @@ def build_left(ax, rel, ref_dir, confidence, mode):
         shifts.append(shift)
         # No legend key: each island is named in place below, and a six-entry
         # legend does not fit in what the nested islands leave empty.
-        curves += draw_island(ax, pieces, colour, dash, lw, "_nolegend_")
+        curves += draw_island(ax, pieces, colour, scaled_dash(dash),
+                              lw * S_LINE, "_nolegend_")
         islands += [as_polygon(m, f, c) for m, f, c in pieces]
         drawn.append((tag, label, colour, pieces))
 
@@ -546,7 +628,8 @@ def build_left(ax, rel, ref_dir, confidence, mode):
                 continue
             # Separate runs: a curve that leaves and re-enters the frame must
             # not be bridged by a straight segment.
-            line, = ax.plot(m_ref[run], a_ref[run], color=colour, lw=lw, ls=dash,
+            line, = ax.plot(m_ref[run], a_ref[run], color=colour,
+                            lw=lw * S_LINE, ls=scaled_dash(dash),
                             zorder=Z_REF, solid_capstyle="butt",
                             label=label if first else "_nolegend_")
             curves.append(line)
@@ -581,7 +664,7 @@ def build_left(ax, rel, ref_dir, confidence, mode):
             raise AssertionError(
                 f"the {tag!r} label would be written over the next island in")
         texts[f"island {tag}"] = ax.text(
-            anchor[0], anchor[1], label, color=colour, fontsize=6.5,
+            anchor[0], anchor[1], label, color=colour, fontsize=6.5 * S_FONT,
             ha="center", va="center", zorder=Z_TEXT)
         print(f"  label {tag:>9s} at m = {anchor[0]:.3g} GeV, "
               f"alpha_n = {anchor[1]:.3g}")
@@ -606,15 +689,16 @@ def build_left(ax, rel, ref_dir, confidence, mode):
     # The mass grid stops at m_Pl. No halo stroke: path effects are unusable
     # under usetex (see paper_style.halo), and none is needed because the label
     # sits in the empty right edge, clear of every island.
-    ax.axvline(m_planck, color=ps.GREY_GUIDE, lw=0.6, ls=":", zorder=Z_MARKER)
+    ax.axvline(m_planck, color=ps.GREY_GUIDE, lw=0.6 * S_LINE, ls=":",
+               zorder=Z_MARKER)
     texts["m_Pl label"] = ax.text(
-        m_planck, 0.975, r"$m_{\mathrm{Pl}}$", color=ps.GREY_GUIDE, fontsize=6.5,
-        ha="right", va="top", rotation=90, zorder=Z_MARKER,
-        transform=ax.get_xaxis_transform())
+        m_planck, 0.975, r"$m_{\mathrm{Pl}}$", color=ps.GREY_GUIDE,
+        fontsize=6.5 * S_FONT, ha="right", va="top", rotation=90,
+        zorder=Z_MARKER, transform=ax.get_xaxis_transform())
 
     texts["hypothesis note"] = ax.text(
         0.028, 0.955, "$f_{\\mathrm{DM}} = 1$, 95\\% CL",
-        transform=ax.transAxes, ha="left", va="top", fontsize=7.0,
+        transform=ax.transAxes, ha="left", va="top", fontsize=7.0 * S_FONT,
         zorder=Z_TEXT)
 
     # Empty from v3 on, so nothing is drawn for the released cube; kept so the
@@ -623,6 +707,8 @@ def build_left(ax, rel, ref_dir, confidence, mode):
         ax, ps.preliminary_tag_text(rel.version_tag).replace(" (", "\n("),
         xy=(0.972, 0.975))
     if tag is not None:
+        # add_preliminary_tag fixes the tag at 6 pt, which is print scale.
+        tag.set_fontsize(6.0 * S_FONT)
         texts["PRELIMINARY tag"] = tag
 
     leg = ax.legend(loc="lower right", bbox_to_anchor=(0.985, 0.02))
@@ -654,8 +740,9 @@ def build_right(ax, rel, ref_dir, confidence, mode):
         raise AssertionError(
             f"mode {mode} excludes nothing at the benchmark lambda={BENCH_LAM}; "
             f"there is no right panel to draw")
-    curves = draw_island(ax, pieces, colour, (0, ()), 1.0, "_nolegend_",
-                         transform=to_sigma, fill_alpha=FILL_ALPHA_SOLO)
+    curves = draw_island(ax, pieces, colour, (0, ()), 1.0 * S_LINE,
+                         "_nolegend_", transform=to_sigma,
+                         fill_alpha=FILL_ALPHA_SOLO)
     islands = [as_polygon(m, f, c, to_sigma) for m, f, c in pieces]
     sig_floor, m_at_floor = min(
         ((float(to_sigma(f[j])), float(m[j]))
@@ -677,8 +764,8 @@ def build_right(ax, rel, ref_dir, confidence, mode):
         alpha_tilde, owner, unc = ff
         m_ff = np.geomspace(*XLIM_B, 64)
         a_ff, s_ff = fifth_force_sigma(m_ff, alpha_tilde)
-        ff_line, = ax.plot(m_ff, s_ff, color=ps.GREY_DARK, lw=0.75,
-                           ls=(0, (4.0, 1.6)), zorder=Z_REF,
+        ff_line, = ax.plot(m_ff, s_ff, color=ps.GREY_DARK, lw=0.75 * S_LINE,
+                           ls=scaled_dash((0, (4.0, 1.6))), zorder=Z_REF,
                            label="_nolegend_")
         # Under the island fill, and faint: the bound covers most of the frame
         # and would otherwise read as the panel's subject.
@@ -701,7 +788,7 @@ def build_right(ax, rel, ref_dir, confidence, mode):
         _a, s_lab = fifth_force_sigma(m_lab, alpha_tilde)
         texts["fifth-force label"] = ax.text(
             m_lab, s_lab * 3.0, "fifth force", color=ps.GREY_DARK,
-            fontsize=6.5, ha="right", va="bottom", zorder=Z_TEXT)
+            fontsize=6.5 * S_FONT, ha="right", va="bottom", zorder=Z_TEXT)
 
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -722,7 +809,7 @@ def build_right(ax, rel, ref_dir, confidence, mode):
         f"$m_\\phi = 10$ meV\n"
         f"$m_d = 1$ keV\n"
         f"$f_{{\\mathrm{{DM}}}} = {F_DM_RIGHT:g}$",
-        transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5,
+        transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5 * S_FONT,
         linespacing=1.35, zorder=Z_TEXT)
 
     return dict(legend=None, labels=[], texts=texts, islands=islands,
@@ -778,18 +865,28 @@ def _assert_clear_of_curves(fig, artist, curves, name, pad_pt=1.0):
             f"{int(hit.sum())} sampled points")
 
 
-def verify(fig, axes, arts):
-    """Renderer gates: exact size, nothing clipped or colliding, legend honest."""
+def verify(fig, axes, arts, figsize=FIGSIZE, talk=False):
+    """Renderer gates: exact size, nothing clipped or colliding, legend honest.
+
+    ``figsize`` is the size the figure was drawn for -- :data:`FIGSIZE` in
+    print, :data:`FIGSIZE_TALK` under --talk. Only the two gates below that are
+    written against the *printed* geometry read it and ``talk``; every gate
+    after them measures rendered artists and runs unchanged at either scale.
+    """
     w_in, h_in = fig.get_size_inches()
-    assert abs(w_in * 72.0 - FIGSIZE[0] * 72.0) < 0.5, \
-        f"figure is {w_in * 72:.1f} pt wide; main.tex places it unscaled"
+    assert abs(w_in - figsize[0]) * 72.0 < 0.5, (
+        f"figure is {w_in * 72:.1f} pt wide, not the {figsize[0] * 72:.1f} pt "
+        f"it is drawn for (in print, main.tex places it unscaled)")
     assert w_in / h_in >= ps.ASPECT_3_2, \
         "aspect ratio must be 3:2 or wider (charter F14)"
+    # Neither panel may be wider than the drawing width its type sizes were
+    # chosen for: one journal column in print, half the slide under --talk.
+    max_panel_cm = (figsize[0] / 2.0 if talk else ps.COLUMN_W_IN) * 2.54
     for ax in axes:
         w_panel_cm = ax.get_position().width * w_in * 2.54
-        assert w_panel_cm <= ps.COLUMN_W_IN * 2.54 + 0.05, (
+        assert w_panel_cm <= max_panel_cm + 0.05, (
             f"a panel is {w_panel_cm:.2f} cm of drawing area, wider than the "
-            f"single-column width the type sizes are chosen for")
+            f"{max_panel_cm:.2f} cm the type sizes are chosen for")
 
     for ax, art in zip(axes, arts):
         named = dict(art["texts"])
@@ -844,6 +941,21 @@ def verify(fig, axes, arts):
     assert arts[1]["islands"], "the right panel drew no island"
 
 
+def save_talk(fig, outdir, stem, dpi=TALK_PNG_DPI):
+    """Write ``stem``.svg and ``stem``.png at the exact figure size.
+
+    Slidev consumes the SVG and the PNG is the raster fallback; the talk asset
+    tree carries no PDFs, so the PDF ``savefig_exact`` always writes is sent to
+    a scratch directory and discarded. Returns ``(svg, png)``.
+    """
+    outdir.mkdir(parents=True, exist_ok=True)
+    svg, png = outdir / f"{stem}.svg", outdir / f"{stem}.png"
+    with tempfile.TemporaryDirectory() as tmp:
+        ps.savefig_exact(fig, Path(tmp) / f"{stem}.pdf", png, png_dpi=dpi,
+                         svg_path=svg)
+    return svg, png
+
+
 def report_benchmark(rel, confidence, mode):
     """Print the numbers a reader of the caption would want to check."""
     alphas = rel.axes.alpha_n
@@ -872,12 +984,17 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--release", type=Path, default=release.DEFAULT_PATH,
                    help="data-release HDF5 (default: %(default)s)")
-    p.add_argument("--outdir", type=Path,
-                   default=Path(__file__).resolve().parents[1]
-                   / "ignore" / "overleaf" / "figs",
-                   help="output directory (default: %(default)s)")
+    p.add_argument("--outdir", type=Path, default=None,
+                   help="output directory (default: ignore/overleaf/figs, or "
+                        "the talk asset tree under --talk)")
     p.add_argument("--stem", default="results",
-                   help="output basename without extension")
+                   help="output basename without extension "
+                        "(--talk writes talk_<stem>)")
+    p.add_argument("--talk", action="store_true",
+                   help="slide variant of the same figure: ~15 pt type, "
+                        f"heavier lines, {FIGSIZE_TALK[0]:.1f}x"
+                        f"{FIGSIZE_TALK[1]:.1f} in, written as SVG+PNG to the "
+                        "talk asset tree. Never writes to the paper's figs/.")
     p.add_argument("--mode", type=int, choices=(1, 2, 3), default=MODE,
                    help="sensor mode whose exclusion BOTH panels draw "
                         "(default: %(default)s). Give a distinct --stem per "
@@ -888,7 +1005,9 @@ def main(argv=None):
                    help="digitised external-limit tables (default: %(default)s)")
     args = p.parse_args(argv)
 
-    ps.apply_prl_style()
+    set_scale(args.talk)
+    figsize = FIGSIZE_TALK if args.talk else FIGSIZE
+    (ps.apply_talk_style if args.talk else ps.apply_prl_style)()
     with release.open_release(args.release) as rel:
         conf = float(rel.attrs.get("confidence_recommended", 0.95))
         print(f"release: {args.release}  ({rel.version_tag})")
@@ -897,20 +1016,26 @@ def main(argv=None):
         print(f"right: mode {args.mode}, f_DM = {F_DM_RIGHT:g}, "
               f"atmosphere on, lambda = {BENCH_LAM}")
 
-        fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=FIGSIZE)
+        fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=figsize)
         art_a = build_left(ax_a, rel, args.refdir, conf, args.mode)
         art_b = build_right(ax_b, rel, args.refdir, conf, args.mode)
-        verify(fig, (ax_a, ax_b), (art_a, art_b))
+        verify(fig, (ax_a, ax_b), (art_a, art_b), figsize=figsize,
+               talk=args.talk)
         print(f"  legend (left): {art_a['labels']}")
         tag = ps.preliminary_tag_text(rel.version_tag)
         print(f"  preliminary tag: {tag or '(none: v3+ cube)'}")
         report_benchmark(rel, conf, args.mode)
 
-    pdf = args.outdir / f"{args.stem}.pdf"
-    png = args.outdir / f"{args.stem}.png"
-    ps.savefig_exact(fig, pdf, png)
+    if args.talk:
+        outdir = args.outdir or TALK_OUTDIR
+        main_out, png = save_talk(fig, outdir, f"talk_{args.stem}")
+    else:
+        outdir = args.outdir or PAPER_OUTDIR
+        main_out = outdir / f"{args.stem}.pdf"
+        png = outdir / f"{args.stem}.png"
+        ps.savefig_exact(fig, main_out, png)
     plt.close(fig)
-    print(ps.report_size(fig, pdf))
+    print(ps.report_size(fig, main_out))
     print(f"preview: {png}")
     return 0
 

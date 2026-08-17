@@ -75,6 +75,17 @@ ts() { date '+%F %T'; }
 #                trials (seed+1), so the exclusion boundary stops jittering
 #                while bulk cells stay at the base n_mc. Unset => single tier,
 #                shards byte-identical to the historical campaign.
+#   MUDEX=0.002  optimum-interval MC calibration granularity [dex of mu]. p is a
+#                step function of the rounded mu, so one bin spans
+#                mu_dex / (dlog mu / dlog alpha) in alpha and that is the floor on
+#                a refined boundary's resolution — on the bare-halo plane at high
+#                mass (dlog mu / dlog alpha ~ 0.05) the default 0.02 dex is a
+#                0.4-dex plateau in alpha and NMC_HI does not help. Costs ~10x
+#                more resident per-mu tables per worker (see TBINS). Unset =>
+#                0.02, shards byte-identical to the historical campaign.
+#   TBINS=200    LRU cap on resident per-mu MC tables, per worker per tier; a
+#                memory knob only (evicted bins are regenerated from their own
+#                seed, values unchanged). Unset => unbounded, as before.
 #   MTIER / DATA_DIR / PASSES  as before
 run_shard() {
     local pass="$1" il="$2"
@@ -89,6 +100,8 @@ run_shard() {
     [ -n "${KNL:-}" ] && extra+=(--projection-kernel "$KNL")
     [ -n "${NA:-}" ] && extra+=(--n-a "$NA")
     [ -n "${NMC_HI:-}" ] && extra+=(--n-mc-hi "$NMC_HI")
+    [ -n "${MUDEX:-}" ] && extra+=(--mu-dex "$MUDEX")
+    [ -n "${TBINS:-}" ] && extra+=(--table-max-bins "$TBINS")
     t0=$(date +%s)
     echo "[$(ts)] SHARD_START pass=$pass il=$il workers=$WORKERS"
     if "$PY" scripts/build_release.py \
