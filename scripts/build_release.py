@@ -52,7 +52,9 @@ f=0.1 meaning, so every existing consumer is untouched.
                                         and (only on a --n-mc-hi build) the
                                         two-tier keys n_mc_hi / p_hi_lo, and
                                         (only on a --mu-dex build) the MC
-                                        calibration granularity mu_dex
+                                        calibration granularity mu_dex, and
+                                        (only on a --v-earth build) the halo
+                                        frame v_earth_km_s
   events_mode1/2/3 f8    (n_ev,)       observed impulses [GeV]
   schema_version i8      ()            2
   created,argv,hostname str; wall_s f8  provenance
@@ -573,6 +575,17 @@ def main():
                          "small (the bare-halo plane at high mass). Recorded in "
                          "the fidelity string only when it differs from the "
                          "default, so a default build stays byte-identical")
+    ap.add_argument("--v-earth", type=float,
+                    default=config.V_E * config.C / 1e3,
+                    help="halo frame: Earth's speed through the halo [km/s] "
+                         "(default %(default)g, i.e. config.V_E / the "
+                         "LUHDM_V_EARTH env knob). 0 = the Galactic rest frame, "
+                         "the shipped convention, byte-identical. 245 is the "
+                         "lab-frame value of Monteiro 2020 / Tseng 2025, which "
+                         "boosts the arrival speeds and extends the halo's "
+                         "support to VESC + v_E. Recorded in the fidelity "
+                         "string only when non-zero, so a rest-frame build "
+                         "keeps its historical fidelity string exactly")
     ap.add_argument("--table-max-bins", type=int, default=None,
                     help="LRU cap on per-mu MC tables kept resident per worker, "
                          "per tier (default: unbounded). Memory knob only -- an "
@@ -683,6 +696,15 @@ def main():
         # (assemble_release's per-pass gate, fid_json -> refine_contours' oracle,
         # verify_release V2 -> scan_grid.scan_point).
         FID["mu_dex"] = float(args.mu_dex)
+    # Halo frame. Applied to config BEFORE the axes, the SHM sample and any fork,
+    # so every worker inherits one convention; recorded in FID on the same terms
+    # as mu_dex (only when non-zero), because it changes every cell's arrival
+    # speeds and the top of the speed integrals, and that difference is
+    # invisible in the numbers themselves. Absent therefore means exactly the
+    # Galactic rest frame, which is what every consumer falls back to.
+    config.set_v_earth_km_s(args.v_earth)
+    if args.v_earth != 0.0:
+        FID["v_earth_km_s"] = float(args.v_earth)
     # memory-only knob: NOT in FID (it changes no value, so it is not part of
     # the cell contract and must not perturb the fidelity string)
     TABLE_MAX_BINS = args.table_max_bins
@@ -758,6 +780,9 @@ def main():
     print(f"FID={FID}  chunk={chunk}  workers={args.workers}")
     print(f"f_dm_values={list(F_DM_VALUES)}  t_exposure_s={T_TOTAL:.0f}  "
           f"efficiency_npz={efficiency.table_path()}")
+    print(f"halo frame: v_earth = {args.v_earth:g} km/s"
+          + (" (Galactic rest frame)" if args.v_earth == 0.0 else " (lab frame)")
+          + f";  v_max = {config.V_MAX * config.C / 1e3:.1f} km/s")
     print(f"processing {len(seq)} ils: {seq}", flush=True)
 
     # --- expensive-first cell list (same for every shard of this pass) ---

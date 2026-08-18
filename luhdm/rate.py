@@ -160,7 +160,10 @@ def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF, eff=None):
 
     # Precompute f_vf on a fixed grid spanning all v_mins
     v_min_global = qs.min() / mu
-    vs_global = np.geomspace(v_min_global, config.VESC, 500)
+    # upper endpoint is the top of the halo's support, config.V_MAX = VESC + V_E
+    # (== VESC in the Galactic rest frame): under a lab-frame convention the
+    # arrival distribution reaches past VESC and stopping there would drop it
+    vs_global = np.geomspace(v_min_global, config.V_MAX, 500)
     f_vf_grid = f_v_f(vs_global)  # KDE evaluated once
 
     results = []
@@ -180,7 +183,9 @@ def differential_rate_trapz(qs, alpha_n, mu, f_v_f, xs, R_eff=R_EFF, eff=None):
 def expected_transits(alpha_n, mu, f_v_f, xs, t_total, R_eff=R_EFF):
     """Expected flybys within the threshold reach during the exposure."""
     alpha = alpha_n * config.N_NEUTRONS
-    vs = np.geomspace(max(Q_THRESH / mu, 1e-8), config.VESC, 300)
+    # config.V_MAX (= VESC + V_E) is the halo's top speed in whichever frame the
+    # convention names; the flux integral must span all of it
+    vs = np.geomspace(max(Q_THRESH / mu, 1e-8), config.V_MAX, 300)
     b = impact_parameter_max_any(Q_THRESH, alpha, vs, xs, R_eff)
     n_m3 = config.F_X * 0.3 / mu * 1e6  # f_X x (0.3 GeV/cm^3) -> 1/m^3
     return t_total * float(np.trapezoid(
@@ -189,8 +194,8 @@ def expected_transits(alpha_n, mu, f_v_f, xs, t_total, R_eff=R_EFF):
 
 def transit_count_halo(m, alpha_n, xs, t_total, R_eff=R_EFF):
     """(N_t, flux-averaged pi*b_max^2 [m^2]) for the unattenuated halo flux."""
-    vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.VESC, 200)
-    if vs.size < 2 or vs[0] >= config.VESC:
+    vs = np.geomspace(max(Q_THRESH / m, 1e-8), config.V_MAX, 200)
+    if vs.size < 2 or vs[0] >= config.V_MAX:
         return 0.0, 0.0
     alpha = alpha_n * config.N_NEUTRONS
     b = impact_parameter_max_any(Q_THRESH, alpha, vs, xs, R_eff)

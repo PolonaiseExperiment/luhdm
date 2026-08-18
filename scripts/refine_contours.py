@@ -1176,6 +1176,25 @@ def main():
         assert T_TOTAL == float(config.T_EXPOSURE), \
             "config.T_EXPOSURE differs from the cube's exposure; set " \
             "LUHDM_T_EXPOSURE to match or the oracle will not reproduce it"
+        # Halo frame. The cube records the Earth speed its cells were computed
+        # at; the oracle gets it from luhdm.config, which is set only by
+        # LUHDM_V_EARTH. There is no way to detect the mismatch from the refined
+        # contour afterwards -- it would just be a slightly wrong boundary -- so
+        # it is a hard stop, with the fix in the message.
+        v_earth_cube = float(attrs.get("v_earth_km_s", 0.0))
+        v_earth_run = config.V_E * config.C / 1e3
+        assert abs(v_earth_cube - v_earth_run) <= 1e-9, (
+            f"halo frame mismatch: the cube was built at v_earth = "
+            f"{v_earth_cube:g} km/s but this process runs config.V_E = "
+            f"{v_earth_run:g} km/s. The oracle would trace the boundary of a "
+            f"different halo than the cube's cells. Set "
+            f"LUHDM_V_EARTH={v_earth_cube:g}"
+            + (" (or unset it)" if v_earth_cube == 0.0 else "")
+            + " and re-run.")
+        print(f"halo frame: v_earth = {v_earth_cube:g} km/s"
+              + (" (Galactic rest frame)" if v_earth_cube == 0.0
+                 else f" (lab frame; v_max = "
+                      f"{config.V_MAX * config.C / 1e3:.1f} km/s)"))
         eff_path = Path(efficiency.table_path())
         eff_sha = sha256_file(eff_path)
         assert eff_sha == attrs["efficiency_npz_sha256"], \
@@ -1278,6 +1297,8 @@ def main():
                 b_constrained_max_m=b_cap, t_exposure_s=T_TOTAL,
                 q_thresh_gev=Q_MIN, massless_lamb_ode_m=args.massless_lamb,
                 massless_q_endpoint_factor=q_epf, projection_kernel=kernel,
+                # halo frame, asserted equal to the running config.V_E above
+                v_earth_km_s=v_earth_cube,
                 efficiency_npz_sha256=attrs.get("efficiency_npz_sha256"),
                 events_sha256=attrs.get(f"events_mode{args.mode}_sha256"),
                 # --spot evidence: max |p_oracle - p_cube| over the recomputed

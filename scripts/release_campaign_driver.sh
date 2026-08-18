@@ -58,6 +58,14 @@ REMOTE_HOST="${REMOTE_HOST:-remote-node}"
 
 OUT="${SHARD_OUT:-$HOME/release_shards}"
 WORKERS="${WORKERS:-$(nproc)}"
+
+# Halo frame. Exported so luhdm.config picks it up at import in EVERY process
+# this driver starts -- including the --print-order probe below, which must see
+# the same convention -- and also passed explicitly as --v-earth so it lands in
+# the shard fidelity string. Unset leaves config.V_E at 0 (Galactic rest frame).
+if [ -n "${VEARTH:-}" ]; then
+    export LUHDM_V_EARTH="$VEARTH"
+fi
 mkdir -p "$OUT/atm" "$OUT/noatm"
 
 ts() { date '+%F %T'; }
@@ -83,6 +91,16 @@ ts() { date '+%F %T'; }
 #                0.4-dex plateau in alpha and NMC_HI does not help. Costs ~10x
 #                more resident per-mu tables per worker (see TBINS). Unset =>
 #                0.02, shards byte-identical to the historical campaign.
+#   VEARTH=245   halo frame: Earth's speed through the halo [km/s], exported as
+#                LUHDM_V_EARTH for every build in this campaign and passed on as
+#                --v-earth. 245 km/s is the lab-frame convention of Monteiro 2020
+#                / Tseng 2025 (v0 = 220, v_esc = 544 already match theirs); the
+#                halo's support then runs to 789 km/s instead of 544 and every
+#                arrival speed moves. Recorded per shard in the fidelity string,
+#                and the assembler / refine_contours / verify_release all refuse
+#                to run against a cube in a frame they are not themselves in.
+#                Unset => the Galactic rest frame, shards byte-identical to the
+#                historical campaign.
 #   TBINS=200    LRU cap on resident per-mu MC tables, per worker per tier; a
 #                memory knob only (evicted bins are regenerated from their own
 #                seed, values unchanged). Unset => unbounded, as before.
@@ -102,6 +120,7 @@ run_shard() {
     [ -n "${NMC_HI:-}" ] && extra+=(--n-mc-hi "$NMC_HI")
     [ -n "${MUDEX:-}" ] && extra+=(--mu-dex "$MUDEX")
     [ -n "${TBINS:-}" ] && extra+=(--table-max-bins "$TBINS")
+    [ -n "${VEARTH:-}" ] && extra+=(--v-earth "$VEARTH")
     t0=$(date +%s)
     echo "[$(ts)] SHARD_START pass=$pass il=$il workers=$WORKERS"
     if "$PY" scripts/build_release.py \
@@ -121,7 +140,7 @@ run_shard() {
     fi
 }
 
-echo "[$(ts)] campaign start  host=$(hostname 2>/dev/null || echo "$REMOTE_HOST")  workers=$WORKERS  out=$OUT"
+echo "[$(ts)] campaign start  host=$(hostname 2>/dev/null || echo "$REMOTE_HOST")  workers=$WORKERS  out=$OUT  v_earth=${VEARTH:-0} km/s"
 
 # noatm first (cheap, full product), then atm tags-first (tag/massless slices
 # early for the V1 gate; remaining lambda smallest-first surfaces ODE blowups).

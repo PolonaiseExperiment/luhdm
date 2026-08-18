@@ -446,6 +446,26 @@ def v2_spot_recompute(atm_shards, noatm_shards, n_spot):
                        for s in atm_shards + noatm_shards})
     print(f"  recomputing with the shards' own MC granularities mu_dex: "
           f"{mu_dexes}")
+    # The halo frame is the one part of the cell contract that does NOT ride
+    # through the fidelity dict into scan_grid: the frame lives in luhdm.config
+    # (LUHDM_V_EARTH), read by luhdm.halo at call time, and this process already
+    # imported it. So the shards' recorded value is checked against the running
+    # one and a mismatch is a hard stop -- recomputing lab-frame cells in the
+    # Galactic rest frame would report a bogus mismatch on every cell, which
+    # reads as "the release is broken" rather than "the verifier is misconfigured".
+    v_earths = sorted({_parse_fid(s["fidelity"]).get("v_earth_km_s", 0.0)
+                       for s in atm_shards + noatm_shards}) or [0.0]
+    v_run = config.V_E * config.C / 1e3
+    print(f"  shards' halo frame v_earth_km_s: {v_earths}  "
+          f"(this process: {v_run:g})")
+    if len(v_earths) > 1 or abs(float(v_earths[0]) - v_run) > 1e-9:
+        print(f"  FATAL: halo-frame mismatch. Shards were built at "
+              f"v_earth = {v_earths} km/s, this process runs config.V_E = "
+              f"{v_run:g} km/s. Set LUHDM_V_EARTH={float(v_earths[0]):g}"
+              + (" (or unset it)" if float(v_earths[0]) == 0.0 else "")
+              + " and re-run.")
+        print("V2 verdict: FAIL")
+        return False
 
     caches = {"xs": {}, "visamp": {}}
     hard_fail = False

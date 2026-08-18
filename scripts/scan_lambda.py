@@ -167,6 +167,15 @@ def main():
                          "mu] (default %(default)g, the release convention); "
                          "recorded in the npz fidelity string only when it "
                          "differs, so a default scan stays byte-identical")
+    ap.add_argument("--v-earth", type=float,
+                    default=config.V_E * config.C / 1e3,
+                    help="halo frame: Earth's speed through the halo [km/s] "
+                         "(default %(default)g, i.e. config.V_E / the "
+                         "LUHDM_V_EARTH env knob). 0 = Galactic rest frame, "
+                         "byte-identical; 245 = the lab-frame convention of "
+                         "Monteiro 2020 / Tseng 2025. Recorded in the npz "
+                         "fidelity string only when non-zero, and it must match "
+                         "the cube this sidecar ships beside")
     args = ap.parse_args()
     M_DM = args.mass
     print(f"fixed m_DM = {M_DM:.3e} GeV")
@@ -187,6 +196,15 @@ def main():
         # only when overridden, matching build_release's discipline, so the
         # npz "fidelity" string of a default scan is unchanged
         FID["mu_dex"] = float(args.mu_dex)
+    # halo frame: applied to config before the SHM sample and the fork, recorded
+    # only when non-zero (build_release's discipline), so a rest-frame scan's
+    # fidelity string is unchanged
+    config.set_v_earth_km_s(args.v_earth)
+    if args.v_earth != 0.0:
+        FID["v_earth_km_s"] = float(args.v_earth)
+    print(f"halo frame: v_earth = {args.v_earth:g} km/s"
+          + (" (Galactic rest frame)" if args.v_earth == 0.0 else " (lab frame)")
+          + f";  v_max = {config.V_MAX * config.C / 1e3:.1f} km/s")
 
     F_SCALE = float(args.f_dm) / float(config.F_X)
     print(f"f_DM = {args.f_dm:g} (rate scale {F_SCALE:g} x the F_X={config.F_X:g} "

@@ -354,6 +354,24 @@ class Release:
         """
         return str(self.attrs.get("projection_kernel", KERNEL_PRE_FLAG))
 
+    @property
+    def v_earth_km_s(self):
+        """Halo frame this cube's surfaces were built in, in km/s.
+
+        ``0.0`` is the Galactic rest frame: the truncated Maxwellian of
+        :func:`luhdm.halo.standard_halo_model` with no Earth motion, which is
+        what every cube predating this attribute carries. A non-zero value is
+        the lab-frame distribution (Lewin & Smith 1996; Monteiro 2020, Tseng
+        2025), whose support runs to v_esc + v_Earth rather than v_esc.
+
+        Recomputing a cell of such a cube requires the SAME frame in
+        :mod:`luhdm.config` -- set the ``LUHDM_V_EARTH`` environment variable to
+        this value before importing luhdm. Nothing in the recomputed numbers
+        announces the mismatch, so ``scripts/refine_contours.py`` and
+        ``scripts/verify_release.py`` both hard-stop on it.
+        """
+        return float(self.attrs.get("v_earth_km_s", 0.0))
+
     def make_xsec(self, lamb, **kw):
         """A :func:`luhdm.rate.make_xsec` handle under *this cube's* conventions.
 

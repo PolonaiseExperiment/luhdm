@@ -127,15 +127,19 @@ def sample_shm(n_samples, rng=None):
         rng = np.random  # legacy global state (original behavior)
 
     # f(v) <= M * g(v) where g is the unnormalised MB
-    # Find M = max(f(v)/g(v)) numerically
-    v_test = np.linspace(0, config.VESC, 10000)
+    # Find M = max(f(v)/g(v)) numerically.
+    # The ceiling is config.V_MAX = VESC + V_E, the top of the halo's support:
+    # under a lab-frame convention (LUHDM_V_EARTH) proposing only up to VESC
+    # would silently throw away the boosted tail. V_MAX == VESC when V_E = 0,
+    # so the Galactic-rest-frame sample is unchanged, draw for draw.
+    v_test = np.linspace(0, config.V_MAX, 10000)
     f_vals = halo.standard_halo_model(v_test)
     M = np.max(f_vals) * 1.1  # small buffer
-    
+
     samples = []
     while len(samples) < n_samples:
-        # Propose from uniform on [0, v_esc]
-        v_prop = rng.uniform(0, config.VESC, n_samples)
+        # Propose from uniform on [0, v_max]
+        v_prop = rng.uniform(0, config.V_MAX, n_samples)
         f_prop = halo.standard_halo_model(v_prop)
         
         # Accept/reject
@@ -162,7 +166,10 @@ def compute_v_f_distribution(alpha_n, lamb, m_dm, v_i_samples, v_min=1e-7, n_sam
     -------
     v_f_samples : array of final velocities at ground level [dimensionless, v/c]
     """
-    v_i_grid = np.geomspace(v_i_samples.min(), config.VESC*1.1, n_grid)
+    # ceiling is the top of the halo's support (config.V_MAX = VESC + V_E, the
+    # lab-frame maximum) plus the usual 10% headroom, so the v_i -> v_f
+    # interpolant covers every sampled speed instead of extrapolating to 0
+    v_i_grid = np.geomspace(v_i_samples.min(), config.V_MAX*1.1, n_grid)
     
     interpolant = compute_v_f_interpolant(v_i_grid, alpha_n, lamb, m_dm, v_min)
     v_f_samples = interpolant(v_i_samples)

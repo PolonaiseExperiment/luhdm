@@ -68,7 +68,12 @@ FID = None       # fidelity dict; optional "mu_cap" key selects the
                  # Optional "n_mc_hi"/"p_hi_lo" keys select the two-tier MC
                  # upgrade (absent -> single tier, the historical behaviour).
                  # Optional "mu_dex" key sets the MC calibration granularity
-                 # (absent -> MU_DEX_DEFAULT, the historical 0.02 dex)
+                 # (absent -> MU_DEX_DEFAULT, the historical 0.02 dex).
+                 # Optional "v_earth_km_s" key RECORDS the halo frame (absent ->
+                 # 0, the Galactic rest frame). It is a record, not a setting:
+                 # the frame lives in luhdm.config, which scan_point reads
+                 # through luhdm.halo, so a caller driving scan_point directly
+                 # (verify_release V2) must have set config.V_E itself.
 EVENTS = None
 Q_MIN = None     # lower edge of the momentum grid / analysis threshold [GeV]
 EFF = None       # detection-efficiency callable eps(q_GeV), or None for raw rate
@@ -175,6 +180,14 @@ def main():
                     help="optimum-interval MC calibration granularity [dex of "
                          "mu] (default %(default)g); recorded in the cache's "
                          "fidelity string only when it differs from the default")
+    ap.add_argument("--v-earth", type=float,
+                    default=config.V_E * config.C / 1e3,
+                    help="halo frame: Earth's speed through the halo [km/s] "
+                         "(default %(default)g, i.e. config.V_E / the "
+                         "LUHDM_V_EARTH env knob). 0 = Galactic rest frame, "
+                         "byte-identical; 245 = the lab-frame convention of "
+                         "Monteiro 2020 / Tseng 2025. Recorded in the cache's "
+                         "fidelity string only when non-zero")
     ap.add_argument("--n-ode", type=int, default=None,
                     help="override attenuation-ODE grid points")
     ap.add_argument("--no-atmosphere", action="store_true",
@@ -227,6 +240,15 @@ def main():
     if args.mu_dex != MU_DEX_DEFAULT:
         # only when overridden, so a default cache's fidelity string is unchanged
         FID["mu_dex"] = float(args.mu_dex)
+    # halo frame, applied to config before the SHM sample and the fork, and
+    # recorded only when non-zero (same discipline as mu_dex): it moves every
+    # arrival speed and the ceiling of every speed integral
+    config.set_v_earth_km_s(args.v_earth)
+    if args.v_earth != 0.0:
+        FID["v_earth_km_s"] = float(args.v_earth)
+    print(f"halo frame: v_earth = {args.v_earth:g} km/s"
+          + (" (Galactic rest frame)" if args.v_earth == 0.0 else " (lab frame)")
+          + f";  v_max = {config.V_MAX * config.C / 1e3:.1f} km/s")
     print(f"grid {FID['n_m']}x{FID['n_a']}  n_mc={FID['n_mc']}  n_ode={FID['n_ode']}"
           + (f"  n_mc_hi={FID['n_mc_hi']} (p >= {FID['p_hi_lo']:g})"
              if args.n_mc_hi else "")

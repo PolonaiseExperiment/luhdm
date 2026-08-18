@@ -284,6 +284,16 @@ def load_pass(pass_dir, pass_name):
                      f"mu_dex={rec_fid.get('mu_dex', MU_DEX_DEFAULT)!r} vs "
                      f"{ref_fid.get('mu_dex', MU_DEX_DEFAULT)!r} in "
                      f"{ref['_file']}")
+        # The halo frame (build_release --v-earth) is named for the third time
+        # for the same reason: it moves every arrival speed and the ceiling of
+        # every speed integral, so shards from different frames describe
+        # different physics that no recompute rule reconciles, and nothing in
+        # the stored numbers says so. Absent == 0.0 == the Galactic rest frame.
+        if rec_fid.get("v_earth_km_s", 0.0) != ref_fid.get("v_earth_km_s", 0.0):
+            sys.exit(f"FATAL: {pass_name}:{tag} MIXED HALO FRAME: "
+                     f"v_earth_km_s={rec_fid.get('v_earth_km_s', 0.0)!r} vs "
+                     f"{ref_fid.get('v_earth_km_s', 0.0)!r} in "
+                     f"{ref['_file']}")
         if str(_scalar(rec["fidelity"])) != fid_str:
             sys.exit(f"FATAL: {pass_name}:{tag} MIXED FIDELITY "
                      f"({str(_scalar(rec['fidelity']))!r} != {fid_str!r})")
@@ -570,6 +580,36 @@ def cross_check_cap(atm, noatm, halo_d):
     return cap
 
 
+def cross_check_v_earth(atm, noatm):
+    """Both cell passes must share one halo frame, and THIS process must run it.
+
+    The frame is recorded per shard (fidelity key ``v_earth_km_s``, absent =
+    Galactic rest frame), but it is *applied* through luhdm.config, which this
+    process resolves from LUHDM_V_EARTH at import. The assembler recomputes
+    physics of its own -- /reference_curves and the m_cut mean speed -- so a
+    process running a different frame than the shards would ship a cube whose
+    curves and mass cut contradict its own cells, silently. Hard gate, with the
+    fix in the message. Returns v_earth in km/s.
+    """
+    ve = {"atm": float(atm["fidelity"].get("v_earth_km_s", 0.0)),
+          "noatm": float(noatm["fidelity"].get("v_earth_km_s", 0.0))}
+    if len(set(ve.values())) > 1:
+        sys.exit(f"FATAL: passes disagree on the halo frame v_earth_km_s: {ve}")
+    v_earth = ve["atm"]
+    running = config.V_E * config.C / 1e3
+    if abs(running - v_earth) > 1e-9:
+        sys.exit(
+            f"FATAL: shards were built at v_earth = {v_earth:g} km/s but this "
+            f"process runs config.V_E = {running:g} km/s. The reference curves "
+            f"and the m_cut mean speed would be computed in the wrong halo "
+            f"frame. Re-run with LUHDM_V_EARTH={v_earth:g}"
+            + (" (or unset it)" if v_earth == 0.0 else ""))
+    print(f"halo frame: v_earth = {v_earth:g} km/s"
+          + (" (Galactic rest frame, the shipped convention)" if v_earth == 0.0
+             else f" (lab frame; v_max = {config.V_MAX * config.C / 1e3:.1f} km/s)"))
+    return v_earth
+
+
 def cross_check_projection_kernel(atm, noatm, halo_d):
     """All three passes must share one projected-dsigma/dq kernel (hard gate)."""
     ks = {"atm": atm["projection_kernel"], "noatm": noatm["projection_kernel"],
@@ -610,8 +650,10 @@ def print_status_report(pass_name, pd):
 def compute_reference_curves(quick=False, projection_kernel=KERNEL_DEFAULT):
     """Notebook-02 showcase arrival-speed distributions + raw spectra.
 
-    m = 1e8 GeV, alpha_n = 1e-3. Speed grid v = linspace(Q_THRESH/1e8/10, VESC,
-    500). fv_shm = SHM; fv_<tag> via the attenuation ODE per tag. Raw dR/dq on
+    m = 1e8 GeV, alpha_n = 1e-3. Speed grid v = linspace(Q_THRESH/1e8/10,
+    config.V_MAX, 500) -- the top of the halo's support, VESC in the Galactic
+    rest frame and VESC + V_E under a lab-frame convention.
+    fv_shm = SHM; fv_<tag> via the attenuation ODE per tag. Raw dR/dq on
     q = geomspace(1e2, 1e5, 160) with the arrival f(v) FIXED at the 200 um
     attenuated distribution for every curve (mirrors notebook 02 exactly).
 
@@ -625,7 +667,10 @@ def compute_reference_curves(quick=False, projection_kernel=KERNEL_DEFAULT):
     t0 = time.time()
 
     v_min = config.Q_THRESH / REF_M / 10.0
-    v = np.linspace(v_min, config.VESC, 500)
+    # top of the halo's support: config.V_MAX = VESC + V_E (== VESC in the
+    # Galactic rest frame), so a lab-frame cube's reference curves show the
+    # whole boosted distribution rather than a clipped one
+    v = np.linspace(v_min, config.V_MAX, 500)
     q_gev = np.geomspace(1e2, 1e5, 160)
 
     v_i_samples = atmosphere.sample_shm(n_shm, rng=np.random.default_rng(SEED))
@@ -861,8 +906,13 @@ def halo_mean_speed_m_s():
     of c and speeds converted by units.C_M_S. The same normalised first moment
     is used here so m_cut and the stored n_transit surface describe the same
     halo, not two different ones.
+
+    The integral runs to config.V_MAX = VESC + V_E, the top of the halo's
+    support in whichever frame the cube's convention names (== VESC in the
+    Galactic rest frame, so m_cut is unchanged by default). Under a lab-frame
+    convention <v> rises and m_cut rises with it, linearly.
     """
-    vs = np.linspace(1e-8, config.VESC, 200000)
+    vs = np.linspace(1e-8, config.V_MAX, 200000)
     f = halo.standard_halo_model(vs)
     return float(np.trapezoid(f * vs, vs) / np.trapezoid(f, vs)) * units.C_M_S
 
@@ -1284,6 +1334,16 @@ def write_h5(out_path, atm, noatm, halo_d, lambda_finite, ref, detector,
         # MU_DEX_DEFAULT, so that is what is written here. fid_json carries the
         # authoritative copy (present only on an overridden build).
         a["fid_mu_dex"] = float(fid.get("mu_dex", MU_DEX_DEFAULT))
+        # Halo frame this cube's cells (and its reference curves and m_cut) were
+        # computed in: Earth's speed through the halo in km/s. 0.0 is the
+        # Galactic rest frame -- the shipped convention and what every cube
+        # predating this attribute carries. Non-zero means the lab-frame
+        # Maxwellian of Monteiro 2020 / Tseng 2025, whose support runs to
+        # VESC + v_earth. Unlike the fid_* keys this one is NOT prefixed: it is
+        # a physics convention a reader must honour, not a fidelity dial, and
+        # refine_contours / verify_release hard-stop unless the running
+        # config.V_E (LUHDM_V_EARTH) equals it.
+        a["v_earth_km_s"] = float(fid.get("v_earth_km_s", 0.0))
         # optimum-interval expected-count cap: cells above it are asserted
         # excluded without Monte Carlo. Shards built before the cap was
         # recorded carry no "mu_cap" key -> NaN, meaning "not recorded".
@@ -1350,6 +1410,9 @@ def write_provenance(release_dir, atm_dir, noatm_dir, halo_dir, atm, noatm,
             # the cross-section convention the cells and the reference curves
             # were computed under (shards predating the flag: planar-signed)
             "projection_kernel": atm["projection_kernel"],
+            # halo frame: Earth's speed through the halo [km/s]; 0.0 = the
+            # Galactic rest frame (shards predating the flag record nothing)
+            "v_earth_km_s": float(atm["fidelity"].get("v_earth_km_s", 0.0)),
             "inputs": inputs,
         },
         "shard_dirs": {
@@ -1479,6 +1542,8 @@ def main():
           f"  [{lambda_finite.min():.3e} .. {lambda_finite.max():.3e}] m")
     cross_check_cap(atm, noatm, halo_d)
     kernel = cross_check_projection_kernel(atm, noatm, halo_d)
+    # gates the frame the reference curves and m_cut below are computed in
+    cross_check_v_earth(atm, noatm)
 
     print_status_report("atm", atm)
     print_status_report("noatm", noatm)
