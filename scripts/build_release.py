@@ -870,6 +870,11 @@ def main():
                 il=il_stored, pass_name=pass_name, t_total=T_TOTAL, seed=SEED,
                 b_constrained_max=args.b_constrained_max,
                 projection_kernel=args.projection_kernel,
+                # the halo pass is geometry, but n_transit is a flux-weighted
+                # reach integral: b_max ~ 1/v, so nt goes as <1/v> and the
+                # frame changes it by ~30%. Record it or a lab-frame halo pass
+                # is indistinguishable from a rest-frame one.
+                v_earth_km_s=float(config.V_E * config.C / 1e3),
                 schema_version=SCHEMA_VERSION, created=created, argv=argv_str,
                 hostname=hostname, wall_s=wall_s, inputs_json=inputs_json)
         else:

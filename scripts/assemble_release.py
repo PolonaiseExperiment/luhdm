@@ -535,7 +535,15 @@ def load_halo(halo_dir):
         bmax[:, :, li] = np.asarray(rec["bmax_m"], dtype=np.float64)
     b_cap, cap_unflagged = _cap_provenance("halo", fin_recs + [massless])
     kernel = _projection_kernel("halo", fin_recs + [massless])
+    # halo frame: recorded per shard since the lab-frame adoption; shards that
+    # predate the key were built in the Galactic rest frame (0.0). All halo
+    # shards of one pass must agree.
+    ve_all = {float(_scalar(r["v_earth_km_s"])) if "v_earth_km_s" in r else 0.0
+              for r in fin_recs + [massless]}
+    if len(ve_all) > 1:
+        sys.exit(f"FATAL: halo shards disagree on v_earth_km_s: {sorted(ve_all)}")
     return dict(ms=ms, alphas_n=alphas_n, lambda_finite=lambda_finite,
+                v_earth_km_s=ve_all.pop(),
                 n_finite=n_finite, n_transit=nt, bmax=bmax,
                 b_constrained_max=b_cap, cap_unflagged_shards=cap_unflagged,
                 projection_kernel=kernel,
@@ -580,7 +588,7 @@ def cross_check_cap(atm, noatm, halo_d):
     return cap
 
 
-def cross_check_v_earth(atm, noatm):
+def cross_check_v_earth(atm, noatm, halo_d=None):
     """Both cell passes must share one halo frame, and THIS process must run it.
 
     The frame is recorded per shard (fidelity key ``v_earth_km_s``, absent =
@@ -593,6 +601,10 @@ def cross_check_v_earth(atm, noatm):
     """
     ve = {"atm": float(atm["fidelity"].get("v_earth_km_s", 0.0)),
           "noatm": float(noatm["fidelity"].get("v_earth_km_s", 0.0))}
+    if halo_d is not None:
+        # the halo pass records the frame directly (it has no fidelity dict);
+        # shards predating the key were built in the Galactic rest frame
+        ve["halo"] = float(halo_d.get("v_earth_km_s", 0.0) or 0.0)
     if len(set(ve.values())) > 1:
         sys.exit(f"FATAL: passes disagree on the halo frame v_earth_km_s: {ve}")
     v_earth = ve["atm"]
@@ -1543,7 +1555,7 @@ def main():
     cross_check_cap(atm, noatm, halo_d)
     kernel = cross_check_projection_kernel(atm, noatm, halo_d)
     # gates the frame the reference curves and m_cut below are computed in
-    cross_check_v_earth(atm, noatm)
+    cross_check_v_earth(atm, noatm, halo_d)
 
     print_status_report("atm", atm)
     print_status_report("noatm", noatm)
