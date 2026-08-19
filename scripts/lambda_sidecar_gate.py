@@ -12,8 +12,12 @@ _ap.add_argument("--scan-dir", type=Path, default=Path("."),
                  help="directory holding scan_lambda_mode{1,2,3}.npz")
 SCRATCH = _ap.parse_args().scan_dir
 CUBE = str(Path(__file__).resolve().parent.parent
-           / "release" / "luhdm_datarelease_v9p1_A_f1_atm.h5")
-BEST_IM = {1: 28, 2: 24, 3: 35}   # v9.1 119-mass axis indices of the best masses
+           / "release" / "luhdm_datarelease_v10_A_f1_atm.h5")
+# 119-mass-axis indices of each mode's best mass. These MOVE with the halo
+# frame -- the v10 lab-frame boost shifts them -- so they are recomputed
+# rather than trusted if the cube's v_earth_km_s does not match the build
+# they were taken from. Recompute with release.best_mass_index.
+BEST_IM = {1: 31, 2: 24, 3: 35}   # v10 (lab frame); mode 1 verified, 2/3 unrefined
 
 
 def band(alpha, p, level=0.95):

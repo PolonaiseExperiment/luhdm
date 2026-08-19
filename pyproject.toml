@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "luhdm"
-version = "0.1.0"
+version = "10.0.0"
 description = "Levitated-sensor ultraheavy dark matter: physics models and limit setting"
 readme = "README.md"
 license = "GPL-3.0-or-later"

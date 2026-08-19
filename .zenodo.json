@@ -1,0 +1,40 @@
+{
+  "title": "luhdm: levitated-sensor ultraheavy dark matter analysis and v10 data release",
+  "description": "Analysis code and data release for the first search for ultraheavy dark matter with a magnetically levitated particle (POLONAISE). The Python package holds the physics models -- the halo, atmospheric and overburden propagation, the straight-line-impulse cross section -- and the bridge to the optimum_interval statistics package, together with the scripts and notebooks that build the release and the figures of the paper. The release/ directory carries the v10 data release: two self-describing HDF5 cubes, one per dark-matter-fraction and atmospheric-propagation hypothesis, storing the optimum-interval extremeness, the expected detected signal and the expected number of in-reach transits over a grid in sensor mode, per-neutron coupling, dark-matter mass and mediator range, along with the measured per-mode efficiency curves, the impulse candidate lists and the live time. In v10 the halo is evaluated in the laboratory frame, at an Earth speed of 245 km/s recorded in the files' attributes. The code is GPL-3.0-or-later; the data in release/ is CC BY 4.0.",
+  "upload_type": "software",
+  "version": "10.0.0",
+  "license": "GPL-3.0-or-later",
+  "creators": [
+    {
+      "name": "Amaral, Dorian W. P.",
+      "affiliation": "Institut de Fisica d'Altes Energies (IFAE), The Barcelona Institute of Science and Technology",
+      "orcid": "0000-0002-1414-932X"
+    },
+    {
+      "name": "Qin, Juehang",
+      "affiliation": "Department of Physics and Astronomy, Rice University"
+    },
+    {
+      "name": "Tunnell, Christopher D.",
+      "affiliation": "Department of Physics and Astronomy, Rice University",
+      "orcid": "0000-0001-8158-7795"
+    }
+  ],
+  "keywords": [
+    "dark matter",
+    "ultraheavy dark matter",
+    "levitated sensor",
+    "magnetic levitation",
+    "optimum interval",
+    "direct detection",
+    "POLONAISE"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/PolonaiseExperiment/luhdm",
+      "relation": "isSupplementTo",
+      "scheme": "url",
+      "resource_type": "software"
+    }
+  ]
+}

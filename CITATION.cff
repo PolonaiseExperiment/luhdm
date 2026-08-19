@@ -8,8 +8,8 @@ abstract: >-
   statistics package, and the scripts and notebooks that build the data release
   and the figures in the paper.
 type: software
-version: "0.2.0"
-date-released: "2026-08-12"
+version: "10.0.0"
+date-released: "2026-08-19"
 license: GPL-3.0-or-later
 # doi: to be assigned (archived code snapshot).
 keywords:
@@ -25,6 +25,9 @@ authors:
     orcid: "https://orcid.org/0000-0002-1414-932X"
     affiliation: "Institut de Fisica d'Altes Energies (IFAE), The Barcelona Institute of Science and Technology"
     email: damaral@ifae.es
+  - family-names: Qin
+    given-names: Juehang
+    affiliation: "Department of Physics and Astronomy, Rice University"
   - family-names: Tunnell
     given-names: "Christopher D."
     orcid: "https://orcid.org/0000-0001-8158-7795"

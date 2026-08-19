@@ -220,8 +220,9 @@ def build(rel, talk=False):
 
 
 #: Slide asset consumed by the COSMO deck (Slidev wants SVG).
-TALK_OUT = Path("/home/tunnell/code/luhdm/ignore/talks/talks-main/2026 COSMO"
-                "/public/assets/luhdm/talk_spectra")
+TALK_OUT = (Path(__file__).resolve().parents[1] / "ignore" / "talks"
+            / "talks-main" / "2026 COSMO" / "public" / "assets" / "luhdm"
+            / "talk_spectra")
 TALK_PNG_DPI = 200
 
 

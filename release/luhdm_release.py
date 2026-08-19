@@ -455,7 +455,7 @@ class Release:
     # -- metadata --------------------------------------------------------- #
     @property
     def version_tag(self):
-        """Human-readable cube version, e.g. ``'v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier'``."""
+        """Human-readable cube version, e.g. ``'v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245'``."""
         return str(self.attrs.get("version_tag")
                    or f"v{self.attrs.get('version', '?')}")
 

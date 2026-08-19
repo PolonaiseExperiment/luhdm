@@ -17,16 +17,35 @@ column by mass column, to the excluded coupling interval with
 as ``Release.excluded_alpha_band`` and that notebooks 01/04 use, so this figure
 cannot drift from them.
 
-Those intervals are two-sided, and the region they sweep out is a **closed
-island**: the search has no sensitivity below the floor (too few expected
-impulses above the 0.1 TeV threshold), loses it again above the ceiling, where
-the atmospheric overburden decelerates the incoming flux below threshold, and
-is closed on the right by the 10 cm impact-parameter cap. We publish the closed
-region, so the fill runs between floor and ceiling and the outline is drawn all
-the way round. Building the band directly rather than contouring the plane is
-what makes the ceiling explicit and yields exactly one closed polygon per
-range. :func:`island_is_closed` asserts every island is strictly interior to
-the scanned grid, i.e. that no edge is merely where the cube stops.
+Those intervals are two-sided wherever the search has a ceiling: it has no
+sensitivity below the floor (too few expected impulses above the threshold) and
+loses it again above the ceiling, where the atmospheric overburden decelerates
+the incoming flux below threshold. Building the band directly rather than
+contouring the plane is what makes that ceiling explicit and yields one polygon
+per range.
+
+    HOW AN EDGE OF THE SCAN IS DRAWN. A boundary the data measured is outlined;
+    a boundary that is merely where the cube stops is **not**. The fill runs to
+    the edge of the scanned grid, but no line is stroked along it, so a region
+    that continues past the scan reads as open rather than as a measured
+    closure. That distinction is the whole point of drawing the band by hand,
+    and :func:`scan_edges` / :func:`island_polygons` enforce it: every drawn
+    stroke is a crossing of the confidence level.
+
+At v10 two edges are open and both are open for a stated reason. (i) The
+massless band runs to the top of the scanned coupling axis, ``alpha_n = 1``,
+above ``m_DM ~ 2e12`` GeV: alpha_n = 1 is where we stopped scanning, not a
+ceiling the atmosphere put there, and the panel's y axis ends at exactly that
+value, so the fill runs into the top spine with no line across it. (ii) The
+same band runs to the last mass column, which is ``m_Pl`` -- the deliberate end
+of the mass grid, already marked in the panel by the dotted ``m_Pl`` guide, so
+the fill runs into that guide with no line down it.
+
+Two edges are *not* negotiable and remain hard errors: a floor sitting on the
+bottom of the coupling grid (the quoted limit would then be the smallest
+coupling computed rather than a measured crossing) and a band reaching the
+low-mass end of the grid (the threshold turn-on the Letter describes would be
+unmeasured). See :func:`scan_edges`.
 
 The islands are nested (longer range => larger island), so they are painted
 largest-first and their translucent fills stack. Ranges are separated by colour
@@ -84,7 +103,7 @@ figure still builds.
 Usage
 -----
     python scripts/paper_fig_limits.py
-    python scripts/paper_fig_limits.py --release release/luhdm_datarelease_v9_A_f1_atm.h5
+    python scripts/paper_fig_limits.py --release release/luhdm_datarelease_v10_A_f1_atm.h5
     python scripts/paper_fig_limits.py --talk      # slide-scale SVG/PNG
 
 Re-running against a newer release regenerates the figure with no edit, and the
@@ -101,6 +120,7 @@ import argparse
 import csv
 import sys
 import tempfile
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
@@ -162,6 +182,17 @@ FILL_ALPHA_SOLO = 0.30
 #: it, because its minimum *is* the number the Letter quotes and a reader must
 #: be able to measure it off the figure.
 SMOOTH_SIGMA_CELLS = 1.1
+
+#: Where the ``m_Pl`` guide is named: this far, in decades of alpha_n, below
+#: whatever the m_Pl column already carries, and never higher than
+#: :data:`M_PL_LABEL_TOP_DEX` below the top of the axis (the slot it occupied
+#: when no band reached m_Pl, kept so that case is drawn exactly as before).
+M_PL_LABEL_PAD_DEX = 0.20
+#: Mass extent, in decades, that the rotated name occupies to the left of the
+#: guide at print scale (measured: 0.40 dex, plus margin). Scaled by S_REL
+#: under --talk, where the name is longer relative to the panel.
+M_PL_LABEL_SPAN_DEX = 0.70
+M_PL_LABEL_TOP_DEX = 0.25
 
 #: Prior massless-mediator limits. Neutral greys separated by dash pattern, so
 #: they read as context rather than as our result and survive grayscale.
@@ -375,18 +406,40 @@ def smooth_log(y_log, sigma, cap):
     return np.clip((w @ y_log) / w.sum(axis=1), y_log - cap, y_log + cap)
 
 
-def island_is_closed(mass, floor, ceiling, mass_axis, alpha_axis):
-    """True if the drawn band is strictly inside the scanned grid.
+#: One connected piece of an excluded region: the per-mass floor and ceiling
+#: over a contiguous run of mass columns, plus which of its sides are the edge
+#: of the scanned grid rather than a measured boundary. ``open_top`` is per
+#: column (the ceiling can hit the scan cap over part of a run only);
+#: ``open_right`` is a single flag for the high-mass end of the run.
+Piece = namedtuple("Piece", "mass floor ceiling open_top open_right")
 
-    A band that reaches the edge of the cube is not a measured boundary, it is
-    where we stopped computing, and the closed two-sided claim would be unsafe.
+
+def scan_edges(mass, floor, ceiling, mass_axis, alpha_axis, tol=1e-9):
+    """Which sides of a band are the edge of the scan rather than a boundary.
+
+    Returns ``(open_left, open_right, open_bottom, open_top)``; ``open_top`` is
+    a per-column boolean mask, the rest are scalars. A side is "open" when the
+    band reaches the first/last node of the scanned grid on that side, i.e.
+    where the cube stops computing rather than where the confidence level was
+    crossed. Nothing here decides what is *allowed* -- see
+    :func:`island_polygons` -- it only says what the data did.
     """
-    return bool(mass.min() > mass_axis[0] and mass.max() < mass_axis[-1]
-                and floor.min() > alpha_axis[0] and ceiling.max() < alpha_axis[-1])
+    return (bool(mass.min() <= mass_axis[0] * (1.0 + tol)),
+            bool(mass.max() >= mass_axis[-1] * (1.0 - tol)),
+            bool(floor.min() <= alpha_axis[0] * (1.0 + tol)),
+            np.asarray(ceiling) >= alpha_axis[-1] * (1.0 - tol))
 
 
 def island_polygons(rel, plane, confidence, cell, label):
-    """``[(mass, floor, ceiling), ...]`` -- the smoothed, closed island pieces."""
+    """``[Piece, ...]`` -- the smoothed pieces of the excluded region.
+
+    Raises on the two edges that would make the published number unsafe (see
+    the module docstring): a floor on the bottom of the coupling grid, or a
+    band reaching the low-mass end of the mass grid. A band that runs off the
+    TOP of the coupling axis, or off the high-mass end at ``m_Pl``, is drawn
+    open -- filled to the edge of the scan, not stroked along it -- and said so
+    on stdout.
+    """
     ms, alphas = rel.axes.mass_gev, rel.axes.alpha_n
     lo, hi, n_nan, holes = excluded_band(plane, alphas, confidence)
     inside = np.isfinite(lo)
@@ -403,43 +456,105 @@ def island_polygons(rel, plane, confidence, cell, label):
     out, shift = [], 0.0
     for run in contiguous_runs(inside):
         m_run = ms[run]
+        # Which columns are capped by the scan is read off the RAW crossings,
+        # before any cosmetic smoothing can move them.
+        op_l, op_r, op_b, op_t = scan_edges(m_run, lo[run], hi[run], ms, alphas)
+        if op_b or op_l:
+            side = ("its floor sits on the bottom of the scanned coupling grid "
+                    f"(alpha_n = {alphas[0]:g}), so the quoted limit would be "
+                    "where the scan stops, not a measured crossing" if op_b else
+                    "it reaches the low-mass end of the scanned mass grid "
+                    f"(m_DM = {ms[0]:g} GeV), so the threshold turn-on would be "
+                    "unmeasured")
+            raise AssertionError(
+                f"{label}: the {confidence:.0%} band cannot be drawn honestly "
+                f"without extending the cube -- {side}")
         hi_raw = np.log10(hi[run])
         hi_s = smooth_log(hi_raw, SMOOTH_SIGMA_CELLS, 0.5 * cell)
+        # A capped ceiling is a hard edge of the scan, not a measured curve:
+        # smoothing must not dimple it below the cap.
+        hi_s[op_t] = np.log10(alphas[-1])
         shift = max(shift, float(np.abs(hi_s - hi_raw).max()))
-        floor, ceiling = lo[run], 10.0 ** hi_s
-        if not island_is_closed(m_run, floor, ceiling, ms, alphas):
-            raise AssertionError(
-                f"{label}: the {confidence:.0%} band reaches the edge of the "
-                f"scanned grid, so it is not a closed island; the two-sided "
-                f"region cannot be drawn honestly without extending the cube")
-        out.append((m_run, floor, ceiling))
+        out.append(Piece(m_run, lo[run], 10.0 ** hi_s, op_t, op_r))
+        if op_t.any() or op_r:
+            m_top = m_run[op_t]
+            print(f"         open at the edge of the scan, drawn unstroked "
+                  f"there: " + ", ".join(
+                      ([f"ceiling at alpha_n = {alphas[-1]:g} over "
+                        f"{int(op_t.sum())}/{len(run)} columns "
+                        f"(m {m_top.min():.3g}-{m_top.max():.3g} GeV)"]
+                       if op_t.any() else [])
+                      + ([f"high-mass end at the last mass column "
+                          f"({m_run.max():.3g} GeV)"] if op_r else [])))
+            if op_t.any():
+                print(f"         CAPTION MUST SAY that the region is bounded "
+                      f"above there by the top of the scanned coupling axis, "
+                      f"alpha_n = {alphas[-1]:g}, and not by a measured ceiling")
     return out, shift
 
 
-def as_polygon(m_run, floor, ceiling, transform=None):
+def as_polygon(piece, transform=None):
     """Close a (floor, ceiling) band into one polygon: floor out, ceiling back.
+
+    This is the FILLED region -- it always runs to wherever the band reaches,
+    including the edge of the scan -- and is what the label-placement and
+    collision gates test containment against. What is *stroked* is
+    :func:`outline_segments`, which is not the same path once a side is open.
 
     ``transform`` maps the coupling ordinate to whatever the panel plots; the
     right panel passes the cross-section recast. It must be monotone, which the
     recast is (a positive multiple of alpha_n^2), or the band's two edges would
     cross.
     """
+    m_run, floor, ceiling = piece.mass, piece.floor, piece.ceiling
     px = np.concatenate([m_run, m_run[::-1], m_run[:1]])
     py = np.concatenate([floor, ceiling[::-1], floor[:1]])
     return px, (py if transform is None else transform(py))
 
 
+def outline_segments(piece):
+    """``[(x, y), ...]`` -- only the parts of the boundary the data measured.
+
+    A closed piece comes back as the single ring :func:`as_polygon` builds, so
+    a fully measured island is stroked exactly as it always was, in one stroke
+    with no dash-phase restart. When a side is the edge of the scan the ring is
+    broken there instead: the floor and the mass ends are still stroked (they
+    are crossings), the capped ceiling is not, and the fill alone carries the
+    region into the top of the panel.
+    """
+    m_run, ceiling = piece.mass, piece.ceiling
+    floor, open_top, open_right = piece.floor, piece.open_top, piece.open_right
+    if not open_top.any() and not open_right:
+        return [as_polygon(piece)]
+
+    segs = []
+    # The floor, plus whichever vertical ends are real boundaries. The left end
+    # always is: island_polygons refuses a band that reaches the low-mass edge.
+    x = np.concatenate([m_run[:1], m_run, m_run[-1:]] if not open_right
+                       else [m_run[:1], m_run])
+    y = np.concatenate([ceiling[:1], floor, ceiling[-1:]] if not open_right
+                       else [ceiling[:1], floor])
+    segs.append((x, y))
+    # ... and the ceiling only where it is a measured crossing.
+    for run in contiguous_runs(~open_top):
+        if run.size >= 2:
+            segs.append((m_run[run], ceiling[run]))
+    return segs
+
+
 def draw_island(ax, pieces, colour, dash, lw, label, transform=None,
                 fill_alpha=FILL_ALPHA):
-    """Fill + outline each closed piece; returns the drawn Line2D artists."""
+    """Fill each piece and stroke its measured boundary; returns the Line2Ds."""
     lines = []
-    for k, (m_run, floor, ceiling) in enumerate(pieces):
-        px, py = as_polygon(m_run, floor, ceiling, transform)
+    for k, piece in enumerate(pieces):
+        px, py = as_polygon(piece, transform)
         ax.fill(px, py, color=colour, alpha=fill_alpha, lw=0, zorder=Z_FILL)
-        line, = ax.plot(px, py, color=colour, lw=lw, ls=dash, zorder=Z_EDGE,
-                        solid_joinstyle="round", dash_capstyle="butt",
-                        label=label if k == 0 else "_nolegend_")
-        lines.append(line)
+        for j, (sx, sy) in enumerate(outline_segments(piece)):
+            line, = ax.plot(sx, sy if transform is None else transform(sy),
+                            color=colour, lw=lw, ls=dash, zorder=Z_EDGE,
+                            solid_joinstyle="round", dash_capstyle="butt",
+                            label=label if (k == 0 and j == 0) else "_nolegend_")
+            lines.append(line)
     return lines
 
 
@@ -517,7 +632,8 @@ def label_candidates(pieces, outer_mass_hi, refs=(), avoid=None,
     else:
         av = None
     out = []
-    for m_run, floor, ceiling in pieces:
+    for piece in pieces:
+        m_run, floor, ceiling = piece.mass, piece.floor, piece.ceiling
         free = np.ones_like(m_run, dtype=bool) if outer_mass_hi is None \
             else m_run > outer_mass_hi
         idx = np.where(free)[0]
@@ -576,6 +692,78 @@ def spread_anchor(candidates, placed, xlim, ylim):
     return max(candidates, key=gap)
 
 
+#: Clearance, in decades of the ordinate, kept between a curve's name and the
+#: curve itself, the excluded region, any other annotation and the frame.
+#: 0.1 dex of the right panel is ~2 pt against a 6.5 pt name.
+CURVE_LABEL_PAD_DEX = 0.10
+
+
+def place_under_curve(text, ax, curve, floors, keep_out, xlim, ylim,
+                      pad=CURVE_LABEL_PAD_DEX, n_try=97):
+    """Move ``text`` to the closest point *under* ``curve`` that stays legible.
+
+    The name of an overlay has to touch its own curve to name it, and this
+    panel's free space depends on the cube: with the atmosphere off the excluded
+    region has no ceiling, so it is painted from its floor to the top of the
+    frame and the only clear ground is *below* both the floor and the overlay.
+    Rather than trust a hand-picked anchor -- which is what the v9 -> v10 change
+    invalidated -- the anchor is searched for.
+
+    ``text``'s own rendered size sets the box, so this is measured in the type
+    that will be printed. For each candidate mass the box hangs from as high as
+    it may: just under the lowest of ``curve`` and every band ``floors`` puts
+    over its width. Candidates that fall off the bottom of ``ylim`` or touch a
+    ``keep_out`` annotation are dropped, and of the rest the winner is the one
+    whose box top is *closest to the curve*, i.e. the most clearly attached.
+
+    Returns the drop, in decades, from the curve to the top of the name.
+    """
+    fig = ax.get_figure()
+    fig.canvas.draw()
+    box = text.get_window_extent(renderer=fig.canvas.get_renderer())
+    inv = ax.transData.inverted()
+    (bx0, by0), (bx1, by1) = inv.transform([(box.x0, box.y0), (box.x1, box.y1)])
+    half_w = 0.5 * np.log10(bx1 / bx0) + pad
+    height = np.log10(by1 / by0) + 2.0 * pad
+
+    blocks = []
+    for other in keep_out:
+        ob = other.get_window_extent(renderer=fig.canvas.get_renderer())
+        (ox0, oy0), (ox1, oy1) = inv.transform([(ob.x0, ob.y0), (ob.x1, ob.y1)])
+        blocks.append((np.log10(ox0), np.log10(ox1),
+                       np.log10(oy0), np.log10(oy1)))
+
+    lm_c, ls_c = np.log10(curve[0]), np.log10(curve[1])
+    best = None
+    for lm in np.linspace(np.log10(xlim[0]) + half_w,
+                          np.log10(xlim[1]) - half_w, n_try):
+        span = np.linspace(lm - half_w, lm + half_w, 9)
+        top = np.interp(span, lm_c, ls_c).min()          # under its own curve
+        for f_m, f_y in floors:                          # ... and under the data
+            f_m, f_y = np.log10(f_m), np.log10(f_y)
+            hit = (span >= f_m.min()) & (span <= f_m.max())
+            if hit.any():
+                top = min(top, np.interp(span[hit], f_m, f_y).min())
+        top -= pad
+        if top - height < np.log10(ylim[0]) + pad:
+            continue
+        if any(lm - half_w < ox1 and lm + half_w > ox0
+               and top > oy0 and top - height < oy1
+               for ox0, ox1, oy0, oy1 in blocks):
+            continue
+        drop = float(np.interp(lm, lm_c, ls_c) - top)
+        if best is None or drop < best[0]:
+            best = (drop, lm, top)
+    if best is None:
+        raise AssertionError(
+            f"nowhere left to write {text.get_text()!r}: every column of the "
+            f"panel is covered by the excluded region, the curve itself or "
+            f"another annotation")
+    drop, lm, top = best
+    text.set_position((10.0 ** lm, 10.0 ** (top - pad)))
+    return drop
+
+
 # --------------------------------------------------------------------------- #
 # Panels
 # --------------------------------------------------------------------------- #
@@ -589,7 +777,7 @@ def build_left(ax, rel, ref_dir, confidence, mode):
     drawn = []                                       # (tag, label, pieces)
     for tag, label, colour, dash, lw in LAMBDA_FAMILY:
         plane = rel.mass_plane("extremeness", mode=mode, lam=tag,
-                               atmosphere=True, f_dm=F_DM_LEFT)
+                               atmosphere=ATM_LEFT, f_dm=F_DM_LEFT)
         pieces, shift = island_polygons(
             rel, plane, confidence, cell,
             f"lambda={tag} ({label.replace('$', '')})")
@@ -600,7 +788,7 @@ def build_left(ax, rel, ref_dir, confidence, mode):
         # legend does not fit in what the nested islands leave empty.
         curves += draw_island(ax, pieces, colour, scaled_dash(dash),
                               lw * S_LINE, "_nolegend_")
-        islands += [as_polygon(m, f, c) for m, f, c in pieces]
+        islands += [as_polygon(p) for p in pieces]
         drawn.append((tag, label, colour, pieces))
 
     max_shift = max(shifts) if shifts else 0.0
@@ -653,11 +841,11 @@ def build_left(ax, rel, ref_dir, confidence, mode):
     for i, (tag, label, colour, pieces) in enumerate(drawn):
         inner = drawn[i + 1][3] if i + 1 < len(drawn) else None
         outer_hi = None if inner is None \
-            else max(float(m.max()) for m, _f, _c in inner)
+            else max(float(p.mass.max()) for p in inner)
         # Every island outline, this one's included: a name written along its
         # own boundary is as hard to read as one written along a neighbour's.
-        others = [np.column_stack(as_polygon(m, f, c))
-                  for _t, _l, _c2, pcs in drawn for m, f, c in pcs]
+        others = [np.column_stack(as_polygon(p))
+                  for _t, _l, _c2, pcs in drawn for p in pcs]
         cands = label_candidates(
             pieces, outer_hi, ref_xy,
             avoid=np.vstack(others) if others else None,
@@ -692,15 +880,39 @@ def build_left(ax, rel, ref_dir, confidence, mode):
     ax.yaxis.set_minor_formatter(NullFormatter())
 
     # -- Planck-mass endpoint marker ----------------------------------------- #
-    # The mass grid stops at m_Pl. No halo stroke: path effects are unusable
-    # under usetex (see paper_style.halo), and none is needed because the label
-    # sits in the empty right edge, clear of every island.
+    # The mass grid stops at m_Pl, and at v10 the massless band runs into that
+    # stop, so the guide is also what tells a reader that the region's high-mass
+    # end is the end of the scan rather than a measured edge.
+    #
+    # Its name hangs from just under whatever occupies the m_Pl column, found
+    # from the bands actually drawn: the old fixed slot at the top of the axis
+    # is inside the massless fill once that fill reaches alpha_n = 1. With
+    # nothing at m_Pl the expression returns the top slot unchanged. No halo
+    # stroke: path effects are unusable under usetex (see paper_style.halo).
     ax.axvline(m_planck, color=ps.GREY_GUIDE, lw=0.6 * S_LINE, ls=":",
                zorder=Z_MARKER)
+    # Rotated, the name runs back down the mass axis from the guide, so the
+    # clearance is the LOWEST floor anywhere under its length, not the floor in
+    # the m_Pl column alone -- the floors rise steeply with mass out here.
+    probe = np.geomspace(m_planck * 10.0 ** (-M_PL_LABEL_SPAN_DEX * S_REL),
+                         m_planck, 9)
+    over = []
+    for _t, _l, _c, pcs in drawn:
+        for p in pcs:
+            hit = (probe >= p.mass.min()) & (probe <= p.mass.max())
+            if hit.any():
+                over.append(float(np.interp(np.log10(probe[hit]),
+                                            np.log10(p.mass),
+                                            np.log10(p.floor)).min()))
+    y_pl = min(10.0 ** (min(over) - M_PL_LABEL_PAD_DEX) if over else YLIM_A[1],
+               YLIM_A[1] * 10.0 ** -M_PL_LABEL_TOP_DEX)
+    print(f"  m_Pl guide at {m_planck:.4g} GeV; name at alpha_n = {y_pl:.3g} "
+          + (f"(lowest floor over its length {10.0 ** min(over):.3g})"
+             if over else "(nothing drawn in that column)"))
     texts["m_Pl label"] = ax.text(
-        m_planck, 0.975, r"$m_{\mathrm{Pl}}$", color=ps.GREY_GUIDE,
+        m_planck, y_pl, r"$m_{\mathrm{Pl}}$", color=ps.GREY_GUIDE,
         fontsize=6.5 * S_FONT, ha="right", va="top", rotation=90,
-        zorder=Z_MARKER, transform=ax.get_xaxis_transform())
+        zorder=Z_MARKER)
 
     texts["hypothesis note"] = ax.text(
         0.028, 0.955, "$f_{\\mathrm{DM}} = 1$, 95\\% CL",
@@ -749,17 +961,43 @@ def build_right(ax, rel, ref_dir, confidence, mode):
     curves = draw_island(ax, pieces, colour, (0, ()), 1.0 * S_LINE,
                          "_nolegend_", transform=to_sigma,
                          fill_alpha=FILL_ALPHA_SOLO)
-    islands = [as_polygon(m, f, c, to_sigma) for m, f, c in pieces]
+    islands = [as_polygon(p, to_sigma) for p in pieces]
     sig_floor, m_at_floor = min(
-        ((float(to_sigma(f[j])), float(m[j]))
-         for m, f, _c in pieces for j in [int(np.argmin(f))]))
+        ((float(to_sigma(p.floor[j])), float(p.mass[j]))
+         for p in pieces for j in [int(np.argmin(p.floor))]))
     print(f"  recast: sigma = {SIGMA_PER_ALPHA2:.6e} cm^2 x alpha_n^2 "
           f"(q0 = mu_chi-n v0, mu = {MU_CHI_N_GEV} GeV, v0/c = {V0_OVER_C})")
     print(f"  deepest cross-section limit {sig_floor:.4g} cm^2 "
           f"at m_DM = {m_at_floor:.4g} GeV")
 
+    # -- axes, set before anything is placed against them --------------------- #
+    # Label placement below measures rendered boxes in data coordinates, which
+    # only mean anything once the panel's limits and scales are final.
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(*XLIM_B)
+    ax.set_ylim(*YLIM_B)
+    ax.set_xlabel(r"Dark matter mass, $m_{\mathrm{DM}}$ (GeV/$c^2$)")
+    ax.set_ylabel(r"DM--neutron cross section, $\sigma_{\chi n}$ (cm$^2$)")
+    ax.xaxis.set_major_locator(FixedLocator([1e6, 1e7, 1e8]))
+    ax.yaxis.set_major_locator(FixedLocator([1e-28, 1e-26, 1e-24, 1e-22]))
+    ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=(1.0,), numticks=20))
+    ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=(1.0,), numticks=20))
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    ax.yaxis.set_minor_formatter(NullFormatter())
+
+    texts = {}
+    texts["benchmark note"] = ax.text(
+        0.972, 0.045,
+        "composite DM\n"
+        f"$m_\\phi = 10$ meV\n"
+        f"$m_d = 1$ keV\n"
+        f"$f_{{\\mathrm{{DM}}}} = {F_DM_RIGHT:g}$",
+        transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5 * S_FONT,
+        linespacing=1.35, zorder=Z_TEXT)
+
     # -- fifth-force bound, recast the same way ------------------------------ #
-    texts, ff_line = {}, None
+    ff_line = None
     lam_m = float(rel.axes.lambda_m[rel.at_lambda(BENCH_LAM)])
     ff = load_fifth_force(ref_dir, lam_m)
     if ff is None:
@@ -784,39 +1022,22 @@ def build_right(ax, rel, ref_dir, confidence, mode):
               f"m_d = {BENCH_M_D_GEV * 1e6:.0f} keV, g_d = {BENCH_G_D:g}")
         print(f"         CAPTION MUST CITE {owner} for this curve")
         # Named on the curve rather than through a legend key, which would have
-        # to be told apart from the island outline by dash pattern alone. The
-        # only part of this panel the island leaves free is the strip beyond
-        # its high-mass tip, so the name goes there, just above the line.
-        # Right-aligned at the frame edge and lifted clear of the line: the
-        # bound rises as m_DM^2, so a centred label would be overrun by its own
-        # curve within half a label width.
-        m_lab = XLIM_B[1] * 0.97
-        _a, s_lab = fifth_force_sigma(m_lab, alpha_tilde)
-        texts["fifth-force label"] = ax.text(
-            m_lab, s_lab * 3.0, "fifth force", color=ps.GREY_DARK,
-            fontsize=6.5 * S_FONT, ha="right", va="bottom", zorder=Z_TEXT)
-
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlim(*XLIM_B)
-    ax.set_ylim(*YLIM_B)
-    ax.set_xlabel(r"Dark matter mass, $m_{\mathrm{DM}}$ (GeV/$c^2$)")
-    ax.set_ylabel(r"DM--neutron cross section, $\sigma_{\chi n}$ (cm$^2$)")
-    ax.xaxis.set_major_locator(FixedLocator([1e6, 1e7, 1e8]))
-    ax.yaxis.set_major_locator(FixedLocator([1e-28, 1e-26, 1e-24, 1e-22]))
-    ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=(1.0,), numticks=20))
-    ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=(1.0,), numticks=20))
-    ax.xaxis.set_minor_formatter(NullFormatter())
-    ax.yaxis.set_minor_formatter(NullFormatter())
-
-    texts["benchmark note"] = ax.text(
-        0.972, 0.045,
-        "composite DM\n"
-        f"$m_\\phi = 10$ meV\n"
-        f"$m_d = 1$ keV\n"
-        f"$f_{{\\mathrm{{DM}}}} = {F_DM_RIGHT:g}$",
-        transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5 * S_FONT,
-        linespacing=1.35, zorder=Z_TEXT)
+        # to be told apart from the island outline by dash pattern alone. It
+        # goes UNDER the curve, in the only region this panel leaves free: with
+        # no atmosphere there is no ceiling, so the excluded region is open
+        # above and everything over its floor is painted. Which mass column has
+        # room is a property of the cube, so it is measured rather than fixed --
+        # a hard-coded anchor is exactly what the v9 -> v10 change broke.
+        txt = ax.text(np.sqrt(XLIM_B[0] * XLIM_B[1]), np.sqrt(YLIM_B[0] * YLIM_B[1]),
+                      "fifth force", color=ps.GREY_DARK, fontsize=6.5 * S_FONT,
+                      ha="center", va="top", zorder=Z_TEXT)
+        drop = place_under_curve(
+            txt, ax, (m_ff, s_ff),
+            floors=[(p.mass, to_sigma(p.floor)) for p in pieces],
+            keep_out=[texts["benchmark note"]], xlim=XLIM_B, ylim=YLIM_B)
+        texts["fifth-force label"] = txt
+        print(f"         name written {drop:.2f} dex under the bound at "
+              f"m_DM = {txt.get_position()[0]:.3g} GeV")
 
     return dict(legend=None, labels=[], texts=texts, islands=islands,
                 curves=curves, ref_curves=[], max_shift=shift,
@@ -985,11 +1206,68 @@ def report_benchmark(rel, confidence, mode):
           f"(sigma from {SIGMA_PER_ALPHA2 * np.nanmin(lo) ** 2:.6g} cm^2 up)")
 
 
+#: How the released pair names its two hypotheses. The release splits the two
+#: surfaces the panels need across two files -- f_DM = 1 attenuated (A) and
+#: f_DM = 0.1 bare-halo (B) -- and NO cube carries f_DM = 0.1 with the
+#: atmosphere, so the right panel simply cannot be read out of the left panel's
+#: file. Deriving B from A keeps ``--release`` a single knob: point it at any
+#: version's A cube and its own B cube is used for the benchmark panel.
+HYPOTHESIS_TAG_LEFT = "_A_f1_atm"
+HYPOTHESIS_TAG_RIGHT = "_B_f0p1_noatm"
+
+
+def benchmark_release_path(path):
+    """The bare-halo f_DM = 0.1 companion of an attenuated f_DM = 1 cube."""
+    path = Path(path)
+    name = path.name.replace(HYPOTHESIS_TAG_LEFT, HYPOTHESIS_TAG_RIGHT)
+    if name == path.name:
+        raise SystemExit(
+            f"cannot tell which cube carries f_DM = {F_DM_RIGHT:g} without the "
+            f"atmosphere: {path.name!r} does not name the hypothesis "
+            f"{HYPOTHESIS_TAG_LEFT!r}, so its companion cannot be derived. "
+            f"Pass --release-benchmark explicitly.")
+    companion = path.with_name(name)
+    if not companion.exists():
+        raise SystemExit(
+            f"the right panel needs the f_DM = {F_DM_RIGHT:g} bare-halo cube "
+            f"{companion}, which does not exist; pass --release-benchmark")
+    return companion
+
+
+def assert_same_release(rel_left, rel_right):
+    """The two panels must come from one release, or they are one figure of two.
+
+    The pair is two files, so nothing on disk stops a stale B cube being drawn
+    beside a fresh A cube. They must agree on the release version and on the
+    axes both panels index, which is what makes "the right panel is the left
+    panel's own 10 meV island, recast" a true statement.
+    """
+    left = str(rel_left.version_tag or "").split("-", 1)[0]
+    right = str(rel_right.version_tag or "").split("-", 1)[0]
+    if left != right:
+        raise AssertionError(
+            f"the two panels would come from different releases: "
+            f"{rel_left.version_tag!r} (left) vs {rel_right.version_tag!r} "
+            f"(right)")
+    for name in ("mass_gev", "alpha_n", "lambda_m"):
+        a = np.asarray(getattr(rel_left.axes, name), float)
+        b = np.asarray(getattr(rel_right.axes, name), float)
+        if a.shape != b.shape or not np.allclose(a, b, rtol=1e-12,
+                                                 equal_nan=True):
+            raise AssertionError(
+                f"the two cubes disagree on the {name} axis, so the panels "
+                f"are not two views of one scan")
+
+
 # --------------------------------------------------------------------------- #
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--release", type=Path, default=release.DEFAULT_PATH,
-                   help="data-release HDF5 (default: %(default)s)")
+                   help="data-release HDF5 for the LEFT panel, f_DM = 1 with "
+                        "the atmosphere (default: %(default)s)")
+    p.add_argument("--release-benchmark", type=Path, default=None,
+                   help="data-release HDF5 for the RIGHT panel, f_DM = 0.1 on "
+                        "the bare halo (default: the companion of --release)")
     p.add_argument("--outdir", type=Path, default=None,
                    help="output directory (default: ignore/overleaf/figs, or "
                         "the talk asset tree under --talk)")
@@ -1014,23 +1292,31 @@ def main(argv=None):
     set_scale(args.talk)
     figsize = FIGSIZE_TALK if args.talk else FIGSIZE
     (ps.apply_talk_style if args.talk else ps.apply_prl_style)()
-    with release.open_release(args.release) as rel:
+    bench_path = args.release_benchmark or benchmark_release_path(args.release)
+    with release.open_release(args.release) as rel, \
+            release.open_release(bench_path) as rel_bench:
+        assert_same_release(rel, rel_bench)
         conf = float(rel.attrs.get("confidence_recommended", 0.95))
+        conf_bench = float(rel_bench.attrs.get("confidence_recommended", conf))
+        assert conf_bench == conf, (
+            f"the two cubes recommend different confidence levels "
+            f"({conf:g} left, {conf_bench:g} right)")
         print(f"release: {args.release}  ({rel.version_tag})")
-        print(f"left:  mode {args.mode}, f_DM = {F_DM_LEFT:g}, atmosphere on, "
-              f"confidence {conf:g}")
-        print(f"right: mode {args.mode}, f_DM = {F_DM_RIGHT:g}, "
-              f"atmosphere on, lambda = {BENCH_LAM}")
+        print(f"left:  mode {args.mode}, f_DM = {F_DM_LEFT:g}, atmosphere "
+              f"{'on' if ATM_LEFT else 'off'}, confidence {conf:g}")
+        print(f"release: {bench_path}  ({rel_bench.version_tag})")
+        print(f"right: mode {args.mode}, f_DM = {F_DM_RIGHT:g}, atmosphere "
+              f"{'on' if ATM_RIGHT else 'off'}, lambda = {BENCH_LAM}")
 
         fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=figsize)
         art_a = build_left(ax_a, rel, args.refdir, conf, args.mode)
-        art_b = build_right(ax_b, rel, args.refdir, conf, args.mode)
+        art_b = build_right(ax_b, rel_bench, args.refdir, conf, args.mode)
         verify(fig, (ax_a, ax_b), (art_a, art_b), figsize=figsize,
                talk=args.talk)
         print(f"  legend (left): {art_a['labels']}")
         tag = ps.preliminary_tag_text(rel.version_tag)
         print(f"  preliminary tag: {tag or '(none: v3+ cube)'}")
-        report_benchmark(rel, conf, args.mode)
+        report_benchmark(rel_bench, conf, args.mode)
 
     if args.talk:
         outdir = args.outdir or TALK_OUTDIR

@@ -5,4 +5,4 @@ original analysis code; ``units`` collects conversions and ``limits`` bridges
 to the ``optimum_interval`` statistics package.
 """
 
-__version__ = "0.1.0"
+__version__ = "10.0.0"

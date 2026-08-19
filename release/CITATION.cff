@@ -29,10 +29,6 @@ keywords:
   - direct detection
 repository-code: "https://github.com/PolonaiseExperiment/luhdm"
 authors:
-  - family-names: Uitenbroek
-    given-names: "Dennis G."
-    orcid: "https://orcid.org/0009-0008-3425-6406"
-    affiliation: "Leiden Institute of Physics, Leiden University"
   - family-names: Amaral
     given-names: "Dorian W. P."
     orcid: "https://orcid.org/0000-0002-1414-932X"
@@ -41,17 +37,6 @@ authors:
   - family-names: Qin
     given-names: Juehang
     affiliation: "Department of Physics and Astronomy, Rice University"
-  - family-names: Langendorff
-    given-names: Jurriaan
-    affiliation: "Leiden Institute of Physics, Leiden University"
-  - family-names: Gingerich
-    given-names: Andrew
-    orcid: "https://orcid.org/0009-0001-7363-1722"
-    affiliation: "Department of Physics and Astronomy, Rice University"
-  - family-names: Oosterkamp
-    given-names: "Tjerk H."
-    orcid: "https://orcid.org/0000-0001-6855-5190"
-    affiliation: "Leiden Institute of Physics, Leiden University"
   - family-names: Tunnell
     given-names: "Christopher D."
     orcid: "https://orcid.org/0000-0001-8158-7795"

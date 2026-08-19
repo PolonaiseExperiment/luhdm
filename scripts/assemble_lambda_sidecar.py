@@ -2,8 +2,8 @@
 """Assemble the per-mode (lambda, alpha_n) scans into one release sidecar npz.
 
 Reads the three scan_lambda.py outputs (one per sensor mode, each at that
-mode's best DM mass from the v9.1 File A cube) and writes
-release/luhdm_lambda_scan_v9p1.npz with a provenance JSON string.
+mode's best DM mass from the File A cube) and writes
+release/luhdm_lambda_scan_v10.npz with a provenance JSON string.
 """
 from __future__ import annotations
 
@@ -23,12 +23,12 @@ _ap.add_argument("--scan-dir", type=Path, default=Path("."),
                  help="directory holding scan_lambda_mode{1,2,3}.npz")
 # The cube, the output name and the mode list all move with the release: v10 is
 # a mode-1-only campaign, so a hardcoded (1, 2, 3) would abort on a missing file
-# and a hardcoded v9p1 output would silently overwrite the shipped sidecar.
-_ap.add_argument("--cube", default="luhdm_datarelease_v9p1_A_f1_atm.h5",
+# and a hardcoded output would silently overwrite the shipped sidecar.
+_ap.add_argument("--cube", default="luhdm_datarelease_v10_A_f1_atm.h5",
                  help="File A cube the best masses were taken from; its digest "
                       "is recorded in the sidecar provenance")
 _ap.add_argument("--out", type=Path,
-                 default=REPO / "release" / "luhdm_lambda_scan_v9p1.npz",
+                 default=REPO / "release" / "luhdm_lambda_scan_v10.npz",
                  help="sidecar npz to write")
 _ap.add_argument("--modes", default="1,2,3",
                  help="comma list of sensor modes present in --scan-dir")
@@ -125,7 +125,7 @@ def main():
             "b_constrained_max_m": None,
             "b_constrained_max_note":
                 "uncapped cross section (rate.make_xsec b_constrained_max=None), "
-                "matching the v9 release whose b_constrained_max_m attribute is NaN",
+                "matching the v10 release whose b_constrained_max_m attribute is NaN",
             "projection_kernel":
                 (str(ref["projection_kernel"])
                  if "projection_kernel" in ref else "planar-signed"),
@@ -155,12 +155,12 @@ def main():
             "fidelity": fid,
         },
         "inputs": {
-            "efficiency_npz": "~/code/luhdm/luhdm/reference_data/efficiency_curves.npz",
+            "efficiency_npz": "~/code/uhdm/luhdm/luhdm/reference_data/efficiency_curves.npz",
             "efficiency_npz_sha256":
                 sha256(REPO / "luhdm" / "reference_data" / "efficiency_curves.npz"),
             "events": {
                 f"data_mode{m}.txt": {
-                    "path": f"~/code/luhdm/notebooks/data_mode{m}.txt",
+                    "path": f"~/code/uhdm/luhdm/notebooks/data_mode{m}.txt",
                     "sha256": sha256(REPO / "notebooks" / f"data_mode{m}.txt"),
                     "n_events": int(scans[m]["events"].size),
                 } for m in MODES

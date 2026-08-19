@@ -21,10 +21,13 @@ measurement).  The panel carries three things:
    (``luhdm.efficiency.make_efficiency``: zero below the calibrated table, held
    at the saturated value above it).
 
-Two vertical guides are drawn: the selection edge at q_thresh (0.1 TeV, taken
-from the release attributes) and the momentum at which eps = 0.5, which is
-*measured* from the efficiency table at run time rather than hard-coded, so the
-label tracks the release.
+Two vertical guides are drawn: the selection edge at q_thresh (1 TeV in the v10
+cube, taken from the release attributes) and the momentum at which eps = 0.5,
+which is *measured* from the efficiency table at run time rather than
+hard-coded, so the label tracks the release.  Neither number is assumed
+anywhere, including in how the two are labelled: at v10 they are 1.00 and 1.21
+TeV, close enough that the labels are placed either side of their guides rather
+than over them (:func:`place_guide_labels`).
 
 Style: PRL single column at final printed size; see ``scripts/paper_style.py``.
 Figures built from a pre-v3 cube carry a red PRELIMINARY corner tag; the tag
@@ -56,6 +59,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.ticker import LogLocator, NullFormatter  # noqa: E402
+from matplotlib.transforms import Bbox  # noqa: E402
 
 import paper_style as ps  # noqa: E402
 from luhdm import release  # noqa: E402
@@ -116,6 +120,69 @@ def scaled_dash(dash):
     if not seq:                      # (0, ()) -- solid, and stays solid
         return dash
     return (offset * S_LINE, tuple(v * S_LINE for v in seq))
+
+
+#: Gap, in points, left between a guide label and its own guide line when the
+#: pair has to be split (see :func:`place_guide_labels`). Small on purpose: the
+#: label has to stay visibly attached to the line it names.
+GUIDE_LABEL_OFFSET_PT = 2.5
+
+#: Clearance, in points, two guide labels must keep from each other. Matches the
+#: ``min_gap_pt`` the render gate gates on, plus a little, so the placement
+#: decision and the gate cannot disagree.
+GUIDE_LABEL_GAP_PT = 2.0
+
+
+def place_guide_labels(fig, ax, entries, y=0.985, fontsize=7.0):
+    """One label per vertical guide, centred if they fit and flanked if not.
+
+    ``entries`` is ``[(x, text), ...]`` for the two guides, in any order.
+    Centred over its own line is the clearest reading and is what is used
+    whenever there is room for it.
+
+    There is not always room. The two guides are the selection threshold and
+    the momentum at which eps = 0.5, and how far apart they sit is a property
+    of the release: in the v10 cube they are 1.00 and 1.21 TeV, 0.08 dex apart,
+    which is about 7 pt on this panel -- so two centred two-line labels
+    overlapped by half their width. The pair is then split outwards, the left
+    label right-aligned just left of its guide and the right label left-aligned
+    just right of its, which keeps each name against the line it belongs to and
+    opens a gap equal to the guide separation plus the two offsets.
+
+    Returns the ``Text`` artists, in the order given.
+    """
+    if len(entries) != 2:
+        raise ValueError("the split rule is written for exactly two guides; "
+                         f"got {len(entries)}")
+
+    def draw(x, s, ha, dx):
+        return ax.annotate(
+            s, xy=(x, y), xycoords=ax.get_xaxis_transform(),
+            xytext=(dx, 0), textcoords="offset points", ha=ha, va="top",
+            fontsize=fontsize, color="black", linespacing=1.15, zorder=5)
+
+    lo, hi = sorted(range(2), key=lambda i: entries[i][0])
+    gap_dex = float(np.log10(entries[hi][0] / entries[lo][0]))
+
+    texts = [draw(x, s, "center", 0.0) for x, s in entries]
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    pad = 0.5 * GUIDE_LABEL_GAP_PT * fig.dpi / 72.0
+    boxes = [t.get_window_extent(renderer=r).padded(pad) for t in texts]
+    clash = Bbox.intersection(boxes[0], boxes[1])
+    if clash is None or clash.width <= 0 or clash.height <= 0:
+        print(f"  guide labels centred on their lines "
+              f"({gap_dex:.3f} dex apart)")
+        return texts
+    for t in texts:
+        t.remove()
+    texts = [None, None]
+    texts[lo] = draw(*entries[lo], "right", -GUIDE_LABEL_OFFSET_PT)
+    texts[hi] = draw(*entries[hi], "left", +GUIDE_LABEL_OFFSET_PT)
+    print(f"  guide labels split outwards: the two guides are only "
+          f"{gap_dex:.3f} dex apart and centred labels overlapped by "
+          f"{clash.width * 72.0 / fig.dpi:.1f} pt")
+    return texts
 
 
 def save_talk(fig, outdir, stem, dpi=TALK_PNG_DPI):
@@ -284,14 +351,11 @@ def build(rel, talk=False):
     # -- guide labels, in the headroom band reserved above the data ---------
     # No halo: HEADROOM keeps this band empty, and ps.halo() cannot be combined
     # with text.usetex in matplotlib 3.11 (see paper_style.halo).
-    t_sel = ax.text(q_thresh, 0.985, "%s TeV\nselection" % tev(q_thresh),
-                    transform=ax.get_xaxis_transform(), ha="center", va="top",
-                    fontsize=7.0 * S_FONT, color="black", linespacing=1.15,
-                    zorder=5)
-    t_50 = ax.text(q50, 0.985, "%s TeV\n$\\varepsilon = 0.5$" % tev(q50),
-                   transform=ax.get_xaxis_transform(), ha="center", va="top",
-                   fontsize=7.0 * S_FONT, color="black", linespacing=1.15,
-                   zorder=5)
+    t_sel, t_50 = place_guide_labels(
+        fig, ax,
+        [(q_thresh, "%s TeV\nselection" % tev(q_thresh)),
+         (q50, "%s TeV\n$\\varepsilon = 0.5$" % tev(q50))],
+        fontsize=7.0 * S_FONT)
 
     # -- legend --------------------------------------------------------------
     handles, labels = ax.get_legend_handles_labels()

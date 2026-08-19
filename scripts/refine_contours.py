@@ -126,9 +126,9 @@ a long run can be watched, and interrupted, without losing what is done.
   # surfaces; the f_DM = 0.1 atmosphere surface is in no v8 file):
   python scripts/refine_contours.py \\
       --surfaces massless_f1,2mm_f1,200um_f1,20um_f1 \\
-      --release release/luhdm_datarelease_v9p1_A_f1_atm.h5 --out /tmp/a.json
+      --release release/luhdm_datarelease_v10_A_f1_atm.h5 --out /tmp/a.json
   python scripts/refine_contours.py --surfaces 20um_f0p1_noatm \\
-      --release release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5 --out /tmp/b.json
+      --release release/luhdm_datarelease_v10_B_f0p1_noatm.h5 --out /tmp/b.json
 """
 from __future__ import annotations
 
@@ -1072,10 +1072,10 @@ def _require_plane(rel, path, name, f_dm, atm):
     if not miss:
         return
     want = ("the f_DM = 1 / atmosphere file (v8: File A, "
-            "release/luhdm_datarelease_v9p1_A_f1_atm.h5)"
+            "release/luhdm_datarelease_v10_A_f1_atm.h5)"
             if (float(f_dm) == 1.0 and atm) else
             "the f_DM = 0.1 / no-atmosphere file (v8: File B, "
-            "release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5)"
+            "release/luhdm_datarelease_v10_B_f0p1_noatm.h5)"
             if (float(f_dm) == 0.1 and not atm) else
             "the release file that carries this plane")
     raise SystemExit(
