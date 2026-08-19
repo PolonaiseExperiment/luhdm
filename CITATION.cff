@@ -13,7 +13,13 @@ date-released: "2026-08-19"
 license: GPL-3.0-or-later
 # Concept DOI of the Zenodo deposit: resolves to the latest version, which is
 # what a citation should point at. The version DOI of v10 is 10.5281/zenodo.22018170.
-doi: 10.5281/zenodo.22018169
+doi: 10.5281/zenodo.22018170
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22018169
+    description: >-
+      Concept DOI: resolves to the latest version of this deposit. The doi
+      field above is this specific version, which is what the paper cites.
 keywords:
   - dark matter
   - ultraheavy dark matter
