@@ -21,10 +21,22 @@ import argparse
 _ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
 _ap.add_argument("--scan-dir", type=Path, default=Path("."),
                  help="directory holding scan_lambda_mode{1,2,3}.npz")
-SCRATCH = _ap.parse_args().scan_dir
-CUBE = "luhdm_datarelease_v9p1_A_f1_atm.h5"
-OUT = REPO / "release" / "luhdm_lambda_scan_v9p1.npz"
-MODES = (1, 2, 3)
+# The cube, the output name and the mode list all move with the release: v10 is
+# a mode-1-only campaign, so a hardcoded (1, 2, 3) would abort on a missing file
+# and a hardcoded v9p1 output would silently overwrite the shipped sidecar.
+_ap.add_argument("--cube", default="luhdm_datarelease_v9p1_A_f1_atm.h5",
+                 help="File A cube the best masses were taken from; its digest "
+                      "is recorded in the sidecar provenance")
+_ap.add_argument("--out", type=Path,
+                 default=REPO / "release" / "luhdm_lambda_scan_v9p1.npz",
+                 help="sidecar npz to write")
+_ap.add_argument("--modes", default="1,2,3",
+                 help="comma list of sensor modes present in --scan-dir")
+_args = _ap.parse_args()
+SCRATCH = _args.scan_dir
+CUBE = _args.cube
+OUT = _args.out
+MODES = tuple(int(m) for m in _args.modes.split(","))
 
 
 def tilde(s):

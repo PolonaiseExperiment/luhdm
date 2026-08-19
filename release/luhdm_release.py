@@ -104,13 +104,13 @@ Quickstart
 
     import luhdm_release
 
-    with luhdm_release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
+    with luhdm_release.open_release("luhdm_datarelease_v10_A_f1_atm.h5") as rel:
         rel.summary()
         sl = rel.get("extremeness", mode=1, lam="200um")   # (alpha_n, mass_gev)
         band = rel.excluded_band(mode=1, lam="200um")
         print(band.mass_range, band.alpha_lo, band.alpha_hi)
 
-From the shell, ``python luhdm_release.py luhdm_datarelease_v9p1_A_f1_atm.h5`` prints the
+From the shell, ``python luhdm_release.py luhdm_datarelease_v10_A_f1_atm.h5`` prints the
 same summary.
 """
 
@@ -394,7 +394,7 @@ def open_release(path):
     wherever you copied the file. Use it as a context manager, or call
     :meth:`Release.close` when you are done::
 
-        with open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
+        with open_release("luhdm_datarelease_v10_A_f1_atm.h5") as rel:
             ...
     """
     f = h5py.File(str(path), "r")
@@ -1230,7 +1230,7 @@ if __name__ == "__main__":
     except (FileNotFoundError, OSError) as _exc:
         print(f"could not open {_args[0]!r}: {_exc}\n\n"
               f"Pass the path to the release HDF5, for example "
-              f"'luhdm_datarelease_v9p1_A_f1_atm.h5'. See README.md for where to get "
+              f"'luhdm_datarelease_v10_A_f1_atm.h5'. See README.md for where to get "
               f"it.\n\n{_USAGE}", file=sys.stderr)
         raise SystemExit(2) from None
     with _f as _rel:

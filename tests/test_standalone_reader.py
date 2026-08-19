@@ -9,6 +9,7 @@ the cube is rebuilt with a different grid.
 import ast
 import importlib.util
 import itertools
+import re
 import subprocess
 import sys
 import warnings
@@ -19,7 +20,19 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 READER = REPO / "release" / "luhdm_release.py"
-CUBES = sorted((REPO / "release").glob("luhdm_datarelease_v*.h5"))
+def _version_key(path):
+    """(major, minor) from luhdm_datarelease_v<major>[p<minor>]_... .
+
+    Sorting these paths as PLAIN STRINGS orders v10 before v2, so `reversed()`
+    below silently picks an old cube as "newest" the moment the major version
+    reaches double digits -- which is exactly what happened at v10.
+    """
+    m = re.search(r"_v(\d+)(?:p(\d+))?", path.name)
+    return (int(m.group(1)), int(m.group(2) or 0)) if m else (-1, -1)
+
+
+CUBES = sorted((REPO / "release").glob("luhdm_datarelease_v*.h5"),
+               key=_version_key)
 
 
 def _load_standalone():

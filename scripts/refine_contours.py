@@ -1288,10 +1288,14 @@ def main():
                 surfaces_requested=list(names), surfaces_done=list(done),
                 cube_version_tag=attrs.get("version_tag"),
                 cube_git_commit=attrs.get("git_commit"),
-                cube_fid=FID, seed=SEED, mu_round_dex=0.02,
-                seed_policy=("fresh optimum_interval table per "
-                             "0.02-dex-rounded mu, seed identical to the "
-                             "cube build "
+                # the granularity the oracle ACTUALLY used (line 368): read it
+                # from the cube rather than restating a default, so a cube built
+                # at a finer mu_dex cannot ship a sidecar claiming 0.02.
+                cube_fid=FID, seed=SEED,
+                mu_round_dex=FID.get("mu_dex", MU_DEX),
+                seed_policy=(f"fresh optimum_interval table per "
+                             f"{FID.get('mu_dex', MU_DEX):g}-dex-rounded mu, "
+                             "seed identical to the cube build "
                              "(build_release.PerMuTable); p is a pure "
                              "function of (alpha, m, surface)"),
                 b_constrained_max_m=b_cap, t_exposure_s=T_TOTAL,

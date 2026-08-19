@@ -122,6 +122,12 @@ MODE = 1                 # the paper's headline channel, in BOTH panels; --mode
                          # selects another. The modes are never combined.
 F_DM_LEFT = 1.0          # presentation convention: everything at f_DM = 1 ...
 F_DM_RIGHT = 0.1         # ... except the composite benchmark
+# Atmosphere per panel. The composite benchmark has always been quoted from the
+# BARE-halo surface (20um_f0p1_noatm), so the right panel must ask for it: the
+# release splits the two planes across files, and no cube carries
+# f_DM = 0.1 WITH atmosphere -- requesting that combination raises.
+ATM_LEFT = True
+ATM_RIGHT = False
 BENCH_LAM = "20um"       # benchmark mediator range, m_phi ~ 10 meV
 BENCH_M_D_GEV = 1.0e-6   # composite constituent mass, 1 keV/c^2
 BENCH_G_D = 1.0          # dark-sector coupling, the draft's stated choice
@@ -732,7 +738,7 @@ def build_right(ax, rel, ref_dir, confidence, mode):
         e for e in LAMBDA_FAMILY if e[0] == BENCH_LAM)
 
     plane = rel.mass_plane("extremeness", mode=mode, lam=BENCH_LAM,
-                           atmosphere=True, f_dm=F_DM_RIGHT)
+                           atmosphere=ATM_RIGHT, f_dm=F_DM_RIGHT)
     pieces, shift = island_polygons(
         rel, plane, confidence, cell,
         f"mode {mode} lambda={BENCH_LAM}, f_DM={F_DM_RIGHT}")
@@ -966,7 +972,7 @@ def report_benchmark(rel, confidence, mode):
         print(f"  {lam_tag:>9s}: lambda = {lam_m:.4g} m, "
               f"m_phi = {m_phi_ev * 1e3:.4g} meV")
     plane = rel.mass_plane("extremeness", mode=mode, lam=BENCH_LAM,
-                           atmosphere=True, f_dm=F_DM_RIGHT)
+                           atmosphere=ATM_RIGHT, f_dm=F_DM_RIGHT)
     lo, _hi, _n, _h = excluded_band(plane, alphas, confidence)
     j = int(np.nanargmin(lo))
     inside = np.isfinite(lo)

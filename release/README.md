@@ -12,9 +12,9 @@ of our software.
 |  |  |
 |---|---|
 | **Paper** | D. G. Uitenbroek, D. W. P. Amaral, J. Qin, J. Langendorff, A. Gingerich, T. H. Oosterkamp and C. D. Tunnell, *First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle*. arXiv identifier and journal reference to be assigned. |
-| **Release version** | `v9.1`, `version_tag` = `v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier` |
+| **Release version** | `v10`, `version_tag` = `v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245` |
 | **Dataset DOI** | to be assigned |
-| **Date** | 2026-08-15 |
+| **Date** | 2026-08-18 |
 | **License** | Data: [CC BY 4.0](LICENSE). Code, including `luhdm_release.py`: GPL-3.0-or-later. See [§13](#13-license-and-contact). |
 | **Code repository** | <https://github.com/PolonaiseExperiment/luhdm> |
 | **Contact** | Dorian W. P. Amaral, <damaral@ifae.es>, or open an issue on the code repository |
@@ -22,7 +22,7 @@ of our software.
 
 > **Trust the file over this text.** Every version tag, axis length, event count
 > and physics constant quoted below is also stored inside the HDF5 files and is
-> read back from them. `python luhdm_release.py luhdm_datarelease_v9p1_A_f1_atm.h5`
+> read back from them. `python luhdm_release.py luhdm_datarelease_v10_A_f1_atm.h5`
 > prints all of them; [§1](#1-quickstart) shows how to read them with five lines
 > of `h5py`. Every example in this document was executed against the released
 > files and its output pasted verbatim. All of them assume you are working in the
@@ -47,12 +47,12 @@ of our software.
 
 ## 1. Quickstart
 
-Download `luhdm_datarelease_v9p1_A_f1_atm.h5`, then:
+Download `luhdm_datarelease_v10_A_f1_atm.h5`, then:
 
 ```python
 import h5py, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     ext = f["results/extremeness"]
     print(f.attrs["version_tag"], ext.shape, list(ext.attrs["DIMENSION_LABELS"]))
     p = ext[0, 0, 0]                     # the file's one hypothesis; mode 1
@@ -60,8 +60,8 @@ with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
 ```
 
 ```
-v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier (1, 1, 3, 44, 119, 5) ['f_dm', 'atmosphere', 'mode', 'alpha_n', 'mass_gev', 'lambda_m']
-excluded at 95% CL: 7735 of 26180 grid points
+v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245 (1, 1, 3, 44, 119, 5) ['f_dm', 'atmosphere', 'mode', 'alpha_n', 'mass_gev', 'lambda_m']
+excluded at 95% CL: 8117 of 26180 grid points
 ```
 
 That is the whole interface: a dense array, its axis names attached, and one
@@ -79,7 +79,7 @@ From the shell, if you have the HDF5 command-line tools (they ship with the
 HDF5 C library, not with `pip install h5py`):
 
 ```console
-$ h5ls -r luhdm_datarelease_v9p1_A_f1_atm.h5 | head
+$ h5ls -r luhdm_datarelease_v10_A_f1_atm.h5 | head
 ```
 
 ```
@@ -105,28 +105,26 @@ The files are plain HDF5 with dimension scales and per-dataset `units` and
 
 | file | size | what it is |
 |---|---|---|
-| `luhdm_datarelease_v9p1_A_f1_atm.h5` | 0.55 MB | **Dataset A.** `f_DM = 1`, atmospheric propagation **on**. The plane the paper's `alpha_n` limits are quoted on. |
-| `luhdm_datarelease_v9p1_B_f0p1_noatm.h5` | 0.58 MB | **Dataset B.** `f_DM = 0.1`, atmospheric propagation **off**. The plane the composite cross-section benchmark is quoted on. |
-| `luhdm_contours_v9p1_A_f1_atm.json` | 190 kB | **Refined contours for dataset A.** The 95% boundary of each of A's four mode-1 exclusion surfaces, root-found rather than read off the grid. This is the boundary the paper draws. See [§5.5](#55-the-sidecar-files). |
-| `luhdm_contours_v9p1_B_f0p1_noatm.json` | 132 kB | The same, for dataset B's four mode-1 surfaces. |
-| `luhdm_contours_v9p1_B_f0p1_noatm_mode2.json` | 134 kB | Dataset B's four surfaces again, at sensor mode 2. |
-| `luhdm_contours_v9p1_B_f0p1_noatm_mode3.json` | 97 kB | Dataset B at sensor mode 3. Three surfaces, not four: the 200 µm one stays grid-only, because at that mode its excluded set is disconnected in coupling and the refiner will not bracket it. See [§5.5](#55-the-sidecar-files). |
-| `luhdm_lambda_scan_v9p1.npz` | 90 kB | **Mediator-range sidecar to dataset A.** Per sensor mode, the (coupling × range) planes on a 54-point range axis from 0.1 µm to 2 m, at that mode's best dark-matter mass — the range resolution the cube's four finite slices cannot give. See [§5.5](#55-the-sidecar-files). |
+| `luhdm_datarelease_v10_A_f1_atm.h5` | 0.56 MB | **Dataset A.** `f_DM = 1`, atmospheric propagation **on**. The plane the paper's `alpha_n` limits are quoted on. |
+| `luhdm_datarelease_v10_B_f0p1_noatm.h5` | 0.59 MB | **Dataset B.** `f_DM = 0.1`, atmospheric propagation **off**. The plane the composite cross-section benchmark is quoted on. |
+| `luhdm_contours_v10_A_f1_atm.json` | 199 kB | **Refined contours for dataset A.** The 95% boundary of each of A's four mode-1 exclusion surfaces, root-found rather than read off the grid. This is the boundary the paper draws. See [§5.5](#55-the-sidecar-files). |
+| `luhdm_contours_v10_B_f0p1_noatm.json` | 132 kB | The same, for dataset B's four mode-1 surfaces. |
+| `luhdm_lambda_scan_v10.npz` | 34 kB | **Mediator-range sidecar to dataset A.** For sensor mode 1, the (coupling × range) plane on a 54-point range axis from 0.1 µm to 2 m, at that mode's best dark-matter mass — the range resolution the cube's four finite slices cannot give. See [§5.5](#55-the-sidecar-files). |
 | `luhdm_release.py` | 53 kB | **Optional** single-file reader. `numpy` and `h5py` only, `pandas` optional. Copy it next to the HDF5 files and import it. Described in [§7](#7-the-standalone-reader). |
-| `README.md` | 111 kB | This document. |
-| `SHA256SUMS` | 1.4 kB | SHA-256 digest of every file in the release. See [§10](#10-integrity-provenance-and-environment). |
-| `provenance_luhdm_datarelease_v9p1_A_f1_atm.json` | 30 kB | Build-side record for dataset A ([§10](#10-integrity-provenance-and-environment)): assembly command line, per-shard run records, per-input digests, impact-parameter-cap block. Not needed to use the data; the same information is in the file's own attributes. |
-| `provenance_luhdm_datarelease_v9p1_B_f0p1_noatm.json` | 30 kB | The same, for dataset B. |
+| `README.md` | 125 kB | This document. |
+| `SHA256SUMS` | 1 kB | SHA-256 digest of every file in the release. See [§10](#10-integrity-provenance-and-environment). |
+| `provenance_luhdm_datarelease_v10_A_f1_atm.json` | 37 kB | Build-side record for dataset A ([§10](#10-integrity-provenance-and-environment)): assembly command line, per-shard run records, per-input digests, impact-parameter-cap block. Not needed to use the data; the same information is in the file's own attributes. |
+| `provenance_luhdm_datarelease_v10_B_f0p1_noatm.json` | 37 kB | The same, for dataset B. |
 | `CITATION.cff` | 3.5 kB | Machine-readable citation metadata. See [§12](#12-how-to-cite). |
 | `exclusion_massless_mode1.png` | 63 kB | The figure produced by [§6](#6-worked-example-the-published-limit), for reference. Regenerated by section 7 of `notebooks/05_using_the_data_release.ipynb`. |
 | `LICENSE` | 19 kB | CC BY 4.0, the licence of the **data**. `luhdm_release.py` is code and is GPL-3.0-or-later instead. See [§13](#13-license-and-contact). |
 
 **The files you need are the one HDF5 that carries your hypothesis and this
 README.** Add `luhdm_release.py` if you want value-based selection instead of
-integer indices. Everything else is provenance and convenience — the five
+integer indices. Everything else is provenance and convenience — the three
 sidecars included, since everything in them is derived from the cubes. One
 caveat worth having early: the exclusion boundary the paper draws is the
-root-found one in `luhdm_contours_v9p1_A_f1_atm.json`, not the grid crossing you
+root-found one in `luhdm_contours_v10_A_f1_atm.json`, not the grid crossing you
 get by contouring the cube. The two agree to within one coupling grid cell, and
 [§5.5](#55-the-sidecar-files) says exactly where they part company.
 
@@ -178,6 +176,54 @@ independently. They are indexed 1, 2, 3 by ascending frequency. **The paper
 reports the search on mode 1**; modes 2 and 3 are carried through the identical
 chain as cross-checks. All three are in both files.
 
+### The halo is evaluated in the laboratory frame
+
+**This is the change that defines `v10`, and it moves every number in the
+release.** The standard halo model is an isotropic truncated Maxwellian in the
+*Galactic* rest frame, with `v_0` = 220 km/s and an escape speed
+`v_esc` = 544 km/s. The detector does not sit in that frame: the Earth moves
+through the halo, so the arrival-speed distribution seen in the laboratory is
+the Maxwellian boosted by the observer's velocity and integrated over arrival
+direction (Lewin & Smith 1996). This release evaluates the halo in that
+laboratory frame, at
+
+```
+attrs['v_earth_km_s'] = 245.0 km/s
+```
+
+the value used by Monteiro (2020) and Tseng (2025) — the two levitated-sensor
+results this analysis overlays — so the halo here is entirely in their
+convention. Every release up to and including `v9.1` carried the Galactic
+rest-frame distribution and no such attribute; **absence of `v_earth_km_s`
+means 0, the rest frame**, and that is how a reader should treat any earlier
+cube.
+
+Two consequences run through everything below:
+
+* **the halo's support now ends at `v_esc + v_E` = 789 km/s**, not at
+  `v_esc` = 544 km/s. A particle sitting at the Galactic escape speed and met
+  head-on by the Earth arrives at the sum, so that — not `v_esc` — is the
+  ceiling of every speed integral, every speed grid and the rate integral's
+  upper limit. It is what sets the kinematic wall of the next subsection;
+* **the flux is faster on average.** The flux-weighted mean arrival speed
+  `<v>`, the first moment that normalises the transit rate, is 338 173 m/s
+  against 245 972 m/s in the rest frame, a factor 1.3748. `<v>` enters the
+  flux cut `m_cut` linearly ([§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it)),
+  which moves right by the same factor.
+
+The boost is a **stated convention, not a fit**, and it is fixed for a whole
+cube: nothing you read out of a released file needs to know about it. It
+matters the moment you **recompute** something and compare it against the file,
+exactly as the projection kernel does ([§5.5](#55-the-sidecar-files)) — a
+spectrum recomputed in the wrong frame disagrees with the cube for a reason
+that has nothing to do with the physics being checked. Read
+`attrs['v_earth_km_s']` and thread it through — with the analysis code that
+means setting the `LUHDM_V_EARTH` environment variable to this value before
+importing `luhdm`, which the refiner and the release verifier both check and
+hard-stop on. The `/halo` diagnostic maps
+([§4.4](#44-halo)) and the `/reference_curves` showcase spectra
+([§4.5](#45-reference_curves)) are in the same frame as `/results`.
+
 ### The analysis window starts at 1 TeV
 
 The momentum threshold of the analysis is `attrs['q_thresh_gev']` = **1000 GeV**
@@ -200,7 +246,7 @@ matters for mode 2:
 ```python
 import h5py, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     q_thresh = float(f.attrs["q_thresh_gev"])
     print("analysis window starts at q_thresh_gev =", q_thresh, "GeV")
     for m in (1, 2, 3):
@@ -218,11 +264,15 @@ analysis window starts at q_thresh_gev = 1000.0 GeV
 ```
 
 The threshold also fixes the **left edge of the excluded region**. A halo
-particle cannot arrive faster than the escape speed `v_esc` = 544 km/s, so a
-mass below `m_wall = q_thresh / v_esc` = 5.51 × 10⁵ GeV cannot deliver a 1 TeV
-impulse at any coupling. That is a hard kinematic wall, not a sensitivity
-statement: no exclusion exists to its left, and the first excluded mass on the
-grid is the first grid point above it, 6.85 × 10⁵ GeV.
+particle cannot arrive faster than the top of the distribution's support, which
+in the laboratory frame is `v_max = v_esc + v_E` = 789 km/s
+([above](#the-halo-is-evaluated-in-the-laboratory-frame)), so a mass below
+`m_wall = q_thresh / v_max` = 3.80 × 10⁵ GeV cannot deliver a 1 TeV impulse at
+any coupling. That is a hard kinematic wall, not a sensitivity statement: no
+exclusion exists to its left, and the first excluded mass on the grid is
+5.20 × 10⁵ GeV. The wall moves with `1/v_max`, so it sits lower here than in
+the Galactic-rest-frame releases, where the same threshold gave
+5.51 × 10⁵ GeV.
 
 The larger lists (66, 99 and 443 entries) that ship alongside as
 `detector/all_blips_mode{1,2,3}` are **not** the night pre-selection of the
@@ -328,7 +378,7 @@ does not carry, so a tag is not a promise that the slice is here:
 ```python
 import h5py, json, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     lam  = f["axes/lambda_m"][:]
     tags = json.loads(f["axes/lambda_m"].attrs["tags_json"])
 print("axis:", lam)
@@ -390,7 +440,7 @@ The analysis inputs. Byte-identical in the two files.
 ```python
 import h5py, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     ev = f["detector/events_mode1"][:]          # GeV
     bl = f["detector/all_blips_mode1"][:]       # eV
     print("events_mode1   units =", f["detector/events_mode1"].attrs["units"],
@@ -427,6 +477,13 @@ are stored at the **build-side baseline `f_DM`** (`attrs['f_dm_default']` = 0.1)
 with no `f_dm` axis, in both files; multiply by `f_DM / 0.1` for another
 fraction. **For anything quantitative use `/results`.**
 
+They are computed in the **same laboratory-frame halo** as `/results`
+(`attrs['v_earth_km_s']` = 245 km/s,
+[§3](#the-halo-is-evaluated-in-the-laboratory-frame)), so the two are directly
+comparable; the assembly step refuses to write a cube whose halo pass and
+results pass disagree on the frame. Both maps therefore differ from their
+Galactic-rest-frame counterparts in `v9.1` and earlier.
+
 With the cap removed, `bmax` at strong coupling and long range runs well past
 the 10 cm hardware scale — that is the physical reach of a threshold-crossing
 flyby, and it is exactly why the mass cut of
@@ -448,7 +505,7 @@ these files.
 | dataset | shape | units | meaning |
 |---|---|---|---|
 | `v` | (500,) | c | arrival-speed grid, shared by every `fv_*`. |
-| `fv_<tag>` | (500,) | (v/c)⁻¹ | attenuated arrival-speed distribution for each of the eight showcase ranges (`2m`, `20cm`, `2cm`, `2mm`, `200um`, `20um`, `10um`, `2um`). Each carries a `survival_fraction` attribute, 0.53 to 0.76 across the eight. |
+| `fv_<tag>` | (500,) | (v/c)⁻¹ | attenuated arrival-speed distribution for each of the eight showcase ranges (`2m`, `20cm`, `2cm`, `2mm`, `200um`, `20um`, `10um`, `2um`). Each carries a `survival_fraction` attribute, 0.80 to 0.86 across the eight. |
 | `fv_shm` | (500,) | (v/c)⁻¹ | the unattenuated standard-halo-model distribution, `survival_fraction` 1.0. |
 | `q_gev` | (160,) | GeV | momentum-kick grid, shared by every `drdq_*`. |
 | `drdq_<tag>`, `drdq_massless` | (160,) | s⁻¹ GeV⁻¹ | raw differential rate dR/dq with no efficiency applied, one per showcase range plus the massless limit. |
@@ -463,9 +520,13 @@ curves differ only through the cross section. `fv_shm` completes the set on the
 
 These curves are computed at `attrs['reference_curves_fidelity']` =
 `production` with the uncapped cross section, so they are not the curves the
-capped scheme produced. No efficiency is applied to them, which is why they are
-bit-identical to the previous build's: the efficiency change of
-[§7.1](#71-detector-inputs) moves `/results`, not these.
+capped scheme produced. No efficiency is applied to them, so nothing on the
+detector side moves them; what does move them is the halo. They are drawn in
+the **laboratory frame** of
+[§3](#the-halo-is-evaluated-in-the-laboratory-frame), so the `v` grid runs to
+`v_esc + v_E` = 789 km/s (2.632 × 10⁻³ c) rather than to 544 km/s, the whole
+`fv_*` family sits at higher speed than its `v9.1` counterpart, and the
+survival fractions rise with it, from 0.53–0.76 there to 0.80–0.86 here.
 
 ### 4.6 Status codes and the NaN policy
 
@@ -488,7 +549,7 @@ computation; see [§9](#9-known-limitations).
 ```python
 import h5py, numpy as np
 
-for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p1_noatm.h5"):
+for path in ("luhdm_datarelease_v10_A_f1_atm.h5", "luhdm_datarelease_v10_B_f0p1_noatm.h5"):
     with h5py.File(path, "r") as f:
         st  = f["results/status"][:]
         ext = f["results/extremeness"][:]
@@ -503,16 +564,16 @@ for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p
 ```
 
 ```
-luhdm_datarelease_v9p1_A_f1_atm.h5
-   {0: 9804, 1: 78, 2: 36246, 3: 18915, 4: 13497} of 78540 cells
-   NaN extremeness exactly where status==1: True | status-1 cells: 78 (0.10%)
-luhdm_datarelease_v9p1_B_f0p1_noatm.h5
-   {0: 11136, 1: 75, 2: 40082, 3: 20839, 4: 6408} of 78540 cells
+luhdm_datarelease_v10_A_f1_atm.h5
+   {0: 9926, 1: 75, 2: 36509, 3: 19991, 4: 12039} of 78540 cells
+   NaN extremeness exactly where status==1: True | status-1 cells: 75 (0.10%)
+luhdm_datarelease_v10_B_f0p1_noatm.h5
+   {0: 10805, 1: 75, 2: 40198, 3: 21543, 4: 5919} of 78540 cells
    NaN extremeness exactly where status==1: True | status-1 cells: 75 (0.10%)
 ```
 
-For file A that is 12.4% code 0, 0.1% code 1, 47.1% code 2, 23.2% code 3 and
-17.2% code 4; for file B, 14.2%, 0.1%, 52.0%, 25.6% and 8.2%.
+For file A that is 12.6% code 0, 0.1% code 1, 46.5% code 2, 25.5% code 3 and
+15.3% code 4; for file B, 13.8%, 0.1%, 51.2%, 27.4% and 7.5%.
 
 **Code 1 is a failure and needs care.** `extremeness` is `NaN` there, and
 `NaN >= 0.95` is `False`, so **a failed cell silently reads as "not excluded"**
@@ -522,9 +583,8 @@ not change it, but you should know where those cells are; see
 
 The failures are a cross-section interpolant underflowing its tabulation floor
 at the strongest couplings and heaviest masses in the shortest mediator ranges.
-All 75 in file B are in the 20 µm slice; file A has the same 75 there and 3 more
-in the 2 mm slice. The 200 µm, 200 m and massless slices are free of them in
-both files. A cell-level failure marks all three modes, so `n_transit`, which
+All 75 in each file are in the 20 µm slice, the shortest range carried here; the
+2 mm, 200 µm, 200 m and massless slices are free of them in both files. A cell-level failure marks all three modes, so `n_transit`, which
 has no mode axis, is `NaN` at exactly the cells where any mode has
 `status == 1`.
 
@@ -546,8 +606,8 @@ version ships the **two hypotheses the paper uses**, one per file:
 
 | file | `f_dm` | `atmosphere` | what it is for |
 |---|---|---|---|
-| `luhdm_datarelease_v9p1_A_f1_atm.h5` | 1.0 | 1 (attenuated) | this species is all of the dark matter, propagated through the overburden. **The plane the paper's `alpha_n` limits are quoted on.** |
-| `luhdm_datarelease_v9p1_B_f0p1_noatm.h5` | 0.1 | 0 (bare halo) | this species is a tenth of the dark matter, with no overburden. **The plane the composite cross-section benchmark is quoted on.** |
+| `luhdm_datarelease_v10_A_f1_atm.h5` | 1.0 | 1 (attenuated) | this species is all of the dark matter, propagated through the overburden. **The plane the paper's `alpha_n` limits are quoted on.** |
+| `luhdm_datarelease_v10_B_f0p1_noatm.h5` | 0.1 | 0 (bare halo) | this species is a tenth of the dark matter, with no overburden. **The plane the composite cross-section benchmark is quoted on.** |
 
 * **`f_dm`** is the fraction of the local dark-matter density carried by this
   species. It enters only as a flux normalisation, so `mu` and `n_transit` scale
@@ -568,7 +628,7 @@ resolution still works. Do it by value, never by position:
 ```python
 import h5py
 
-for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p1_noatm.h5"):
+for path in ("luhdm_datarelease_v10_A_f1_atm.h5", "luhdm_datarelease_v10_B_f0p1_noatm.h5"):
     with h5py.File(path, "r") as f:
         print(f"{path}:  f_dm = {f['axes/f_dm'][:]}, "
               f"atmosphere = {f['axes/atmosphere'][:]}, "
@@ -578,9 +638,9 @@ for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p
 ```
 
 ```
-luhdm_datarelease_v9p1_A_f1_atm.h5:  f_dm = [1.], atmosphere = [1], results/mu (1, 1, 3, 44, 119, 5)
+luhdm_datarelease_v10_A_f1_atm.h5:  f_dm = [1.], atmosphere = [1], results/mu (1, 1, 3, 44, 119, 5)
     f_dm_default attr = 0.1 (build-side baseline, NOT this file's plane)
-luhdm_datarelease_v9p1_B_f0p1_noatm.h5:  f_dm = [0.1], atmosphere = [0], results/mu (1, 1, 3, 44, 119, 5)
+luhdm_datarelease_v10_B_f0p1_noatm.h5:  f_dm = [0.1], atmosphere = [0], results/mu (1, 1, 3, 44, 119, 5)
     f_dm_default attr = 0.1 (build-side baseline, NOT this file's plane)
 ```
 
@@ -601,7 +661,7 @@ the nearest point in log space and *check* what you got.
 ```python
 import h5py, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     lam = f["axes/lambda_m"][:]
     n_finite = int(f["axes/lambda_m"].attrs["n_finite"])
 
@@ -691,9 +751,15 @@ N(m) = f_DM (rho_0 / m) <v> T_obs pi b_cap^2  >=  N_req
 m_cut = f_DM rho_0 <v> T_obs pi b_cap^2 / N_req
 ```
 
-with `rho_0` = 0.3 GeV/cm³ = 3 × 10⁵ GeV/m³, `<v>` = 245 972 m/s (the
+with `rho_0` = 0.3 GeV/cm³ = 3 × 10⁵ GeV/m³, `<v>` = 338 173 m/s (the
 flux-weighted first moment of the truncated standard halo model, the same
 convention as the `n_transit` surface), `T_obs` = 790 778 s and `b_cap` = 0.1 m.
+
+`<v>` is **the one input to this cut that the laboratory frame changes**
+([§3](#the-halo-is-evaluated-in-the-laboratory-frame)): the same moment of the
+Galactic-rest-frame distribution is 245 972 m/s, so the boost multiplies `<v>`,
+and with it `m_cut`, by 1.3748. The exact value used, and this derivation, are
+in the `m_cut_10cm_*_gev_derivation` attribute beside the cut itself.
 
 > **`N_req = 3` is an assumption of this release, not a measurement.** It is the
 > Poisson-zero standard, the same one the limit itself uses: three expected
@@ -706,8 +772,8 @@ aperture and the fraction, with a one-paragraph derivation beside it:
 
 | file | attribute | value |
 |---|---|---|
-| A (`f_DM = 1`) | `m_cut_10cm_f1_gev` | 6.11 × 10¹⁴ GeV |
-| B (`f_DM = 0.1`) | `m_cut_10cm_f0.1_gev` | 6.11 × 10¹³ GeV |
+| A (`f_DM = 1`) | `m_cut_10cm_f1_gev` | 8.40 × 10¹⁴ GeV |
+| B (`f_DM = 0.1`) | `m_cut_10cm_f0.1_gev` | 8.40 × 10¹³ GeV |
 
 `attrs['m_cut_applied_to_stored_surfaces']` is `False` in both files. That is
 deliberate: the surfaces stay a pure statement about the statistics, the cut
@@ -716,7 +782,7 @@ stays a stated assumption, and you can move it.
 ```python
 import h5py, numpy as np
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     a = dict(f.attrs)
 m_cut  = float(a["m_cut_10cm_f1_gev"])
 b_cap  = float(a["m_cut_b_cap_m"])
@@ -724,7 +790,7 @@ n_req  = float(a["m_cut_n_transits_required"])
 print(f"m_cut = {m_cut:.4g} GeV   (b_cap = {b_cap} m, N_req = {n_req:g}, "
       f"applied to stored surfaces: {bool(a['m_cut_applied_to_stored_surfaces'])})")
 
-rho_0, v_mean, t_obs = 3.0e5, 245972.0, float(a["t_exposure_s"])   # GeV/m^3, m/s, s
+rho_0, v_mean, t_obs = 3.0e5, 338173.0, float(a["t_exposure_s"])   # GeV/m^3, m/s, s
 f_dm = 1.0
 check = f_dm * rho_0 * v_mean * t_obs * np.pi * b_cap**2 / n_req
 print(f"recomputed from the attributes: {check:.4g} GeV")
@@ -733,11 +799,11 @@ for n in (1.0, 3.0, 6.8):
 ```
 
 ```
-m_cut = 6.111e+14 GeV   (b_cap = 0.1 m, N_req = 3, applied to stored surfaces: False)
-recomputed from the attributes: 6.111e+14 GeV
-  N_req = 1.0  ->  m_cut = 1.83e+15 GeV
-  N_req = 3.0  ->  m_cut = 6.11e+14 GeV
-  N_req = 6.8  ->  m_cut = 2.7e+14 GeV
+m_cut = 8.401e+14 GeV   (b_cap = 0.1 m, N_req = 3, applied to stored surfaces: False)
+recomputed from the attributes: 8.401e+14 GeV
+  N_req = 1.0  ->  m_cut = 2.52e+15 GeV
+  N_req = 3.0  ->  m_cut = 8.4e+14 GeV
+  N_req = 6.8  ->  m_cut = 3.71e+14 GeV
 ```
 
 **How to apply it.** One line, wherever you build the mask you plot or quote
@@ -754,19 +820,19 @@ massless region runs to the Planck mass and you are reading a statistical
 statement about a flux that is not there.
 [§6](#6-worked-example-the-published-limit) shows it in place.
 
-The last line of the block above is the historical bridge: `N_req = 6.8`
-reproduces 2.70 × 10¹⁴ GeV, the right-hand edge that earlier, cap-truncated
-versions of this analysis closed at. The two schemes agree on where the region
-ends to within a factor of about two in mass; the difference between them is a
-choice of standard, and this release makes that choice visible instead of
-burying it in an integration limit.
+The last line of the block above is the historical bridge: `N_req = 6.8` puts
+the cut at 3.71 × 10¹⁴ GeV, against 2.70 × 10¹⁴ GeV, the right-hand edge that
+earlier, cap-truncated versions of this analysis closed at. The two schemes
+agree on where the region ends to within a factor of about three in mass; the
+difference between them is a choice of standard, and this release makes that
+choice visible instead of burying it in an integration limit.
 
 ### 5.5 The sidecar files
 
-Five files ship beside the two cubes: four refined-contour files — one for
-dataset A, three for dataset B, one per sensor mode — and one mediator-range
-scan. None of them is a new measurement: everything in them is the cubes' own
-calculation, run at finer resolution or on a finer axis. All five are listed in
+Three files ship beside the two cubes: two refined-contour files, one per cube,
+and one mediator-range scan. None of them is a new measurement: everything in
+them is the cubes' own calculation, run at finer resolution or on a finer axis.
+All three are listed in
 `SHA256SUMS`, and each carries in its own provenance record the SHA-256 of the
 cube it was computed against, so a sidecar can always be matched to the file it
 belongs to:
@@ -776,18 +842,21 @@ $ grep -E 'contours|lambda_scan' SHA256SUMS | sha256sum -c -
 ```
 
 ```
-luhdm_contours_v9p1_A_f1_atm.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm_mode2.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm_mode3.json: OK
-luhdm_lambda_scan_v9p1.npz: OK
+luhdm_contours_v10_A_f1_atm.json: OK
+luhdm_contours_v10_B_f0p1_noatm.json: OK
+luhdm_lambda_scan_v10.npz: OK
 ```
+
+Each also records the halo frame it was refined in, as `provenance.v_earth_km_s`
+= 245.0, beside the projection kernel; a sidecar cannot be read as belonging to
+a cube built under a different convention
+([§3](#the-halo-is-evaluated-in-the-laboratory-frame)).
 
 (`SHA256SUMS` lists the files of the current release only; superseded cubes and
 their sidecars are not carried forward.)
 
-**The refined contours.** `luhdm_contours_v9p1_A_f1_atm.json` and the three
-`luhdm_contours_v9p1_B_f0p1_noatm*.json` files carry the 95% boundary itself. Where [§5.3](#53-the-exclusion-convention) interpolates
+**The refined contours.** `luhdm_contours_v10_A_f1_atm.json` and
+`luhdm_contours_v10_B_f0p1_noatm.json` carry the 95% boundary itself. Where [§5.3](#53-the-exclusion-convention) interpolates
 the level crossing between the two grid cells that bracket it, these files
 root-find it, on the same statistic and against the same level:
 
@@ -801,19 +870,19 @@ root-find it, on the same statistic and against the same level:
   *anything* is excluded at that mass, since at an end there is no coupling
   crossing left to bracket.
 
-There is one refined surface per exclusion surface the paper draws. File A
-contributes four, all at sensor mode 1: massless, 2 mm, 200 µm and 20 µm at
-`f_DM` = 1 with atmosphere. File B — the `f_DM` = 0.1 bare-halo plane the
-composite benchmark is quoted on — now contributes the same four surfaces at
-**all three sensor modes**, in one file per mode, which is what makes a refined
-mode comparison possible on that plane rather than only on A's. There are eleven
-refined surfaces rather than twelve: at mode 3 the 200 µm surface is left at grid
-resolution, because its excluded set there is genuinely disconnected in the
-coupling — two separate bands at some mass columns rather than one — and the
-refiner's bracketing step refuses a column it cannot describe as a single
-(floor, ceiling) pair rather than quietly picking one of them. Contour that
-surface from the cube per [§5.3](#53-the-exclusion-convention) and read the
-disconnection as real.
+There is one refined surface per exclusion surface the paper draws. **`v10`
+refines sensor mode 1 only**, four surfaces per cube, eight in all: massless,
+2 mm, 200 µm and 20 µm, at `f_DM` = 1 with atmosphere in file A and at
+`f_DM` = 0.1 bare-halo in file B. That is a deliberate narrowing from `v9.1`,
+which refined eleven surfaces — mode 1 on file A and all three sensor modes on
+file B, in one file per mode. Mode 1 is the mode the paper reports
+([§3](#3-what-the-data-is)), so it is the mode whose boundary is drawn, and the
+refinement is expensive; modes 2 and 3 are still in both cubes at grid
+resolution and are still contoured per
+[§5.3](#53-the-exclusion-convention), which is what the refined mode-2 and
+mode-3 files of `v9.1` were a convenience on top of. If you want a refined
+boundary at another mode, `scripts/refine_contours.py --mode 2` is the same
+command with a different argument; the recipe is below.
 
 The massless surface has no right-hand end to bisect — it is still excluded at
 the last mass the cube carries ([§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it))
@@ -840,13 +909,13 @@ parallel arrays, one entry per vertex, ordered in mass:
 | `tips` | the mass bracket at each end: the last mass still excluded and the first that is not. An island still excluded at the end of the cube's mass axis says `open_at_mass_axis_edge` instead; one whose polyline was stopped at the flux cut says `cut_at_m_cut` (with `m_cut_gev`, `n_req` and `b_cap_m` beside it) rather than reporting a bracket it never found |
 | `m_cut_gev`, `m_cut_truncated` | the flux cut of [§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it) read off the cube, and whether this surface's polyline was truncated at it. `true` only where the surface is still excluded at `m_cut` — the massless one — so the polyline stops where the claim stops instead of running to the Planck mass |
 | `cell_dex`, `n_grid_columns`, `n_inserted`, `n_open_top_columns`, `n_oracle_calls`, `wall_s` | the cube's coupling cell (0.2326 dex) and the run's counts |
-| `widened_columns`, `flags` | the few columns where the starting bracket had to be widened, or where an edge search fell back or needed a rescue scan, keyed by mass. Read them before quoting a single vertex: in file A the massless surface carries one (the `m_cut` truncation), the 200 µm and 20 µm surfaces one each, and the 2 mm surface none |
+| `widened_columns`, `flags` | the few columns where the starting bracket had to be widened, or where an edge search fell back or needed a rescue scan, keyed by mass. Read them before quoting a single vertex: in file A the massless surface carries one (the `m_cut` truncation), the 2 mm surface five (columns where the ceiling is non-monotone in mass), and the 200 µm and 20 µm surfaces none |
 
 `provenance` holds the cube's path, SHA-256, version tag and git commit; the
 fidelity, seed and seed policy read back out of that cube; the tolerances above;
 the refiner's git SHA, command line and timings; and the spot-check result. It
-also repeats the cube's `projection_kernel`, so a sidecar cannot be read as
-belonging to a cube built under a different convention.
+also repeats the cube's `projection_kernel` and `v_earth_km_s`, so a sidecar
+cannot be read as belonging to a cube built under a different convention.
 
 **The projection kernel.** Both cubes record the convention their projected
 `dsigma/dq` was built with, as the root attribute `projection_kernel`, and in
@@ -867,11 +936,11 @@ through:
 import h5py
 from luhdm import rate, release             # or your own cross-section code
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     kernel = f.attrs.get("projection_kernel", "planar-signed")   # pre-flag default
 
 xs = rate.make_xsec(None, projection_kernel=kernel)              # explicit, or
-rel = release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5")
+rel = release.open_release("luhdm_datarelease_v10_A_f1_atm.h5")
 xs = rel.make_xsec(None)          # the reader threads the file's own kernel and cap
 ```
 
@@ -885,7 +954,7 @@ cube bit for bit.
 ```python
 import json
 
-doc = json.load(open("luhdm_contours_v9p1_A_f1_atm.json"))
+doc = json.load(open("luhdm_contours_v10_A_f1_atm.json"))
 prov = doc["provenance"]
 print(doc["format"], "schema", doc["schema_version"], "at C =", doc["confidence"])
 print("refined from", prov["cube_path"], prov["cube_version_tag"])
@@ -907,13 +976,13 @@ print("spot check against the cube:", prov["spot_n_cells"], "cells per surface, 
 
 ```
 luhdm-refined-contours schema 1 at C = 0.95
-refined from release/luhdm_datarelease_v9p1_A_f1_atm.h5 v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier
-  massless_f1: 158 vertices, 75 on the cube's mass columns, 81 inserted, 34 with no ceiling
-       2mm_f1: 257 vertices, 62 on the cube's mass columns, 192 inserted, 0 with no ceiling
-     200um_f1: 211 vertices, 45 on the cube's mass columns, 161 inserted, 0 with no ceiling
-      20um_f1: 130 vertices, 29 on the cube's mass columns, 96 inserted, 0 with no ceiling
-massless left end: 5.868e+05 GeV (origin tip), floor 2.101e-08
-massless deepest floor: 2.548e-09 at 7.085e+06 GeV (origin inserted)
+refined from release/luhdm_datarelease_v10_A_f1_atm.h5 v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245
+  massless_f1: 165 vertices, 78 on the cube's mass columns, 83 inserted, 47 with no ceiling
+       2mm_f1: 275 vertices, 65 on the cube's mass columns, 205 inserted, 0 with no ceiling
+     200um_f1: 224 vertices, 48 on the cube's mass columns, 171 inserted, 0 with no ceiling
+      20um_f1: 136 vertices, 32 on the cube's mass columns, 99 inserted, 0 with no ceiling
+massless left end: 4.021e+05 GeV (origin tip), floor 6.784e-08
+massless deepest floor: 3.207e-09 at 5.382e+06 GeV (origin inserted)
 spot check against the cube: 6 cells per surface, max |dp| = 0.0
 ```
 
@@ -922,14 +991,14 @@ spot check against the cube: 6 cells per surface, max |dp| = 0.0
 [§5.3](#53-the-exclusion-convention) remains the right way to read a cube. The
 two are the same claim at different resolution, and the gap between them is
 bounded by the cell size: for the massless mode-1 surface the interpolated floor
-sits at most 0.165 dex above the refined one and the interpolated ceiling at most
+sits at most 0.176 dex above the refined one and the interpolated ceiling at most
 0.219 dex below it, against a coupling cell of 0.233 dex. Where they part
 company visibly is at the ends, because a grid contour cannot begin before the
-first mass column that is excluded at all: that column is 6.85 × 10⁵ GeV for the
-massless surface, while the island really ends at 5.87 × 10⁵ GeV. The ends are
+first mass column that is excluded at all: that column is 5.20 × 10⁵ GeV for the
+massless surface, while the island really ends at 4.02 × 10⁵ GeV. The ends are
 bisected in mass, so the sidecar puts them where they are rather than on the
-nearest column — the 200 µm island's right end is 1.48 × 10¹¹ GeV, bracketed
-against 1.51 × 10¹¹ GeV where nothing is excluded any more. Compare curve to
+nearest column — the 200 µm island's right end is 2.35 × 10¹¹ GeV, bracketed
+against 2.39 × 10¹¹ GeV where nothing is excluded any more. Compare curve to
 curve with the published figure using the sidecar; re-derive from the cube and
 you have the grid boundary, which is what you should say you have.
 
@@ -939,22 +1008,18 @@ per hypothesis file — each surface must be run against the file that carries i
 `provenance.argv`:
 
 ```
-scripts/refine_contours.py --release release/luhdm_datarelease_v9p1_A_f1_atm.h5 \
-    --surfaces massless_f1,2mm_f1,200um_f1,20um_f1 --mode 1 --spot 6 --workers 55 \
-    --max-insert 800 --out release/luhdm_contours_v9p1_A_f1_atm.json
-scripts/refine_contours.py --release release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5 \
+scripts/refine_contours.py --release release/luhdm_datarelease_v10_A_f1_atm.h5 \
+    --surfaces massless_f1,2mm_f1,200um_f1,20um_f1 --mode 1 --spot 6 --workers 50 \
+    --max-insert 800 --out release/luhdm_contours_v10_A_f1_atm.json
+scripts/refine_contours.py --release release/luhdm_datarelease_v10_B_f0p1_noatm.h5 \
     --surfaces massless_f0p1_noatm,2mm_f0p1_noatm,200um_f0p1_noatm,20um_f0p1_noatm \
-    --mode 1 --spot 6 --workers 20 \
-    --max-insert 800 --out release/luhdm_contours_v9p1_B_f0p1_noatm.json
-scripts/refine_contours.py --release release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5 \
-    --surfaces massless_f0p1_noatm,2mm_f0p1_noatm,200um_f0p1_noatm,20um_f0p1_noatm \
-    --mode 2 --spot 6 --workers 20 \
-    --max-insert 800 --out release/luhdm_contours_v9p1_B_f0p1_noatm_mode2.json
-scripts/refine_contours.py --release release/luhdm_datarelease_v9p1_B_f0p1_noatm.h5 \
-    --surfaces massless_f0p1_noatm,2mm_f0p1_noatm,20um_f0p1_noatm \
-    --mode 3 --spot 6 --workers 20 \
-    --max-insert 800 --out release/luhdm_contours_v9p1_B_f0p1_noatm_mode3.json
+    --mode 1 --spot 6 --workers 25 \
+    --max-insert 800 --out release/luhdm_contours_v10_B_f0p1_noatm.json
 ```
+
+The refiner reads the cube's `v_earth_km_s` and applies it to its own halo
+before recomputing anything, and hard-stops if the two disagree; there is no way
+to refine a lab-frame cube in the rest frame by accident.
 
 **Re-checking them.** The same script does it: `--spot N` re-evaluates N of the
 cube's own grid cells with the refining calculation and compares against the
@@ -968,35 +1033,37 @@ checking a handful of columns without paying for a whole surface.
 **What it costs.** Hours per hypothesis at the release fidelity, not minutes.
 One call of the refining calculation is one attenuation ODE plus one freshly
 seeded optimum-interval table, and a surface takes thousands of them, most of
-them in the column-insertion phase. File A's four surfaces took 12 928 such
-calls and 5.9 hours of wall time on 55 workers. File B's surfaces solve no ODE
-at all, so they are cheap by comparison: 7 380 calls and 29 minutes on 20
-workers at mode 1, 7 528 calls and 41 minutes at mode 2, and 5 378 calls and 35
-minutes for mode 3's three surfaces. The sidecar is rewritten after each surface,
+them in the column-insertion phase. File A's four surfaces took 13 619 such
+calls and 7.2 hours of wall time on 50 workers. File B's four surfaces solve no
+ODE at all, so they are cheap by comparison: 7 341 calls and 52 minutes on 25
+workers. The sidecar is rewritten after each surface,
 so a long run can be watched, and interrupted, without losing what is already
 done.
 
 **The mediator-range scan.**
-`luhdm_lambda_scan_v9p1.npz` answers the question the cube's `lambda_m` axis cannot:
+`luhdm_lambda_scan_v10.npz` answers the question the cube's `lambda_m` axis cannot:
 four finite ranges are too few to draw a band in the (coupling, range) plane, or
 to say where it closes. The sidecar is that plane scanned properly, for dataset A
-only. For each sensor mode it holds `extremeness_mode{n}`, `mu_mode{n}` and
-`n_transit_mode{n}` on a 44 × 54 (coupling × range) grid running from 0.1 µm to
-2 m, at that mode's best dark-matter mass `best_mass_gev_mode{n}` — the mass whose
+and **sensor mode 1** only — the same narrowing of scope as the refined contours
+above. It holds `extremeness_mode1`, `mu_mode1` and
+`n_transit_mode1` on a 44 × 54 (coupling × range) grid running from 0.1 µm to
+2 m, at that mode's best dark-matter mass `best_mass_gev_mode1` — the mass whose
 exclusion is widest in the (coupling, range) plane, ties broken towards reach to
 the shortest range, by `luhdm.release.best_mass_index` evaluated on the cube's
-four finite slices. The
-axes travel with the planes: `alpha_n_mode{n}` is bitwise the cube's
-`axes/alpha_n`, and `lambda_m_mode{n}` contains the 20 µm, 200 µm and 2 mm tags
+four finite slices. `modes` names the modes actually present, so read it rather
+than assuming three. The
+axes travel with the planes: `alpha_n_mode1` is bitwise the cube's
+`axes/alpha_n`, and `lambda_m_mode1` contains the 20 µm, 200 µm and 2 mm tags
 exactly, so those columns are directly comparable to the cube. `provenance` is a
 JSON string carrying the cube's name and digest, the best-mass criterion, the
-range and coupling axis definitions, the physics and statistics settings, the
-input digests and the three scan command lines.
+range and coupling axis definitions, the physics and statistics settings
+(including `v_earth_km_s` and `mu_dex` in the fidelity string), the
+input digests and the scan command line.
 
 ```python
 import json, numpy as np
 
-d = np.load("luhdm_lambda_scan_v9p1.npz", allow_pickle=True)
+d = np.load("luhdm_lambda_scan_v10.npz", allow_pickle=True)
 prov = json.loads(str(d["provenance"]))
 level = float(np.float32(0.95))              # the storage-precision convention
 print("scanned against", prov["cube"]["file"], "f_dm =", prov["cube"]["f_dm"],
@@ -1010,19 +1077,22 @@ for m in d["modes"]:
 ```
 
 ```
-scanned against luhdm_datarelease_v9p1_A_f1_atm.h5 f_dm = 1.0 atmosphere = True
-  mode 1: best mass 2.201e+08 GeV, plane (44, 54) (alpha_n x lambda), 95% band 6.32 um .. 2 m
-  mode 2: best mass 7.329e+07 GeV, plane (44, 54) (alpha_n x lambda), 95% band 3.17 um .. 2 m
-  mode 3: best mass 1.507e+09 GeV, plane (44, 54) (alpha_n x lambda), 95% band 20 um .. 2 m
+scanned against luhdm_datarelease_v10_A_f1_atm.h5 f_dm = 1.0 atmosphere = True
+  mode 1: best mass 5.019e+08 GeV, plane (44, 54) (alpha_n x lambda), 95% band 7.96 um .. 2 m
 ```
 
-**Rebuilding and re-checking it.** `scripts/scan_lambda.py` runs the scan, one
-run per mode at that mode's best mass, and `scripts/assemble_lambda_sidecar.py`
-gathers the three outputs into the npz with the provenance record.
+The short end of that band is where the exclusion pinches off in mediator range:
+7.96 µm, a mediator mass of 24.8 meV. In the Galactic rest frame of `v9.1` the
+same scan pinched off at 6.32 µm (31.2 meV) at a best mass of 2.20 × 10⁸ GeV,
+so the lab-frame flux moves both the optimizing mass and the closing range.
+
+**Rebuilding and re-checking it.** `scripts/scan_lambda.py` runs the scan at the
+mode's best mass, and `scripts/assemble_lambda_sidecar.py`
+gathers the output into the npz with the provenance record.
 `scripts/lambda_sidecar_gate.py` is the gate: it compares the scan against the
 released cube everywhere the two overlap — the 20 µm, 200 µm and 2 mm columns
 must reproduce the cube's excluded coupling bands, and the long end of the range
-axis, 2 m, must reproduce the cube's massless slice for all three modes. The same
+axis, 2 m, must reproduce the cube's massless slice. The same
 comparison is written into the file's own provenance.
 
 ---
@@ -1039,7 +1109,7 @@ import h5py, numpy as np
 
 C = 0.95                                    # confidence level, attrs['confidence_recommended']
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     alpha = f["axes/alpha_n"][:]
     mass  = f["axes/mass_gev"][:]
     lam   = f["axes/lambda_m"][:]
@@ -1073,30 +1143,31 @@ print(f"upper edge at the best mass: {hi[j]:.3g}; "
 ```
 
 ```
-best limit  alpha_n = 2.8e-09  at m_DM = 8.1e+06 GeV  (95% CL)
-excluded at 75 of 119 masses, m_DM = 6.85e+05 .. 4.67e+14 GeV
-(37 further masses are excluded by the surfaces but lie above m_cut = 6.11e+14 GeV)
-upper edge at the best mass: 0.000974; 16 of the 75 in-window masses run to the top of the coupling grid
+best limit  alpha_n = 4e-09  at m_DM = 8.1e+06 GeV  (95% CL)
+excluded at 78 of 119 masses, m_DM = 5.2e+05 .. 8.09e+14 GeV
+(35 further masses are excluded by the surfaces but lie above m_cut = 8.4e+14 GeV)
+upper edge at the best mass: 0.00166; 23 of the 78 in-window masses run to the top of the coupling grid
 ```
 
 Those are the paper's numbers for a massless mediator: couplings excluded down
-to `alpha_n = 2.8 × 10⁻⁹` at 95% CL at a mass of 8.1 × 10⁶ GeV — 2.5 × 10⁻⁹ at
-7.1 × 10⁶ GeV once the boundary is root-found rather than read off the grid
+to `alpha_n = 4.0 × 10⁻⁹` at 95% CL at a mass of 8.1 × 10⁶ GeV — 3.2 × 10⁻⁹ at
+5.4 × 10⁶ GeV once the boundary is root-found rather than read off the grid
 ([§5.5](#55-the-sidecar-files)) — over a mass window running from the kinematic
-wall at 5.51 × 10⁵ GeV to the flux cut at 6.11 × 10¹⁴ GeV. Three features of the
+wall at 3.80 × 10⁵ GeV to the flux cut at 8.40 × 10¹⁴ GeV. Three features of the
 printout are worth reading twice:
 
-* the **left** end, 6.85 × 10⁵ GeV, is the first mass grid point above the
-  kinematic wall ([§3](#the-analysis-window-starts-at-1-tev)). Nothing is
-  excluded below it because nothing *can* be. It is a grid point, not the edge
-  of the claim: the refined contour sidecar of [§5.5](#55-the-sidecar-files)
-  traces the island's tip to 5.87 × 10⁵ GeV;
-* the **right** end is set by `m_cut` and by nothing in the surfaces: 37 further
+* the **left** end, 5.20 × 10⁵ GeV, is the first mass grid point that is
+  excluded at all, above the kinematic wall
+  ([§3](#the-analysis-window-starts-at-1-tev)). Nothing is
+  excluded below the wall because nothing *can* be. It is a grid point, not the
+  edge of the claim: the refined contour sidecar of
+  [§5.5](#55-the-sidecar-files) traces the island's tip to 4.02 × 10⁵ GeV;
+* the **right** end is set by `m_cut` and by nothing in the surfaces: 35 further
   masses, all the way to the Planck mass, satisfy `extremeness >= 0.95`. Without
   the cut the region would not close on the right at all;
 * the band is **open at the top over part of the window**. With the cap removed,
   atmospheric attenuation no longer closes the massless region from above
-  everywhere: 16 of the 75 in-window masses run to `alpha_n = 1`, the top of the
+  everywhere: 23 of the 78 in-window masses run to `alpha_n = 1`, the top of the
   scanned grid, and there the upper edge is a property of the scan and not a
   ceiling ([§9](#9-known-limitations)).
 
@@ -1113,7 +1184,7 @@ import h5py, numpy as np
 import matplotlib.pyplot as plt
 
 C = 0.95
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     alpha = f["axes/alpha_n"][:]
     mass  = f["axes/mass_gev"][:]
     lam   = f["axes/lambda_m"][:]
@@ -1154,7 +1225,7 @@ print("wrote exclusion_massless_mode1.png")
 wrote exclusion_massless_mode1.png
 ```
 
-![Excluded region in the coupling versus dark-matter mass plane for a massless mediator, mode 1, f_DM = 1, with atmospheric attenuation applied. The region is bounded on the left by the kinematic wall, below by the sensitivity floor, and on the right by the dashed flux cut at 6.11e14 GeV; over the upper decades of mass it runs to the top of the coupling grid.](exclusion_massless_mode1.png)
+![Excluded region in the coupling versus dark-matter mass plane for a massless mediator, mode 1, f_DM = 1, with atmospheric attenuation applied. The region is bounded on the left by the kinematic wall, below by the sensitivity floor, and on the right by the dashed flux cut at 8.40e14 GeV; over the upper decades of mass it runs to the top of the coupling grid.](exclusion_massless_mode1.png)
 
 The file that block writes is shipped as
 [`exclusion_massless_mode1.png`](exclusion_massless_mode1.png), so you can check
@@ -1206,16 +1277,16 @@ you will get a `KeyError` naming the axis it does have.
 Run it on a file to see what you have:
 
 ```console
-$ python luhdm_release.py luhdm_datarelease_v9p1_A_f1_atm.h5
+$ python luhdm_release.py luhdm_datarelease_v10_A_f1_atm.h5
 ```
 
 ```
 ==============================================================================
-POLONAISE UHDM data release   v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier
+POLONAISE UHDM data release   v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245
 ==============================================================================
-file            : luhdm_datarelease_v9p1_A_f1_atm.h5
+file            : luhdm_datarelease_v10_A_f1_atm.h5
 format          : luhdm-datarelease version 2 (schema 1)
-created         : 2026-08-14T20:06:39.566119+00:00
+created         : 2026-08-18T14:01:23.802961+00:00
 exposure        : 790,778 s  (219.66 h)
 impact-param cap: none (uncapped)
 recommended CL  : 0.95
@@ -1260,11 +1331,11 @@ results  (axis order in parentheses)
                   0=ok(MC) 1=exception 2=mu<0.2 3=mu>mu_cap 4=mu==0
 
 status codes  (counts over the whole cube)
-  0         9,804  (12.48%)  ok(MC): the optimum-interval Monte Carlo ran
-  1            78  ( 0.10%)  exception: the cell raised; extremeness/mu/n_transit are NaN, and NaN reads as NOT excluded
-  2        36,246  (46.15%)  mu<0.2: expected counts below the MC floor; extremeness is exactly 0
-  3        18,915  (24.08%)  mu>mu_cap: expected counts above the MC cap; extremeness is exactly 1 (excluded)
-  4        13,497  (17.18%)  mu==0: the spectrum has no support; extremeness is exactly 0
+  0         9,926  (12.64%)  ok(MC): the optimum-interval Monte Carlo ran
+  1            75  ( 0.10%)  exception: the cell raised; extremeness/mu/n_transit are NaN, and NaN reads as NOT excluded
+  2        36,509  (46.48%)  mu<0.2: expected counts below the MC floor; extremeness is exactly 0
+  3        19,991  (25.45%)  mu>mu_cap: expected counts above the MC cap; extremeness is exactly 1 (excluded)
+  4        12,039  (15.33%)  mu==0: the spectrum has no support; extremeness is exactly 0
 
 detector
   exposure_s     790,778 s
@@ -1280,10 +1351,10 @@ halo diagnostics (own coarser alpha/mass grids)
 reference_curves: 20 datasets (showcase spectra / arrival-speed distributions)
 
 provenance
-  git_commit     f4080540318810b4e07dec60375577aaa3bcaa60 (dirty=True)
+  git_commit     4193b74c0439b13d5fbea7f31df940dea0b3ccdf (dirty=True)
   seed           20260702
   MC fidelity    n_mc=10000 n_ode=400 n_shm=300000 n_q=240
-  packages       {"numpy": "2.5.1", "scipy": "1.18.0", "h5py": "3.16.0", "optimum_interval": "0.3.0", "luhdm": "0.1.0", "matplotlib": "3.11.1", "pandas": "3.0.3", "python": "3.14.6"}
+  packages       {"numpy": "2.5.1", "scipy": "1.18.0", "h5py": "3.16.0", "optimum_interval": "0.3.0", "luhdm": "0.1.0", "matplotlib": "3.11.1", "pandas": "3.0.3", "python": "3.14.7"}
   events_mode1_sha256 9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6
   events_mode2_sha256 9b78181c959266873dafabe2db4ae8227ed61e10e1b363282be521123ea0ea50
   events_mode3_sha256 31e611787b087d6f6494422d8485a5a51d97168eb6b3b34dd6920840c396f105
@@ -1291,10 +1362,15 @@ provenance
 ==============================================================================
 ```
 
-Two lines of that summary deserve a note. `impact-param cap: none (uncapped)` is
-this release's headline change ([§3](#the-interaction-model-in-one-paragraph)).
+Three things about that summary deserve a note. `impact-param cap: none
+(uncapped)` is the headline change of the `v7` line and still holds
+([§3](#the-interaction-model-in-one-paragraph)).
 The `tags:` list on `lambda_m` names ranges the axis does not carry; see the
-trap in [§4.1](#41-axes).
+trap in [§4.1](#41-axes). And the summary does **not** print the halo frame:
+the reader shipped here predates the attribute, so read
+`attrs['v_earth_km_s']` yourself if you are recomputing anything
+([§3](#the-halo-is-evaluated-in-the-laboratory-frame)). It is one line of
+`h5py`, and absence of the attribute means the Galactic rest frame.
 
 `python luhdm_release.py --help` prints the module documentation and the usage
 line. The API is in the docstrings: `help(luhdm_release)` and
@@ -1304,7 +1380,7 @@ line. The API is in the docstrings: `help(luhdm_release)` and
 import numpy as np
 import luhdm_release
 
-with luhdm_release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
+with luhdm_release.open_release("luhdm_datarelease_v10_A_f1_atm.h5") as rel:
     print(rel)
     print("exposure", rel.exposure_s, "s, cap", rel.b_constrained_max_m)
 
@@ -1323,17 +1399,17 @@ with luhdm_release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
 ```
 
 ```
-<Release 'luhdm_datarelease_v9p1_A_f1_atm.h5' (v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier)>
+<Release 'luhdm_datarelease_v10_A_f1_atm.h5' (v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245)>
 exposure 790778.0 s, cap None
 <Slice extremeness [1] (alpha_n=44, mass_gev=119) at f_dm=1, atmosphere=True, mode=1, lambda_m=0.0002>
-excluded cells: 896
-<ExcludedBand 95% CL at f_dm=1, atmosphere=True, mode=1, lambda_m=0.0002: 45/119 masses excluded, mass range 6.849e+05..1.225e+11 GeV>
-at m = 684906.8588503074 alpha_n in (np.float64(2.2483363016740766e-08), np.float64(0.00019529794666043004))
-{'mass_gev': 96471330.72266711, 'alpha_n': 0.0009478599776522384, 'mu': 2585.50048828125, 'extremeness': 1.0, 'status': 3}
+excluded cells: 981
+<ExcludedBand 95% CL at f_dm=1, atmosphere=True, mode=1, lambda_m=0.0002: 48/119 masses excluded, mass range 5.203e+05..2.123e+11 GeV>
+at m = 520302.1070058871 alpha_n in (np.float64(3.5197484401264716e-08), np.float64(0.0003336228720393256))
+{'mass_gev': 96471330.72266711, 'alpha_n': 0.0009478599776522384, 'mu': 5508.9423828125, 'extremeness': 1.0, 'status': 3}
 ```
 
 `cap None` is the uncapped cross section. The 200 µm band above ends at
-5.4 × 10¹⁰ GeV, well below `m_cut`, so for that range the mass cut changes
+2.1 × 10¹¹ GeV, well below `m_cut`, so for that range the mass cut changes
 nothing; it is the massless and 2 mm slices where it bites.
 
 `to_dataframe()` is the one method that needs `pandas`, so it is in its own
@@ -1342,7 +1418,7 @@ block:
 ```python
 import luhdm_release                                  # this block also needs pandas
 
-with luhdm_release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
+with luhdm_release.open_release("luhdm_datarelease_v10_A_f1_atm.h5") as rel:
     df = rel.to_dataframe(mode=1, lam="massless", mass=1e12, f_dm=1.0)
     print(df.shape, list(df.columns))
 ```
@@ -1380,7 +1456,7 @@ With the standalone reader, where `df` defaults to the file's own `attrs['df']`:
 import numpy as np
 import luhdm_release
 
-with luhdm_release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5") as rel:
+with luhdm_release.open_release("luhdm_datarelease_v10_A_f1_atm.h5") as rel:
     print("exposure_s :", rel.exposure_s, "s")
     for m in rel.modes:
         q, eff = rel.efficiency_curve(m)          # df defaults to attrs['df']
@@ -1417,7 +1493,7 @@ Or straight from `h5py`, with no reader at all:
 ```python
 import h5py
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     df = int(f.attrs["df"])
     print("analysis df =", df, "| exposure_s =", float(f["detector/exposure_s"][()]))
     for m in (1, 2, 3):
@@ -1449,7 +1525,7 @@ full instructions.
 import numpy as np
 from luhdm import release
 
-rel = release.open_release("luhdm_datarelease_v9p1_A_f1_atm.h5")
+rel = release.open_release("luhdm_datarelease_v10_A_f1_atm.h5")
 print("exposure_s :", rel.attrs["t_exposure_s"], "s")
 for m in (1, 2, 3):
     q, eff = rel.efficiency_curve(m, df=int(rel.attrs["df"]))
@@ -1517,25 +1593,40 @@ efficiency curves, candidate lists and live time.
 
 ## 9. Known limitations
 
+**The halo frame is a convention, and it is the largest single difference from
+every earlier release.** The lab-frame boost `v_earth_km_s` = 245 km/s
+([§3](#the-halo-is-evaluated-in-the-laboratory-frame)) is a stated choice, taken
+to match Monteiro (2020) and Tseng (2025) so that the overlaid limits are read
+in one frame. It is not a fit and it carries no uncertainty band here: the boost
+is applied as a single fixed speed over the whole exposure, so any annual
+variation in the Earth's motion through the halo is neither modelled nor
+propagated. Nor is the choice reducible to a rescaling of the `v9.1` surfaces —
+the boost changes the shape of the arrival-speed distribution, not only its
+mean, and `extremeness` is a non-linear function of what follows. If you want
+the Galactic rest frame, you want a different cube, not a factor.
+
 **The mass cut is an assumption, and it is yours to own.** `N_req = 3` transits
 within a 10 cm aperture is a stated standard, not a measurement, and the
 right-hand edge of every excluded region moves inversely with it
 ([§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it)). It is the largest
 discretionary choice in this release. The cut is also a *sharp* line drawn
 across a continuous fall-off in transit rate: nothing changes physically at
-6.11 × 10¹⁴ GeV, the expected number of flybys simply passes 3 there.
+8.40 × 10¹⁴ GeV, the expected number of flybys simply passes 3 there.
 
 **Cells above the expected-count cap are asserted excluded, not computed.**
 Where `mu` exceeds `attrs['fid_mu_cap']` = 85 the optimum-interval Monte Carlo is
-skipped and `extremeness` is set to exactly `1.0` (`status == 3`, 24.1% of file
-A and 26.5% of file B). The assertion is that such a hypothesis is
+skipped and `extremeness` is set to exactly `1.0` (`status == 3`, 25.5% of file
+A and 27.4% of file B). The assertion is that such a hypothesis is
 overwhelmingly excluded. It is validated for **modes 1 and 2**: no Monte-Carlo
 cell with `p < 0.95` has `mu` above 36, leaving a wide margin below the cap. For
 **mode 3** it is not: Monte-Carlo cells with `mu` up to about 84 still show
 `p < 0.95`, so the assertion is applied right where the computed answer can still
 fall below threshold. **Mode-3 exclusion boundaries near high expected counts
 therefore carry additional uncertainty** beyond the quoted Monte-Carlo noise.
-Mask on `status == 3` if you need a purely computed boundary.
+Mask on `status == 3` if you need a purely computed boundary — but know how much
+of the region that removes: the shortcut accounts for 86% of the excluded
+mode-1 cells in file A and 85% in file B. The boundary itself is computed; the
+interior, overwhelmingly, is asserted.
 
 **The mode-3 massless floor is resolved to about one coupling grid step.** The
 `alpha_n` axis is 0.2326 dex per step, and for the massless slice in mode 3 the
@@ -1543,10 +1634,10 @@ lower edge of the excluded band is determined to roughly that spacing. Treat the
 mode-3 massless floor as grid-resolution-limited rather than as a precisely
 located number.
 
-**Undefined (status-1) cells.** 78 cells in file A and 75 in file B (0.10% of
+**Undefined (status-1) cells.** 75 cells in each file (0.10% of
 each) raised during evaluation and carry `NaN` in `extremeness`, `mu` and
 `n_transit`; `NaN` is exactly coincident with `status == 1`. They sit deep in
-the non-excluded corner, at strong coupling and heavy mass, almost entirely in
+the non-excluded corner, at strong coupling and heavy mass, all of them in
 the 20 µm slice, the shortest range carried here. The published limits are
 unaffected. If you contour a different confidence level, or work in that corner,
 mask on `status == 1` explicitly rather than trusting the `NaN` comparison.
@@ -1560,7 +1651,7 @@ the scanned coupling grid.
 ```python
 import h5py, numpy as np
 
-for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p1_noatm.h5"):
+for path in ("luhdm_datarelease_v10_A_f1_atm.h5", "luhdm_datarelease_v10_B_f0p1_noatm.h5"):
     with h5py.File(path, "r") as f:
         ext = f["results/extremeness"][0, 0]      # (mode, alpha, mass, lambda)
         atm = int(f["axes/atmosphere"][0])
@@ -1572,8 +1663,8 @@ for path in ("luhdm_datarelease_v9p1_A_f1_atm.h5", "luhdm_datarelease_v9p1_B_f0p
 ```
 
 ```
-atmosphere=1: 1074 excluded (mode, mass, lambda) columns, 29.3% saturate at alpha_n = 1
-atmosphere=0: 1003 excluded (mode, mass, lambda) columns, 100.0% saturate at alpha_n = 1
+atmosphere=1: 1105 excluded (mode, mass, lambda) columns, 31.5% saturate at alpha_n = 1
+atmosphere=0: 1032 excluded (mode, mass, lambda) columns, 100.0% saturate at alpha_n = 1
 ```
 
 Quote a saturated column as a one-sided lower bound (`alpha_n > lo`), not as a
@@ -1581,9 +1672,9 @@ band. The reader's `band.saturated_hi` flags this per mass.
 
 **The 200 m slice is a convergence check, and it passes.** Taking the
 interpolated lower edge per mass, mode 1, file A, the 200 m slice and the
-massless slice exclude the same 112 masses, agree on the edge to 0.04% in the
-median, and reach floors 1.6% apart — a fraction of the 0.2326 dex coupling
-grid step:
+massless slice exclude the same 113 masses, agree on the edge to 0.06% in the
+median, and reach the same floor to the precision printed — well inside the
+0.2326 dex coupling grid step:
 
 ```python
 import h5py, numpy as np
@@ -1604,7 +1695,7 @@ def lower_edge(path, i_lam, mode=1, C=0.95):
             C, p[a - 1:a + 1, j], np.log10(alpha[a - 1:a + 1]))
     return mass, lo
 
-P = "luhdm_datarelease_v9p1_A_f1_atm.h5"
+P = "luhdm_datarelease_v10_A_f1_atm.h5"
 with h5py.File(P, "r") as f:
     lam = f["axes/lambda_m"][:]
 mass, lo_200m = lower_edge(P, int(np.flatnonzero(lam == 200.0)[0]))
@@ -1619,9 +1710,9 @@ print(f"lower edge, 200 m vs massless: median |diff| {np.median(d):.2%}, "
 ```
 
 ```
-masses excluded: 200 m 112, massless 112
-floor: 200 m 2.827e-09, massless 2.826e-09
-lower edge, 200 m vs massless: median |diff| 0.01%, 90th pct 1.96%, max 21.3%
+masses excluded: 200 m 113, massless 113
+floor: 200 m 3.993e-09, massless 3.993e-09
+lower edge, 200 m vs massless: median |diff| 0.06%, 90th pct 2.42%, max 26.2%
 ```
 
 The tail of that distribution is Monte-Carlo noise at individual masses, not a
@@ -1640,6 +1731,23 @@ a contour near 0.95 wobbles at the finer of the two scales, and a contour drawn
 at some other level — 0.5, say — wobbles at the coarser one. Cubes are stored as
 float32, whose spacing near 0.95 is orders of magnitude finer than either, so the
 precision loss is irrelevant.
+
+**Monte-Carlo *calibration* granularity is a second, separate floor, and it is
+the one `v10` moves.** The optimum-interval calibration is a pure function of
+the expected count, so the build rounds `mu` onto a log grid of step
+`attrs['fid_mu_dex']` before drawing the toy table, and shards the seeded Monte
+Carlo by the rounded value. That is what makes the cube bit-reproducible
+regardless of worker count or evaluation order — and it also makes
+`extremeness` a *step* function of `mu`, so a boundary can only be located to
+within one `mu` bin. In coupling, one bin is
+`dlog(alpha) = mu_dex / (dlog mu / dlog alpha)` wide, so wherever the
+sensitivity `dlog mu / dlog alpha` is small the plateau is wide: on the
+bare-halo plane at high dark-matter mass it falls to about 0.05, where the
+`mu_dex` = 0.02 of every earlier release gave plateaus up to 0.4 dex in
+`alpha_n` — nearly two coupling cells, and **no number of Monte-Carlo trials
+removes them**. `v10` uses `mu_dex` = 0.002, ten times finer, which narrows
+those plateaus by the same factor. It is still a floor, an order of magnitude
+lower: do not read a refined boundary as located to better than one `mu` bin.
 
 **Modes are separate measurements.** The three sensor modes have different
 thresholds, efficiencies and event lists. Combining them is an analysis choice
@@ -1677,23 +1785,21 @@ CITATION.cff: OK
 LICENSE: OK
 README.md: OK
 exclusion_massless_mode1.png: OK
-luhdm_contours_v9p1_A_f1_atm.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm_mode2.json: OK
-luhdm_contours_v9p1_B_f0p1_noatm_mode3.json: OK
-luhdm_datarelease_v9p1_A_f1_atm.h5: OK
-luhdm_datarelease_v9p1_B_f0p1_noatm.h5: OK
-luhdm_lambda_scan_v9p1.npz: OK
+luhdm_contours_v10_A_f1_atm.json: OK
+luhdm_contours_v10_B_f0p1_noatm.json: OK
+luhdm_datarelease_v10_A_f1_atm.h5: OK
+luhdm_datarelease_v10_B_f0p1_noatm.h5: OK
+luhdm_lambda_scan_v10.npz: OK
 luhdm_release.py: OK
-provenance_luhdm_datarelease_v9p1_A_f1_atm.json: OK
-provenance_luhdm_datarelease_v9p1_B_f0p1_noatm.json: OK
+provenance_luhdm_datarelease_v10_A_f1_atm.json: OK
+provenance_luhdm_datarelease_v10_B_f0p1_noatm.json: OK
 ```
 
 The digests of the datasets themselves are
 
 ```
-fe5168bdbaa054d05716ce08f547a7a915bb6f6a9caafe8f99a8e0f80f42d858  luhdm_datarelease_v9p1_A_f1_atm.h5
-10a2efe9a85f994ec9c9890d7594c484e8ac009840b3249b689b0cb93bf8a39e  luhdm_datarelease_v9p1_B_f0p1_noatm.h5
+db126b5852f97764674e02fda5e97d323e9f5b4207b72cdacc2aa2a9adfcb116  luhdm_datarelease_v10_A_f1_atm.h5
+cad157a7244d66ba454361bb41bc8cb90a3eeb1285ad3c417bea270f22180f33  luhdm_datarelease_v10_B_f0p1_noatm.h5
 ```
 
 If you renamed a file, compare its digest directly: the digest is what matters,
@@ -1715,9 +1821,9 @@ themselves.
 
 ### Names, tags and what they refer to
 
-The `version_tag` attribute is `v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier` and the
-files are distributed as `luhdm_datarelease_v9p1_A_f1_atm.h5` and
-`luhdm_datarelease_v9p1_B_f0p1_noatm.h5`. The tag and the filenames were fixed at
+The `version_tag` attribute is `v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245` and the
+files are distributed as `luhdm_datarelease_v10_A_f1_atm.h5` and
+`luhdm_datarelease_v10_B_f0p1_noatm.h5`. The tag and the filenames were fixed at
 different moments and do not match word for word:
 
 * `-wmargnight` in the tag records which efficiency the cube was built with: the
@@ -1729,13 +1835,20 @@ different moments and do not match word for word:
   `fid_*` attributes.
 * `-a18iso` records the projection kernel, `isotropic-folded`, which is also in
   the `projection_kernel` attribute ([§5.5](#55-the-sidecar-files)).
-* `-mc2tier` records that the boundary cells were re-evaluated on a second,
-  ten-times-larger Monte Carlo table: `fid_n_mc_hi` = 100 000 trials for any cell
-  whose base extremeness landed in `[fid_p_hi_lo, 1)` = `[0.9, 1)`
-  ([§11](#11-versions)). Both numbers are attributes, and the rule is
-  deterministic, so a recomputation still reproduces the cube bit for bit.
+* `-mudex0p002` records the Monte-Carlo calibration granularity,
+  `fid_mu_dex` = 0.002 dex, ten times finer than the 0.02 every earlier cube
+  used ([§9](#9-known-limitations)).
+* `-vE245` records the halo frame: `v_earth_km_s` = 245.0, the laboratory frame
+  of [§3](#the-halo-is-evaluated-in-the-laboratory-frame). Its absence from a
+  tag, and of the attribute from a file, means the Galactic rest frame.
+* `-mc2tier` is **gone from the tag but not from the build**. The two-tier Monte
+  Carlo `v9.1` introduced is still on here — `fid_n_mc_hi` = 100 000 trials for
+  any cell whose base extremeness landed in `[fid_p_hi_lo, 1)` = `[0.9, 1)` — it
+  is simply no longer the newest thing about the cube, and the tag names what
+  changed. Read the `fid_*` attributes, not the tag, for what the build did.
 * the filenames carry the hypothesis (`A_f1_atm`, `B_f0p1_noatm`), which the tag
-  does not, because one tag covers both files.
+  does not, because one tag covers both files. They also shorten `v10.0` to
+  `v10`.
 
 **The attributes are the authority**, and they are not edited after a file is
 built: renaming a released file, or rewriting a tag to make it prettier, would
@@ -1750,61 +1863,72 @@ files to know what produced the numbers:
 ```python
 import h5py, json
 
-with h5py.File("luhdm_datarelease_v9p1_A_f1_atm.h5", "r") as f:
+with h5py.File("luhdm_datarelease_v10_A_f1_atm.h5", "r") as f:
     a = dict(f.attrs)
 for k in ("version_tag", "created", "git_commit", "git_dirty", "seed",
           "t_exposure_s", "q_thresh_gev", "b_constrained_max_m",
-          "m_cut_10cm_f1_gev", "m_cut_n_transits_required",
-          "m_cut_applied_to_stored_surfaces", "df", "fid_mu_cap",
+          "v_earth_km_s", "m_cut_10cm_f1_gev", "m_cut_n_transits_required",
+          "m_cut_applied_to_stored_surfaces", "df", "fid_mu_cap", "fid_mu_dex",
           "events_mode1_sha256", "efficiency_npz_sha256"):
     print(f"{k:34s} {a[k]}")
 print("packages", json.loads(a["packages_json"]))
 ```
 
 ```
-version_tag                        v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier
-created                            2026-08-14T20:06:39.566119+00:00
-git_commit                         f4080540318810b4e07dec60375577aaa3bcaa60
+version_tag                        v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245
+created                            2026-08-18T14:01:23.802961+00:00
+git_commit                         4193b74c0439b13d5fbea7f31df940dea0b3ccdf
 git_dirty                          True
 seed                               20260702
 t_exposure_s                       790778.0
 q_thresh_gev                       1000.0
 b_constrained_max_m                nan
-m_cut_10cm_f1_gev                  611068455417254.0
+v_earth_km_s                       245.0
+m_cut_10cm_f1_gev                  840123306518896.1
 m_cut_n_transits_required          3.0
 m_cut_applied_to_stored_surfaces   False
 df                                 3
 fid_mu_cap                         85.0
+fid_mu_dex                         0.002
 events_mode1_sha256                9bdc69c90b6f9e80db114821e1af363157a1a55c260907e2d4ebfc0641c1f5b6
 efficiency_npz_sha256              6505e5e39621f094fc5b902e24f9ad4cd802c53c2a1c2930d6e5b7921202d497
-packages {'numpy': '2.5.1', 'scipy': '1.18.0', 'h5py': '3.16.0', 'optimum_interval': '0.3.0', 'luhdm': '0.1.0', 'matplotlib': '3.11.1', 'pandas': '3.0.3', 'python': '3.14.6'}
+packages {'numpy': '2.5.1', 'scipy': '1.18.0', 'h5py': '3.16.0', 'optimum_interval': '0.3.0', 'luhdm': '0.1.0', 'matplotlib': '3.11.1', 'pandas': '3.0.3', 'python': '3.14.7'}
 ```
 
 `b_constrained_max_m` is `NaN`, which is how an uncapped cross section is
 recorded; a finite value there would mean the impact-parameter integral had been
 truncated at that radius.
 
+`v_earth_km_s` and `fid_mu_dex` are **new in `v10`** and have no counterpart in
+any earlier file. Both are stated conventions rather than measurements, and both
+have a defined meaning by absence: no `v_earth_km_s` means the Galactic rest
+frame ([§3](#the-halo-is-evaluated-in-the-laboratory-frame)), no `fid_mu_dex`
+means 0.02 dex ([§9](#9-known-limitations)). They also appear inside
+`fid_json`, the fidelity block the refiner and the verifier read back.
+
 The SHA-256 of every input (event lists, efficiency table) is recorded, along
 with the git commit of the analysis code in
 <https://github.com/PolonaiseExperiment/luhdm>, the RNG seed, the Monte-Carlo
-fidelity settings (`fid_*`, including the expected-count cap `fid_mu_cap` and
+fidelity settings (`fid_*`, including the expected-count cap `fid_mu_cap`, the
+calibration granularity `fid_mu_dex` and
 the two-tier pair `fid_n_mc_hi` / `fid_p_hi_lo`) and
 the versions of every package used (`packages_json`). Exclusion limits were
 computed with `optimum_interval` 0.3.0.
 
 `git_dirty` tells you honestly whether the working tree had uncommitted changes
 at build time, and for these files it is **`True`**: the scan ran from a tree
-that carried edits on top of commit `f408054`. The commit identifies the code
+that carried edits on top of commit `4193b74`. The commit identifies the code
 that the tree was based on; the physics settings that the edits touched — the
-1 TeV threshold, the absent cap, the mediator-range set, the Monte-Carlo
-fidelity — are all recorded as attributes in their own right, so the numbers
+1 TeV threshold, the absent cap, the mediator-range set, the halo frame, the
+Monte-Carlo fidelity — are all recorded as attributes in their own right, so the numbers
 remain reproducible from what is in the file even where the commit alone would
 not pin them. The efficiency table is pinned the same way, by
 `efficiency_npz_sha256` rather than by the commit.
 
 **Physics fiducials** are attributes too, so a reinterpretation does not have to
 guess them: `rho_dm_gev4`, `f_x`, `n_neutrons`, `r_eff_m`, `q_thresh_gev`,
-`q_hi_ref_gev`, `m_planck_gev`, `t_exposure_s`, and the `m_cut_*` block of
+`q_hi_ref_gev`, `m_planck_gev`, `t_exposure_s`, `v_earth_km_s`, and the
+`m_cut_*` block of
 [§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it).
 
 Some attributes (`efficiency_npz`, `events_dir`, `inputs_json`) and many entries
@@ -1820,7 +1944,7 @@ build.
 
 ### The environment it was built in
 
-Python 3.14.6 with numpy 2.5.1, scipy 1.18.0, h5py 3.16.0, matplotlib 3.11.1,
+Python 3.14.7 with numpy 2.5.1, scipy 1.18.0, h5py 3.16.0, matplotlib 3.11.1,
 pandas 3.0.3, luhdm 0.1.0 and optimum_interval 0.3.0, as recorded in
 `packages_json`. **To read the release you need none of that**: any Python with
 `numpy` and `h5py` will do, and the examples here were checked on the versions
@@ -1838,8 +1962,10 @@ evaluation regimes (Monte Carlo, deterministic shortcut, finite ranges and the
 massless limit) were recomputed from scratch and reproduced the stored values on
 the toolchain used to build the release. The two files were checked against each
 other on everything they are supposed to share — the shared axes, `/detector`,
-`/reference_curves` and `/halo` — and found identical. The 200 m validation
-slice was checked against the massless slice
+`/reference_curves` and `/halo` — and found identical. Both cubes' halo pass and
+results pass were checked to carry the same `v_earth_km_s`, since a frame
+mismatch between them is invisible in the numbers themselves. The 200 m
+validation slice was checked against the massless slice
 ([§9](#9-known-limitations)). The worked
 example of [§6](#6-worked-example-the-published-limit) reproduces the published
 endpoint numbers and the shipped figure.
@@ -1849,16 +1975,63 @@ endpoint numbers and the shipped figure.
 ## 11. Versions
 
 The released files are identified by their `version_tag` attribute, here
-`v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier`, which reads component
-by component as: cube version 9.1; `night`, the night selection of
+`v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245`, which
+reads component
+by component as: cube version 10.0; `night`, the night selection of
 [§3](#3-what-the-data-is); `m0p356mg`, a 0.356 mg sphere; `q1TeV`, the 1 TeV
 analysis window; `nocap`, no impact-parameter cap; `wmargnight`, the
 arrival-phase-averaged night-selection efficiency of
 [§7.1](#71-detector-inputs); `a18iso`, the A18 isotropic-folded projection kernel
-of [§5.5](#55-the-sidecar-files); and `mc2tier`, the two-tier Monte Carlo
-described just below.
+of [§5.5](#55-the-sidecar-files); `mudex0p002`, the ten-times-finer Monte-Carlo
+calibration granularity; and `vE245`, the laboratory-frame halo. The last two
+are what `v10` adds, and are described just below. `mc2tier` has dropped out of
+the tag even though the two-tier Monte Carlo is still on
+([§10](#names-tags-and-what-they-refer-to)): the tag names the newest changes,
+the `fid_*` attributes name everything.
 
-**Two-tier Monte Carlo**, the last component, is what `v9.1` adds. The
+**The laboratory-frame halo** is the reason for this release. Every cube up to
+and including `v9.1` evaluated the standard halo model in the *Galactic* rest
+frame: an isotropic truncated Maxwellian, `v_0` = 220 km/s, cut off at
+`v_esc` = 544 km/s, with the detector at rest in it. `v10` puts the detector
+where it is, moving through the halo at `v_earth_km_s` = 245 km/s, and the
+arrival-speed distribution becomes the boosted, direction-integrated form of
+Lewin & Smith (1996) — the convention of Monteiro (2020) and Tseng (2025), the
+two levitated-sensor results this analysis overlays, so all three curves are now
+read in one frame. [§3](#the-halo-is-evaluated-in-the-laboratory-frame) sets out
+what it means; what it *moves* is:
+
+* **the halo's support**, from `v_esc` = 544 km/s to `v_esc + v_E` = 789 km/s,
+  which is the ceiling of every speed integral and of the rate integral;
+* **the kinematic wall**, `q_thresh / v_max`, down from 5.51 × 10⁵ to
+  3.80 × 10⁵ GeV, because the wall goes as `1/v_max`;
+* **the flux-averaged speed `<v>`**, up from 245 972 to 338 173 m/s, a factor
+  1.3748, and with it the flux cut `m_cut`, from 6.11 × 10¹⁴ to
+  8.40 × 10¹⁴ GeV at `f_DM` = 1 and from 6.11 × 10¹³ to 8.40 × 10¹³ GeV at
+  `f_DM` = 0.1;
+* **every surface in the cube**, through a faster and differently shaped arrival
+  flux. The refined massless mode-1 floor moves from `alpha_n` = 2.548 × 10⁻⁹ at
+  7.08 × 10⁶ GeV to 3.207 × 10⁻⁹ at 5.38 × 10⁶ GeV, and the composite
+  cross-section floor of the `f_DM` = 0.1 20 µm surface from 3.86 × 10⁻²⁸ to
+  4.48 × 10⁻²⁸ cm² at 1.56 × 10⁶ GeV. The mediator-range scan's exclusion
+  pinches off at 7.96 µm (24.8 meV) rather than 6.32 µm (31.2 meV);
+* **`/halo` and `/reference_curves`**, which are computed in the same frame as
+  `/results` and so are not the curves `v9.1` shipped.
+
+A new root attribute carries it, `v_earth_km_s` = 245.0, repeated inside the
+`fid_json` fidelity block. It exists in no earlier file, and **absence means the
+Galactic rest frame** — that is how to read a pre-`v10` cube.
+
+**Finer Monte-Carlo calibration.** The optimum-interval calibration is sharded
+by the expected count rounded onto a log grid, which is what makes the cube
+bit-reproducible and also quantizes `extremeness` into steps in `mu`. `v10`
+takes that step, `attrs['fid_mu_dex']`, from 0.02 dex to **0.002 dex**. It is
+not a statistics upgrade — no number of toy trials touches this floor — but a
+resolution one: on the bare-halo plane at high mass, where the sensitivity of
+`mu` to the coupling is weakest, the old 0.02-dex bin was up to 0.4 dex wide in
+`alpha_n`, and the new one is a tenth of that.
+[§9](#9-known-limitations) has the mechanism.
+
+**Two-tier Monte Carlo** was what `v9.1` added, and it is still on here. The
 extremeness at a grid point is the fraction of background-free pseudo-experiments
 that look less extreme than the data, so it is a Monte Carlo quantile and carries
 a Monte Carlo error. Away from the boundary that error is irrelevant — the cell
@@ -1872,40 +2045,60 @@ the first. Both numbers are stored in the fidelity block
 rule is deterministic: the same cell takes the same tier every run, so the cube
 and anything that recomputes against it still agree bit for bit. The correction
 it applies is a quantile bias of the smaller table, and it is small but not
-nothing — it is what moves the composite cross-section floor of the `f_DM` = 0.1
-20 µm surface from 4.49 × 10⁻²⁸ to 3.86 × 10⁻²⁸ cm².
+nothing — within the Galactic-rest-frame `v9` campaign it moved the composite
+cross-section floor of the `f_DM` = 0.1 20 µm surface from 4.49 × 10⁻²⁸ to
+3.86 × 10⁻²⁸ cm².
 
-`v9.0` was the first public version and `v9.1` supersedes it. Earlier cubes (`v1`
+`v9.0` was the first public version, `v9.1` superseded it, and `v10` supersedes
+`v9.1`. Earlier cubes (`v1`
 to `v8`) were internal analysis products and were never distributed; three of
 them, `v6.0-night-m0p356mg-bcap10cm-lam4`,
 `v7.0-quick-night-m0p356mg-q1TeV-nocap` and
 `v8.0-night-m0p356mg-q1TeV-nocap-wmarg`, were prepared for release and superseded
 before publication. What changed along the way:
 
-| | v6 (unpublished) | v7.0 (unpublished) | v8.0 (unpublished) | v9.0 | v9.1 (this release) |
-|---|---|---|---|---|---|
-| analysis window | 0.1 TeV | **1 TeV** | 1 TeV | 1 TeV | 1 TeV |
-| impact-parameter integral | truncated at 10 cm | **uncapped** | uncapped | uncapped | uncapped |
-| right-hand edge in mass | closure of the capped cross section, 2.7 × 10¹⁴ GeV | **explicit flux cut `m_cut`**, 6.11 × 10¹⁴ GeV at `N_req = 3` | the same cut, unchanged | the same cut, unchanged | the same cut, unchanged |
-| layout | one file, 2 × 2 hypotheses | **two files, one hypothesis each** | two files | two files | two files |
-| mediator ranges | 2 mm, 200 µm, 20 µm + massless | the same three + a **200 m validation slice** + massless | the same five | the same five | the same five |
-| detection efficiency | impulse arrival phase fixed | the same fixed-phase curves | **averaged over the arrival phase**, full run | **the same average over the night-selected segments** | unchanged |
-| projection kernel | planar-signed (unrecorded) | planar-signed (unrecorded) | planar-signed (unrecorded) | **`isotropic-folded`, recorded in `projection_kernel`** | unchanged |
-| Monte Carlo | single tier, `n_mc` = 10 000 | single tier | single tier | single tier | **two tiers: 10⁵ trials for cells in `[0.9, 1)`** |
-| grid | 44 couplings × 119 masses | 44 × 119 | 44 × 119 | 22 × 60 | **44 × 119 restored** (0.233 dex in `alpha_n`, 0.119 dex in mass) |
-| refined contours | — | — | shipped | shipped, and **truncated at `m_cut`** where the surface does not close | the same, and **the `f_DM` = 0.1 plane at all three sensor modes** |
+| | v6 (unpublished) | v7.0 (unpublished) | v8.0 (unpublished) | v9.0 | v9.1 | v10 (this release) |
+|---|---|---|---|---|---|---|
+| analysis window | 0.1 TeV | **1 TeV** | 1 TeV | 1 TeV | 1 TeV | 1 TeV |
+| impact-parameter integral | truncated at 10 cm | **uncapped** | uncapped | uncapped | uncapped | uncapped |
+| halo frame | Galactic rest (`v_E` = 0, unrecorded) | Galactic rest (unrecorded) | Galactic rest (unrecorded) | Galactic rest (unrecorded) | Galactic rest (unrecorded) | **laboratory, `v_earth_km_s` = 245 km/s**; support to `v_esc + v_E` = 789 km/s |
+| kinematic wall | `q_thresh / v_esc`, at the 0.1 TeV window | 5.51 × 10⁵ GeV | 5.51 × 10⁵ GeV | 5.51 × 10⁵ GeV | 5.51 × 10⁵ GeV | **3.80 × 10⁵ GeV**, `q_thresh / (v_esc + v_E)` |
+| right-hand edge in mass | closure of the capped cross section, 2.7 × 10¹⁴ GeV | **explicit flux cut `m_cut`**, 6.11 × 10¹⁴ GeV at `N_req = 3` | the same cut, unchanged | the same cut, unchanged | the same cut, unchanged | the same cut, **moved to 8.40 × 10¹⁴ GeV** by the lab-frame `<v>` |
+| layout | one file, 2 × 2 hypotheses | **two files, one hypothesis each** | two files | two files | two files | two files |
+| mediator ranges | 2 mm, 200 µm, 20 µm + massless | the same three + a **200 m validation slice** + massless | the same five | the same five | the same five | the same five |
+| detection efficiency | impulse arrival phase fixed | the same fixed-phase curves | **averaged over the arrival phase**, full run | **the same average over the night-selected segments** | unchanged | unchanged |
+| projection kernel | planar-signed (unrecorded) | planar-signed (unrecorded) | planar-signed (unrecorded) | **`isotropic-folded`, recorded in `projection_kernel`** | unchanged | unchanged |
+| Monte Carlo | single tier, `n_mc` = 10 000 | single tier | single tier | single tier | **two tiers: 10⁵ trials for cells in `[0.9, 1)`** | unchanged, and no longer named in the tag |
+| MC calibration granularity | `mu_dex` = 0.02 dex (unrecorded) | 0.02 (unrecorded) | 0.02 (unrecorded) | 0.02 (unrecorded) | 0.02 (unrecorded) | **0.002 dex, recorded in `fid_mu_dex`** |
+| grid | 44 couplings × 119 masses | 44 × 119 | 44 × 119 | 22 × 60 | **44 × 119 restored** (0.233 dex in `alpha_n`, 0.119 dex in mass) | 44 × 119 |
+| refined contours | — | — | shipped | shipped, and **truncated at `m_cut`** where the surface does not close | the same, and **the `f_DM` = 0.1 plane at all three sensor modes** | **mode 1 only**: eight surfaces, four per cube, against eleven in `v9.1` |
 
-The last three rows are the step from `v9.0` to this release, and none of them
-changes a convention: the grid is back at the density the v6–v8 campaigns used,
-the boundary cells are evaluated at ten times the Monte Carlo statistics, and the
-bare-halo plane now ships a refined boundary at every sensor mode. The
-kernel row is the substantive change of `v9.0` and still is: it is a convention
-for how the three-dimensional impulse is projected onto the measured axis, fixed
-for the whole cube, and it moves every cross section by a constant factor in the
-Coulomb limit ([§5.5](#55-the-sidecar-files)). The massless mode-1 floor, taken
-from the refined boundary, is `alpha_n` = 2.548 × 10⁻⁹ at 7.08 × 10⁶ GeV; on the
-grid it is 2.826 × 10⁻⁹ at 8.13 × 10⁶ GeV. The kinematic wall and the flux cut do
-not move at all — neither is a statement about the sensor or the cross section.
+The halo-frame row is the step from `v9.1` to this release, and unlike anything
+above it, it is a change of *physics convention* rather than of resolution or
+scope: it moves the wall, the flux cut and every surface at once, and there is
+no factor that converts one frame's cube into the other's
+([§9](#9-known-limitations)). The finer `mu_dex` row rides along with it,
+lifting a quantization floor that no amount of Monte Carlo could. The kernel
+row was the substantive change of `v9.0` and is still a live convention: it is a
+statement about how the three-dimensional impulse is projected onto the measured
+axis, fixed for the whole cube, and it moves every cross section by a constant
+factor in the Coulomb limit ([§5.5](#55-the-sidecar-files)).
+
+The last row is a **reduction in scope, and it is the one thing here that a
+`v9.1` user loses**. `v10` ships refined contours for sensor mode 1 only —
+`luhdm_contours_v10_A_f1_atm.json` and `luhdm_contours_v10_B_f0p1_noatm.json`,
+four surfaces each. There are no `_mode2` and `_mode3` contour files, and the
+mediator-range sidecar likewise carries mode 1 alone (`modes` = `[1]`). Mode 1
+is the mode the paper reports; modes 2 and 3 are still present in both cubes,
+at full grid resolution, and are contoured per
+[§5.3](#53-the-exclusion-convention) as any other surface is
+([§5.5](#55-the-sidecar-files) says how to refine them yourself). Nothing was
+removed from the cubes.
+
+For orientation, the massless mode-1 floor taken from the refined boundary is
+`alpha_n` = 3.207 × 10⁻⁹ at 5.38 × 10⁶ GeV, against 2.548 × 10⁻⁹ at
+7.08 × 10⁶ GeV in `v9.1`; on the grid it is 3.993 × 10⁻⁹ at 8.13 × 10⁶ GeV,
+against 2.826 × 10⁻⁹ at the same mass.
 
 **Published files are never edited in place.** Any correction or extension is
 issued as a new version with a new tag, new digests and its own DOI, and this
@@ -1942,7 +2135,7 @@ The dataset:
     title  = "{Data release for: First Search for Ultraheavy Dark Matter
               Using a Magnetically Levitated Particle}",
     year   = "2026",
-    note   = "Version v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier. DOI to be assigned"
+    note   = "Version v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245. DOI to be assigned"
 }
 ```
 
@@ -1953,7 +2146,7 @@ The same metadata is in [`CITATION.cff`](CITATION.cff) in machine-readable
 form, which GitHub, Zenodo and Zotero read directly.
 
 The dataset DOI is not yet minted. Until it is, cite the version tag
-`v9.1-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mc2tier` and the digests in
+`v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245` and the digests in
 [§10](#10-integrity-provenance-and-environment), which identify the files
 unambiguously. This section and `CITATION.cff` will be updated with the DOI when
 it is assigned.
@@ -1970,8 +2163,8 @@ apparatus is described in D. G. Uitenbroek, J. Langendorff and T. H. Oosterkamp,
 
 Two licences, because this release is part data and part code.
 
-**The data is CC BY 4.0.** `luhdm_datarelease_v9p1_A_f1_atm.h5`,
-`luhdm_datarelease_v9p1_B_f0p1_noatm.h5`, and the `provenance_*.json`,
+**The data is CC BY 4.0.** `luhdm_datarelease_v10_A_f1_atm.h5`,
+`luhdm_datarelease_v10_B_f0p1_noatm.h5`, and the `provenance_*.json`,
 `SHA256SUMS`, `CITATION.cff`, `exclusion_massless_mode1.png` and this `README.md`
 that travel with them, are released under the Creative Commons Attribution 4.0
 International licence. The full text is in [`LICENSE`](LICENSE) in this
@@ -2011,10 +2204,13 @@ Terms that appear in dataset names and attributes, and are not standard usage.
 | **mode** | One of the three translational eigenmodes of the levitated sphere (51.2365, 59.4663, 94.86 Hz), demodulated from the same readout stream and analysed independently. Indexed 1, 2, 3 by ascending frequency. |
 | **extremeness** | The optimum-interval statistic: the probability that a background-free pseudo-experiment under a hypothesis looks less extreme than the observed data. Exclusion at confidence `C` is `extremeness >= C`, inside the mass window. |
 | **massless sentinel** | The final `inf` entry of `axes/lambda_m`, holding the analytic Coulomb-like limit of a massless mediator, where `m_phi_gev` is exactly 0. |
-| **kinematic wall** | The lowest mass that can deliver a threshold impulse at any coupling, `q_thresh / v_esc` = 5.51 × 10⁵ GeV. The left edge of every excluded region here. See [§3](#the-analysis-window-starts-at-1-tev). |
+| **kinematic wall** | The lowest mass that can deliver a threshold impulse at any coupling, `q_thresh / v_max` = 3.80 × 10⁵ GeV, where `v_max` is the top of the halo's support. The left edge of every excluded region here. It sits lower than the 5.51 × 10⁵ GeV of the Galactic-rest-frame releases because `v_max` is larger in the laboratory frame. See [§3](#the-analysis-window-starts-at-1-tev). |
+| **halo frame**, **lab frame** (`v_earth_km_s`, `vE245`) | Which frame the standard halo model is evaluated in. `v_earth_km_s` = 245.0 here: the Earth's speed through the halo, so the arrival-speed distribution is the Galactic Maxwellian boosted into the detector frame and integrated over arrival direction (Lewin & Smith 1996; the convention of Monteiro 2020 and Tseng 2025). Its support runs to `v_esc + v_E` = 789 km/s instead of `v_esc` = 544 km/s. **Absence of the attribute means 0, the Galactic rest frame**, which is what every release before `v10` carried. See [§3](#the-halo-is-evaluated-in-the-laboratory-frame). |
+| **`<v>`** | The flux-weighted first moment of the halo speed distribution, 338 173 m/s here, the same convention the `n_transit` surface uses. It is what normalises the transit rate, and therefore the flux cut `m_cut`. See [§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it). |
 | **`m_cut`** | The flux cut: the largest mass for which the halo delivers at least `N_req` = 3 transits within a 10 cm aperture during the exposure. The right edge of every excluded region here. **Not applied to the stored surfaces**; see [§5.4](#54-the-mass-cut-m_cut-and-how-to-apply-it). |
 | **`b_constrained_max`** | The outer cutoff of the impact-parameter integral in earlier versions of this analysis. `NaN` here, meaning uncapped. |
 | **validation slice** | The `lambda` = 200 m entry of the mediator-range axis: a convergence check of the finite-range cross section against the analytic massless limit, not a physics result. See [§4.1](#41-axes). |
 | **`df`** | Degrees of freedom of the detection-efficiency fit. Two hypotheses are shipped; the analysis used `df = 3`. |
 | **`m0p356mg`, `q1TeV`, `nocap`, `wmarg`** | Version-tag fragments: the 0.356 mg sphere mass, the 1 TeV analysis window, the absence of an impact-parameter cap, and the efficiency curves averaged over the impulse arrival phase. |
-| **two-tier Monte Carlo** (`mc2tier`) | The rule this release adds: every cell is evaluated on a table of `fid_n_mc` = 10 000 optimum-interval trials, and any cell landing in `[fid_p_hi_lo, 1)` = `[0.9, 1)` — the band the 95% boundary lives in — is re-evaluated on a second, independently seeded table of `fid_n_mc_hi` = 100 000. It buys the boundary a factor of ten in Monte-Carlo resolution and changes nothing about determinism: the tier a cell takes is a function of the cell. See [§11](#11-versions). |
+| **MC calibration granularity** (`mu_dex`, `mudex0p002`) | The log step, in dex, onto which the expected count `mu` is rounded before the seeded optimum-interval table is drawn. It is what makes a cell's `extremeness` a pure function of `(rounded mu, seed, n_mc)` — hence bit-reproducible regardless of worker count — and also what quantizes a boundary into steps. `attrs['fid_mu_dex']` = 0.002 here, ten times finer than the 0.02 of every earlier cube; **absence of the attribute means 0.02**. See [§9](#9-known-limitations). |
+| **two-tier Monte Carlo** (`mc2tier`) | The rule `v9.1` introduced and this release keeps: every cell is evaluated on a table of `fid_n_mc` = 10 000 optimum-interval trials, and any cell landing in `[fid_p_hi_lo, 1)` = `[0.9, 1)` — the band the 95% boundary lives in — is re-evaluated on a second, independently seeded table of `fid_n_mc_hi` = 100 000. It buys the boundary a factor of ten in Monte-Carlo resolution and changes nothing about determinism: the tier a cell takes is a function of the cell. The fragment is no longer in the version tag; the `fid_*` attributes are the authority. See [§11](#11-versions). |
