@@ -7,8 +7,7 @@ data-derived figures are drawn from is in this repository, and the released
 files can be read without installing any of this code.
 
 The spectrum code — the physics modules (`config`, `halo`, `atmosphere`,
-`cross_section`) — was written by Dorian Amaral; it is packaged here with its
-notation unchanged. New here:
+`cross_section`) — was written initially by Dorian Amaral ([@dwpamaral](https://github.com/dwpamaral)); it is packaged here with its notation unchanged. New here:
 
 - `units` — unit conversions (lengths ↔ GeV⁻¹, rate GeV → s⁻¹);
 - `cross_section` additionally holds the straight-line-impulse (K1) machinery
