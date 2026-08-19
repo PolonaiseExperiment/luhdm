@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite both the software and the paper it was written for."
-title: "luhdm: levitated-sensor ultraheavy dark matter analysis"
+title: "luhdm: levitated-sensor ultraheavy dark matter analysis and v10 data release"
 abstract: >-
   Physics models and limit setting for the search for ultraheavy dark matter
   with a magnetically levitated particle: halo and atmospheric propagation, the
@@ -11,7 +11,9 @@ type: software
 version: "10.0.0"
 date-released: "2026-08-19"
 license: GPL-3.0-or-later
-# doi: to be assigned (archived code snapshot).
+# Concept DOI of the Zenodo deposit: resolves to the latest version, which is
+# what a citation should point at. The version DOI of v10 is 10.5281/zenodo.22018170.
+doi: 10.5281/zenodo.22018169
 keywords:
   - dark matter
   - ultraheavy dark matter

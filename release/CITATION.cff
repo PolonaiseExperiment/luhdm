@@ -16,10 +16,11 @@ abstract: >-
   the halo flux cut recorded in the files' attributes.
 type: dataset
 version: "v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245"
-date-released: "2026-08-18"
+date-released: "2026-08-19"
 license: CC-BY-4.0
-# doi: to be assigned. Add the version DOI of the deposit here, and update
-# section 12 of README.md, when the dataset is deposited.
+# Concept DOI of the Zenodo deposit that carries this dataset; it resolves to
+# the latest version. The version DOI of v10 is 10.5281/zenodo.22018170.
+doi: 10.5281/zenodo.22018169
 keywords:
   - dark matter
   - ultraheavy dark matter

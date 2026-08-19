@@ -13,7 +13,7 @@ of our software.
 |---|---|
 | **Paper** | D. G. Uitenbroek, D. W. P. Amaral, J. Qin, J. Langendorff, A. Gingerich, T. H. Oosterkamp and C. D. Tunnell, *First Search for Ultraheavy Dark Matter Using a Magnetically Levitated Particle*. arXiv identifier and journal reference to be assigned. |
 | **Release version** | `v10`, `version_tag` = `v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245` |
-| **Dataset DOI** | to be assigned |
+| **Dataset DOI** | [10.5281/zenodo.22018169](https://doi.org/10.5281/zenodo.22018169) (concept; resolves to the latest version. v10 itself is 10.5281/zenodo.22018170) |
 | **Date** | 2026-08-18 |
 | **License** | Data: [CC BY 4.0](LICENSE). Code, including `luhdm_release.py`: GPL-3.0-or-later. See [§13](#13-license-and-contact). |
 | **Code repository** | <https://github.com/PolonaiseExperiment/luhdm> |
@@ -2138,7 +2138,8 @@ The dataset:
     title  = "{Data release for: First Search for Ultraheavy Dark Matter
               Using a Magnetically Levitated Particle}",
     year   = "2026",
-    note   = "Version v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245. DOI to be assigned"
+    doi    = "10.5281/zenodo.22018169",
+    note   = "Version v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245"
 }
 ```
 
@@ -2148,14 +2149,18 @@ not define a `dataset` entry type.
 The same metadata is in [`CITATION.cff`](CITATION.cff) in machine-readable
 form, which GitHub, Zenodo and Zotero read directly.
 
-The dataset DOI is not yet minted. Until it is, cite the version tag
-`v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245` and the digests in
-[§10](#10-integrity-provenance-and-environment), which identify the files
-unambiguously. This section and `CITATION.cff` will be updated with the DOI when
-it is assigned.
+The dataset DOI is [10.5281/zenodo.22018169](https://doi.org/10.5281/zenodo.22018169).
+That is the *concept* DOI: it resolves to the latest version, which is what a
+citation should point at. The v10 deposit itself is 10.5281/zenodo.22018170. The
+version tag `v10.0-night-m0p356mg-q1TeV-nocap-wmargnight-a18iso-mudex0p002-vE245`
+and the digests in [§10](#10-integrity-provenance-and-environment) identify the
+files unambiguously alongside it.
 
 The optimum-interval implementation used to compute the limits is a separate
-package, <https://github.com/tunnell/optimum_interval>, version 0.3.0. The
+package, <https://github.com/tunnell/optimum_interval>, version 0.4.0
+(10.5281/zenodo.21114720, concept). The limits were computed with 0.3.0, whose
+archive never reached Zenodo; 0.4.0 is that code plus a corrected dependency
+floor, identical in library behaviour. The
 apparatus is described in D. G. Uitenbroek, J. Langendorff and T. H. Oosterkamp,
 *Picometer control of a levitating milligram gravity sensor*,
 [arXiv:2605.28479](https://arxiv.org/abs/2605.28479).
