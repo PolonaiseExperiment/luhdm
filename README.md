@@ -1,5 +1,7 @@
 # luhdm
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22018169.svg)](https://doi.org/10.5281/zenodo.22018169)
+
 Levitated-sensor ultraheavy dark matter (POLONAISE): the physics models, the
 limit setting, and the `v10` data release behind *First Search for Ultraheavy
 Dark Matter Using a Magnetically Levitated Particle*. Everything the paper's
