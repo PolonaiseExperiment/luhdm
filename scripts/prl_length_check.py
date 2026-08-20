@@ -73,7 +73,7 @@ Draft markup stripped before counting (macros defined in main.tex ~99-119):
   * Deleted with their argument (margin comments / struck text, gone at
     submission):  \\DA \\da \\QJH \\qjh \\THO \\DU \\CTtwo \\CTn \\CTQ \\JWL \\sout
   * Unwrapped, argument kept (colored wrappers around real manuscript text):
-    \\CT \\CTB \\rev
+    \\CT \\CTB \\CTr \\rev
   * \\CTnum{old}{new}: the second argument is kept.
   * LaTeX comments (%) removed, \\% respected.
   * The acknowledgment paragraph(s) are excluded per the official rules
@@ -99,7 +99,7 @@ EQ_WORDS_DOUBLE = 32
 
 DELETE_MACROS = ["DA", "da", "QJH", "qjh", "THO", "DU",
                  "CTtwo", "CTn", "CTQ", "JWL", "sout"]
-UNWRAP_MACROS = ["CT", "CTB", "rev"]
+UNWRAP_MACROS = ["CTr", "CT", "CTB", "rev"]   # CTr before CT: longest match first
 
 MATH_ENVS = ["equation", "align", "alignat", "flalign", "gather",
              "multline", "eqnarray", "displaymath"]
