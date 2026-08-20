@@ -1084,10 +1084,23 @@ scanned against luhdm_datarelease_v10_A_f1_atm.h5 f_dm = 1.0 atmosphere = True
   mode 1: best mass 5.019e+08 GeV, plane (44, 54) (alpha_n x lambda), 95% band 7.96 um .. 2 m
 ```
 
-The short end of that band is where the exclusion pinches off in mediator range:
-7.96 µm, a mediator mass of 24.8 meV. In the Galactic rest frame of `v9.1` the
-same scan pinched off at 6.32 µm (31.2 meV) at a best mass of 2.20 × 10⁸ GeV,
-so the lab-frame flux moves both the optimizing mass and the closing range.
+That printed band is grid-node membership: the shortest range whose *column*
+contains a cell reaching 0.95. It is not the crossing, and the two differ by
+more than a grid step here. See below.
+
+The short end of that band is the last *grid node* whose column reaches 0.95,
+at 7.96 µm. The exclusion does not stop there. Node 7.96 µm reaches p = 0.9848
+and the next node in, 6.32 µm, reaches p = 0.9378, so the p = 0.95 crossing lies
+between them, and the crossing is this release's convention everywhere else
+(`scripts/refine_contours.py`). Root-finding it with the same oracle that built
+the scan — validated by reproducing both bracketing nodes bit-for-bit, 0 of 88
+cells differing — puts the pinch-off at **6.56 µm, a mediator mass of
+30.06 ± 0.03 meV**. Quote that, not 24.8 meV. Note p is concave across the cell,
+so linear interpolation of the two nodes gives 29.6 meV and understates the
+reach by ~0.5 meV; grid-node membership understates it by 5 meV. In the Galactic
+rest frame of `v9.1` the same scan pinched off at 6.32 µm (31.2 meV) at a best
+mass of 2.20 × 10⁸ GeV, so the lab-frame flux moves both the optimizing mass and
+the closing range.
 
 **Rebuilding and re-checking it.** `scripts/scan_lambda.py` runs the scan at the
 mode's best mass, and `scripts/assemble_lambda_sidecar.py`
@@ -2016,7 +2029,8 @@ what it means; what it *moves* is:
   7.08 × 10⁶ GeV to 3.207 × 10⁻⁹ at 5.38 × 10⁶ GeV, and the composite
   cross-section floor of the `f_DM` = 0.1 20 µm surface from 3.86 × 10⁻²⁸ to
   4.48 × 10⁻²⁸ cm² at 1.56 × 10⁶ GeV. The mediator-range scan's exclusion
-  pinches off at 7.96 µm (24.8 meV) rather than 6.32 µm (31.2 meV);
+  pinches off at 6.56 µm (30.06 meV, root-found) rather than 6.32 µm
+  (31.2 meV);
 * **`/halo` and `/reference_curves`**, which are computed in the same frame as
   `/results` and so are not the curves `v9.1` shipped.
 
